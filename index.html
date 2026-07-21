@@ -585,7 +585,7 @@
 
   <nav>
     <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
-    <button class="nav-btn" data-screen="tasks" onclick="showScreen('tasks')">TASKS</button>
+    <button class="nav-btn" data-screen="tasks" onclick="showScreen('tasks')">TASKS<span class="nav-badge" id="tasksBadge"></span></button>
     <button class="nav-btn" data-screen="achievements" onclick="showScreen('achievements')">TROPHIES<span class="nav-badge" id="prestigeBadge"></span></button>
     <button class="nav-btn" data-screen="upgrades" onclick="showScreen('upgrades')">UPGRADES</button>
     <button class="nav-btn" data-screen="herbarium" onclick="showScreen('herbarium')">HERBS</button>
@@ -1102,7 +1102,7 @@ function bumpTaskProgress(type, amount, matchSpecies){
     state.taskBoard.progress[t.key] = Math.min(t.goal, cur+amount);
     changed = true;
   });
-  if(changed) saveState();
+  if(changed){ saveState(); updateTasksBadge(); }
 }
 function isTaskPossible(task){
   if(task.type==='unlock_plot') return state.plots.some(p=>p.locked);
@@ -1183,6 +1183,7 @@ function onRerollTaskBoard(){
 function renderTasks(){
   ensureTaskBoardCurrent();
   pruneImpossibleTasks();
+  updateTasksBadge();
   const tasks = getCurrentTasks();
   const list = document.getElementById('taskList');
   if(!list) return;
@@ -2818,6 +2819,15 @@ function updatePrestigeBadge(){
   const badge = document.getElementById('prestigeBadge');
   if(badge) badge.classList.toggle('show', (state.prestige.skillPoints||0) > 0);
 }
+function updateTasksBadge(){
+  const badge = document.getElementById('tasksBadge');
+  if(!badge) return;
+  const tasks = state.taskBoard && state.taskBoard.tasks;
+  const anyClaimable = Array.isArray(tasks) && tasks.some(t =>
+    !state.taskBoard.claimed[t.key] && (state.taskBoard.progress[t.key]||0) >= t.goal
+  );
+  badge.classList.toggle('show', anyClaimable);
+}
 function updateHeader(){
   document.getElementById('sporeCount').textContent = Math.round(state.spores);
   document.getElementById('gemCount').textContent = Math.round(state.gems||0);
@@ -2830,6 +2840,7 @@ function updateHeader(){
   if(labelEl) labelEl.textContent = prog.level>=MAX_LEVEL ? 'MAX' : prog.current+' / '+prog.needed+' XP';
   updateLabNavLock();
   updatePrestigeBadge();
+  updateTasksBadge();
 }
 
 /* ===================== RENDER: HERBARIUM ===================== */

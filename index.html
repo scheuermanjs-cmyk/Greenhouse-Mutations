@@ -2301,6 +2301,17 @@ document.addEventListener('pointerdown', ()=>{
   userInteracted = true;
   if(currentWeather==='rain' || currentWeather==='storm') playRainAudio();
 }, {once:true});
+
+const clickAudio = new Audio('assets/click.wav');
+clickAudio.volume = 0.5;
+function playClickSound(){
+  if(!userInteracted) return;
+  clickAudio.currentTime = 0;
+  clickAudio.play().catch(()=>{});
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('button, [onclick], .plot-tile')) playClickSound();
+}, true);
 function applyWeather(weather){
   currentWeather = weather;
   const el = document.getElementById('windowScene');

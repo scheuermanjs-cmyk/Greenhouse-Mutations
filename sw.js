@@ -1,4 +1,4 @@
-const CACHE_NAME = 'greenhouse-v4';
+const CACHE_NAME = 'greenhouse-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS = [
   './assets/icon-512.png',
   './assets/icon-512-maskable.png',
   './assets/apple-touch-icon.png',
-  './assets/rain-loop.wav'
+  './assets/rain-loop.wav',
+  './assets/click.wav'
 ];
 
 self.addEventListener('install', (e) => {

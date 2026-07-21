@@ -241,18 +241,19 @@
   /* ---------- pixel sprite (plants) ---------- */
   .sprite-wrap-sm{ display:flex; align-items:flex-end; justify-content:center; height:46px; }
   .sprite-wrap-lg{ display:flex; align-items:flex-end; justify-content:center; height:96px; margin:6px auto 0; }
-  .pix-sprite{ display:grid; image-rendering:pixelated; transform-origin:50% 100%; }
+  .pix-sprite{ display:grid; image-rendering:pixelated; }
   .pix-sprite > div{ width:100%; height:100%; }
-  .pix-sprite.is-wilt{ transform:skewX(6deg); opacity:.92; }
+  .pix-sprite.is-wilt{ transform:rotate(6deg); opacity:.92; }
   .pix-sprite.is-glow{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.6)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.35)); }
   @media (prefers-reduced-motion:no-preference){
     .pix-sprite.is-glow{ animation:glowPulse 2.2s ease-in-out infinite; }
+    .pix-sprite.is-drift{ animation:gentleSway 4s ease-in-out infinite; }
   }
-  .pix-sprite.is-drift > div{ transition:transform .5s steps(2,end); }
   @keyframes glowPulse{
     0%,100%{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
     50%{ filter:drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
   }
+  @keyframes gentleSway{ 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(3deg); } }
 
   /* ---------- bottom nav ---------- */
   nav{ position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; z-index:10; }
@@ -3672,30 +3673,6 @@ function openIntro(){
   document.getElementById('introOverlay').classList.add('open');
 }
 
-/* ===================== DRIFTPETAL SWAY ===================== */
-function updateDriftSprites(){
-  document.querySelectorAll('.pix-sprite.is-drift').forEach(el=>{
-    const style = getComputedStyle(el);
-    const cols = style.gridTemplateColumns.split(' ').length;
-    const cellPx = parseFloat(style.gridTemplateColumns);
-    const cells = el.children;
-    const rows = Math.round(cells.length/cols);
-    if(rows<2) return;
-    const maxOffsetCells = Math.round(Math.random()*7-3.5);
-    for(let r=0;r<rows;r++){
-      const rowFactor = (rows-1-r)/(rows-1);
-      const offsetCells = Math.round(maxOffsetCells*rowFactor);
-      const px = offsetCells*cellPx;
-      const t = offsetCells===0 ? '' : 'translateX('+px+'px)';
-      for(let c=0;c<cols;c++) cells[r*cols+c].style.transform = t;
-    }
-  });
-}
-function scheduleDriftUpdate(){
-  updateDriftSprites();
-  setInterval(updateDriftSprites, 4000);
-}
-
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
@@ -3776,7 +3753,6 @@ async function init(){
   }
   saveState();
   setInterval(tick, 1000);
-  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) scheduleDriftUpdate();
 }
 window.addEventListener('DOMContentLoaded', init);
 if('serviceWorker' in navigator){

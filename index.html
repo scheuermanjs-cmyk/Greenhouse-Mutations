@@ -247,13 +247,12 @@
   .pix-sprite.is-glow{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.6)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.35)); }
   @media (prefers-reduced-motion:no-preference){
     .pix-sprite.is-glow{ animation:glowPulse 2.2s ease-in-out infinite; }
-    .pix-sprite.is-drift{ animation:gentleSway 4s ease-in-out infinite; }
   }
+  .pix-sprite.is-drift{ transition:transform 2s ease-in-out; }
   @keyframes glowPulse{
     0%,100%{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
     50%{ filter:drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
   }
-  @keyframes gentleSway{ 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(3deg); } }
 
   /* ---------- bottom nav ---------- */
   nav{ position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; z-index:10; }
@@ -3673,6 +3672,14 @@ function openIntro(){
   document.getElementById('introOverlay').classList.add('open');
 }
 
+/* ===================== DRIFTPETAL SWAY ===================== */
+function updateDriftSprites(){
+  document.querySelectorAll('.pix-sprite.is-drift').forEach(el=>{
+    const angle = Math.random()*6-3;
+    el.style.transform = 'rotate('+angle.toFixed(1)+'deg)';
+  });
+}
+
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
@@ -3753,6 +3760,10 @@ async function init(){
   }
   saveState();
   setInterval(tick, 1000);
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    updateDriftSprites();
+    setInterval(updateDriftSprites, 2500);
+  }
 }
 window.addEventListener('DOMContentLoaded', init);
 if('serviceWorker' in navigator){

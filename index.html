@@ -454,13 +454,26 @@
   @keyframes sparklePop{ 0%{ opacity:0; transform:scale(0); } 40%{ opacity:1; transform:scale(1.3); } 100%{ opacity:0; transform:scale(.6); } }
 
   /* ---------- intro / start screen / tutorial ---------- */
-  .intro-overlay{ position:fixed; inset:0; z-index:50; background:var(--panel); display:none; align-items:center; justify-content:center; padding:24px; }
+  .intro-overlay{
+    position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:24px;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(126,217,87,.20), transparent 55%),
+      radial-gradient(circle at 15% 85%, rgba(199,125,255,.14), transparent 50%),
+      radial-gradient(circle at 88% 82%, rgba(126,200,227,.14), transparent 50%),
+      var(--panel);
+  }
   .intro-overlay.open{ display:flex; }
-  .intro-card{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; text-align:center; }
-  .intro-logo-wrap{ margin-bottom:22px; display:flex; align-items:flex-end; justify-content:center; height:64px; }
-  .intro-title{ font-size:22px; line-height:1.6; letter-spacing:1px; }
+  .intro-bg{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .intro-bg-plant{ position:absolute; opacity:.4; }
+  .intro-card{ position:relative; z-index:1; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .intro-logo-wrap{ position:relative; margin-bottom:18px; display:flex; align-items:flex-end; justify-content:center; height:70px; }
+  .intro-logo-pot{ position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); z-index:-1; }
+  .intro-title{ font-size:22px; line-height:1.6; letter-spacing:1px; text-shadow:3px 3px 0 rgba(0,0,0,.35); }
   .intro-title span{ color:var(--accent); }
   .intro-tagline{ font-size:15px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
+  .intro-shelf{ display:flex; align-items:flex-end; justify-content:center; gap:16px; margin:20px 0 2px; height:38px; }
+  .intro-shelf-plant{ display:flex; align-items:flex-end; }
   .intro-step-title{ font-size:15px; letter-spacing:.5px; margin-bottom:14px; }
   .intro-step-body{ font-size:15px; color:var(--text-muted); line-height:1.6; }
   .intro-dots{ display:flex; gap:7px; margin:22px 0; }
@@ -474,7 +487,7 @@
 </head>
 <body>
 
-  <div class="intro-overlay" id="introOverlay"><div class="intro-card" id="introCard"></div></div>
+  <div class="intro-overlay" id="introOverlay"><div class="intro-bg" id="introBg"></div><div class="intro-card" id="introCard"></div></div>
 
   <header>
     <div class="xp-bar-wrap" onclick="openLevelTree()"><div class="xp-bar-fill" id="xpBarFill"></div><span class="xp-bar-level" id="farmLevel">LV 1</span><span class="xp-bar-label" id="xpBarLabel"></span></div>
@@ -3441,16 +3454,39 @@ const TUTORIAL_STEPS = [
   { title:'Level Up & Prestige', body:'Earn XP to level up, unlock new species, and Prestige for permanent bonuses once you’ve mastered the basics.' }
 ];
 let introStep = 0;
+const INTRO_BG_PLANTS = [
+  { species:'glowbloom',  hue:280, glow:true,  style:'top:8%; left:6%; transform:scale(1.3) rotate(-6deg);' },
+  { species:'thornvine',  hue:24,             style:'top:14%; right:5%; transform:scale(1.05) rotate(8deg);' },
+  { species:'duskvelvet', hue:320, glow:true,  style:'bottom:10%; left:9%; transform:scale(1.15) rotate(5deg);' },
+  { species:'starforge',  hue:190, glow:true,  style:'bottom:6%; right:7%; transform:scale(1.3) rotate(-4deg);' },
+  { species:'fernling',   hue:150,            style:'top:44%; left:2%; transform:scale(.9) rotate(-3deg);' }
+];
+const INTRO_SHELF_SPECIES = ['fernling','glowbloom','mossputt','thornvine','duskvelvet','starforge'];
 function renderIntroStep(step){
   introStep = step;
   const card = document.getElementById('introCard');
+  const bg = document.getElementById('introBg');
   if(step===0){
-    card.innerHTML = '<div class="intro-logo-wrap">'+renderSprite({species:'mossputt',hue:128,glow:true},'lg','bloom')+'</div>'
+    bg.innerHTML = INTRO_BG_PLANTS.map(p=>
+      '<div class="intro-bg-plant" style="'+p.style+'">'+renderSprite({species:p.species,hue:p.hue,glow:!!p.glow},'sm','bloom')+'</div>'
+    ).join('');
+    const shelfHtml = INTRO_SHELF_SPECIES.map(key=>{
+      const sp = SPECIES[key];
+      return '<div class="intro-shelf-plant">'+renderSprite({species:key,hue:sp.hue,glow:!!sp.glowBias},'sm','bloom')+'</div>';
+    }).join('');
+    card.innerHTML = '<div class="intro-logo-wrap">'
+        + '<div class="intro-logo-pot">'+renderPot('lg', false)+'</div>'
+        + renderSprite({species:'mossputt',hue:128,glow:true},'lg','bloom')
+        + '<span class="sparkle" style="top:-4px;left:6px;animation-delay:.2s;background:var(--warn);"></span>'
+        + '<span class="sparkle" style="top:10px;right:2px;animation-delay:.6s;background:var(--violet);"></span>'
+      + '</div>'
       + '<h1 class="intro-title">GREENHOUSE<br><span>MUTATIONS</span></h1>'
       + '<p class="intro-tagline">Grow, tend, and cross-pollinate strange little plants. See what mutates.</p>'
+      + '<div class="intro-shelf">'+shelfHtml+'</div>'
       + '<div class="intro-actions"><button class="btn btn-primary btn-block" onclick="renderIntroStep(1)">New Game</button></div>';
     return;
   }
+  bg.innerHTML = '';
   const idx = step-1;
   const total = TUTORIAL_STEPS.length;
   const s = TUTORIAL_STEPS[idx];

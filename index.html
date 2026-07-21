@@ -1,0 +1,3424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Greenhouse: Mutations</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1A2B1D">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Greenhouse">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --panel:#1A2B1D;
+    --panel-2:#223A26;
+    --outline:#0A120C;
+    --pot:#B5764A;
+    --pot-light:#D98B55;
+    --pot-dark:#7A431F;
+    --accent:#7ED957;
+    --accent-dark:#3F8C2A;
+    --violet:#C77DFF;
+    --warn:#FFC857;
+    --danger:#FF5C5C;
+    --text:#EAF2E2;
+    --text-muted:#8FA68C;
+    --parchment:#EBD9A8;
+    --parchment-ink:#3B2E1E;
+    --parchment-line:#8C6A3E;
+    --hill:#16261A;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{
+    margin:0; padding:0; background-color:var(--panel); color:var(--text); font-family:'VT323',monospace;
+    background-image:
+      repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'%3E%3Crect x='0' y='0' width='192' height='2' fill='rgb(140,98,56)'/%3E%3Crect x='0' y='2' width='92' height='46' fill='rgb(124,84,48)'/%3E%3Crect x='92' y='2' width='4' height='46' fill='rgb(58,36,18)'/%3E%3Crect x='96' y='2' width='92' height='46' fill='rgb(110,70,36)'/%3E%3Crect x='188' y='2' width='4' height='46' fill='rgb(58,36,18)'/%3E%3Crect x='0' y='48' width='192' height='2' fill='rgb(140,98,56)'/%3E%3Crect x='0' y='50' width='44' height='46' fill='rgb(104,66,34)'/%3E%3Crect x='44' y='50' width='4' height='46' fill='rgb(58,36,18)'/%3E%3Crect x='48' y='50' width='92' height='46' fill='rgb(118,80,46)'/%3E%3Crect x='140' y='50' width='4' height='46' fill='rgb(58,36,18)'/%3E%3Crect x='144' y='50' width='48' height='46' fill='rgb(104,66,34)'/%3E%3C/svg%3E");
+    background-size: auto, 192px 96px;
+  }
+  body{
+    min-height:100vh;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  h1,h2,h3{ margin:0; font-family:'Press Start 2P',monospace; font-weight:400; }
+  h3{ text-transform:uppercase; font-size:12px; letter-spacing:.5px; }
+  button{ border:none; cursor:pointer; }
+  p{ margin:0; }
+  ::selection{ background:var(--accent); color:#0F1A12; }
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-direction:column;
+    padding:0;
+    background:var(--panel);
+    border-bottom:4px solid var(--outline);
+  }
+  .header-inner{ display:flex; align-items:center; justify-content:flex-end; gap:8px; width:100%; padding:8px 16px; }
+  .spore-counter{ display:flex; align-items:center; gap:6px; font-size:19px; background:var(--panel); border:3px solid var(--outline); padding:5px 11px; }
+  .gem-counter{ display:flex; align-items:center; gap:6px; font-size:19px; background:var(--panel); border:3px solid var(--outline); padding:5px 11px; }
+  .gem-icon{ display:inline-flex; align-items:center; }
+  .header-right{ display:flex; align-items:center; gap:8px; }
+
+  .reward-tree{ display:flex; flex-direction:column; }
+  .reward-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed rgba(255,255,255,.08); }
+  .reward-row.is-unlocked .reward-node{ border-color:var(--accent); background:var(--accent-dark); color:var(--text); }
+  .reward-row.is-current .reward-node{ border-color:var(--warn); background:rgba(255,200,87,.15); animation:pulseText 1.3s steps(2) infinite; }
+  .reward-row.is-locked{ opacity:.4; }
+  .reward-node{ width:44px; height:44px; flex-shrink:0; border:3px solid var(--outline); background:var(--panel); display:flex; align-items:center; justify-content:center; font-family:'VT323',monospace; font-size:22px; color:var(--text-muted); }
+  .reward-plain-row{ display:flex; align-items:center; gap:12px; padding:5px 0; border-bottom:1px dashed rgba(255,255,255,.05); }
+  .reward-plain-node{ width:36px; height:30px; flex-shrink:0; border:2px solid var(--outline); background:var(--panel); display:flex; align-items:center; justify-content:center; font-family:'VT323',monospace; font-size:18px; color:var(--text-muted); }
+  .reward-plain-row.is-unlocked .reward-plain-node{ border-color:var(--accent-dark); background:rgba(63,140,42,.15); color:var(--text-muted); }
+  .reward-plain-row.is-locked{ opacity:.35; }
+  .reward-info{ flex:1; min-width:0; }
+  .reward-name{ font-size:16px; text-transform:uppercase; letter-spacing:.3px; display:flex; align-items:center; gap:6px; }
+  .reward-desc{ font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .xp-bar-wrap{ width:100%; height:18px; margin-top:env(safe-area-inset-top); background:var(--panel-2); position:relative; cursor:pointer; border-top:2px solid var(--outline); }
+  .xp-bar-wrap:active{ opacity:.85; }
+  .xp-bar-fill{ height:100%; background:repeating-linear-gradient(45deg, var(--accent) 0 3px, var(--accent-dark) 3px 6px); transition:width .5s ease; }
+  .xp-bar-level{ position:absolute; left:0; top:0; bottom:0; display:flex; align-items:center; padding:0 7px; font-family:'VT323',monospace; font-size:14px; color:var(--text); background:var(--accent-dark); border-right:2px solid var(--outline); white-space:nowrap; z-index:1; }
+  .xp-bar-label{ position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); }
+  .spore-icon{ display:inline-flex; align-items:center; }
+
+  /* ---------- hint banner ---------- */
+  .hint-banner{ display:none; margin:10px 16px 0; padding:9px 13px; background:var(--panel-2); border:3px dashed var(--outline); font-size:15px; color:var(--text-muted); text-align:center; }
+  body.show-hint .hint-banner{ display:block; }
+
+  /* ---------- toast ---------- */
+  #toast{ position:fixed; top:66px; left:50%; transform:translate(-50%,-12px); z-index:30; background:var(--panel-2); border:3px solid var(--outline); color:var(--text); padding:10px 16px; font-size:14px; opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; max-width:88%; text-align:center; box-shadow:3px 3px 0 rgba(0,0,0,.4); }
+  #toast.show{ opacity:1; transform:translate(-50%,0); }
+
+  /* ---------- screens ---------- */
+  main{ padding:14px 16px 100px; }
+  .screen{ display:none; }
+  .screen.active{ display:block; animation:fadeIn .3s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .screen-title{ font-size:14px; color:var(--text-muted); margin:2px 2px 12px; text-transform:uppercase; letter-spacing:.5px; }
+  .screen-title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 2px 12px; }
+  .screen-title-row .screen-title{ margin:0; }
+
+  /* ---------- window scene ---------- */
+  .window{ position:relative; height:118px; border:4px solid var(--outline); overflow:hidden; box-shadow:3px 3px 0 rgba(0,0,0,.4); }
+  .sky-layer{ position:absolute; inset:0; }
+  .sky-layer.is-night{ background:linear-gradient(to bottom, #0A0E1A 0% 40%, #141A30 40% 75%, #1F2A44 75% 100%); }
+  .sky-layer.is-dawn{ background:linear-gradient(to bottom, #2B1F45 0% 30%, #C9577A 30% 65%, #FFB072 65% 100%); }
+  .sky-layer.is-day{ background:linear-gradient(to bottom, #3A8FD9 0% 45%, #6FB8E8 45% 80%, #BFE6F5 80% 100%); }
+  .sky-layer.is-dusk{ background:linear-gradient(to bottom, #2C2150 0% 30%, #D9554F 30% 65%, #FFB15E 65% 100%); }
+  .sky-over{ opacity:0; transition:opacity 3s ease; }
+  .hills{ position:absolute; left:-4px; right:-4px; bottom:-2px; height:28px; background:var(--hill); clip-path:polygon(0% 65%, 10% 45%, 22% 58%, 35% 32%, 50% 52%, 65% 28%, 80% 48%, 92% 22%, 100% 42%, 100% 100%, 0% 100%); }
+  .clouds{ position:absolute; inset:0; opacity:0; transition:opacity 1.5s ease; }
+  .window.is-day .clouds{ opacity:1; }
+  .window.is-dawn .clouds, .window.is-dusk .clouds{ opacity:.45; }
+  .cloud{ position:absolute; }
+  .cloud span{ position:absolute; background:rgba(255,255,255,.8); }
+  .cloud-a{ top:16%; left:10%; }
+  .cloud-a span:nth-child(1){ width:26px; height:8px; top:4px; left:0; }
+  .cloud-a span:nth-child(2){ width:16px; height:8px; top:0; left:13px; }
+  .cloud-b{ top:26%; left:58%; }
+  .cloud-b span:nth-child(1){ width:22px; height:7px; top:3px; left:0; }
+  .cloud-b span:nth-child(2){ width:14px; height:7px; top:0; left:12px; }
+  @media (prefers-reduced-motion:no-preference){
+    .cloud-a{ animation:cloudDriftA 50s linear infinite; }
+    .cloud-b{ animation:cloudDriftB 64s linear infinite; animation-delay:-18s; }
+  }
+  @keyframes cloudDriftA{ from{ transform:translateX(-50px); } to{ transform:translateX(340px); } }
+  @keyframes cloudDriftB{ from{ transform:translateX(-50px); } to{ transform:translateX(340px); } }
+  .bird{ position:absolute; width:10px; height:6px; top:30%; left:0; }
+  .bird::before, .bird::after{ content:''; position:absolute; width:6px; height:2px; background:var(--outline); top:2px; }
+  .bird::before{ left:0; transform:rotate(22deg); transform-origin:right center; }
+  .bird::after{ right:0; transform:rotate(-22deg); transform-origin:left center; }
+  .window.is-night .bird{ display:none; }
+  @media (prefers-reduced-motion:no-preference){
+    .bird{ animation:birdFly 32s linear infinite; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .bird{ display:none; }
+  }
+  @keyframes birdFly{
+    0%{ transform:translate(-20px,12px); opacity:0; }
+    4%{ opacity:1; }
+    42%{ transform:translate(330px,-10px); opacity:1; }
+    48%{ opacity:0; }
+    100%{ transform:translate(330px,-10px); opacity:0; }
+  }
+  .firefly{ position:absolute; width:3px; height:3px; border-radius:50%; background:#D9F2A3; box-shadow:0 0 4px 2px rgba(217,242,163,.7); opacity:0; transition:opacity 1.5s ease; }
+  .window.is-night .firefly{ opacity:.85; }
+  .firefly-a{ bottom:24%; left:28%; }
+  .firefly-b{ bottom:30%; left:68%; }
+  @media (prefers-reduced-motion:no-preference){
+    .window.is-night .firefly-a{ animation:fireflyDrift 7s ease-in-out infinite; }
+    .window.is-night .firefly-b{ animation:fireflyDrift 8.5s ease-in-out infinite; animation-delay:-3s; }
+  }
+  @keyframes fireflyDrift{
+    0%,100%{ transform:translate(0,0); opacity:.35; }
+    25%{ transform:translate(13px,-9px); opacity:1; }
+    50%{ transform:translate(4px,-16px); opacity:.5; }
+    75%{ transform:translate(-11px,-6px); opacity:1; }
+  }
+  .stars{ position:absolute; inset:0; opacity:0; transition:opacity 1.5s ease; }
+  .window.is-night .stars{ opacity:1; }
+  .stars span{ position:absolute; width:2px; height:2px; background:#fff; }
+  @media (prefers-reduced-motion:no-preference){
+    .stars span{ animation:twinkle 2.4s ease-in-out infinite; }
+    .stars span:nth-child(2n){ animation-delay:.6s; }
+    .stars span:nth-child(3n){ animation-delay:1.2s; }
+  }
+  @keyframes twinkle{ 0%,100%{opacity:.3;} 50%{opacity:1;} }
+  .celestial{ position:absolute; width:16px; height:16px; border-radius:50%; z-index:2; transition:top 1.5s ease, left 1.5s ease, background 1.5s ease, box-shadow 1.5s ease; }
+  .window.is-night .celestial{ top:16%; left:62%; background:#F4F1E0; box-shadow:0 0 10px 4px rgba(244,241,224,.5); }
+  .window.is-dawn .celestial{ top:58%; left:18%; background:#FFB05C; box-shadow:0 0 14px 6px rgba(255,176,92,.55); }
+  .window.is-day .celestial{ top:13%; left:55%; background:#FFD24C; box-shadow:0 0 16px 6px rgba(255,210,76,.6); }
+  .window.is-dusk .celestial{ top:56%; left:78%; background:#FF7A45; box-shadow:0 0 14px 6px rgba(255,122,69,.55); }
+  .mullion{ position:absolute; background:var(--outline); z-index:3; }
+  .mullion-v{ left:50%; top:0; bottom:0; width:4px; margin-left:-2px; }
+  .mullion-h{ left:0; right:0; top:50%; height:4px; margin-top:-2px; }
+  .ledge{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:16px; }
+
+  /* ---------- plot grid ---------- */
+  .plot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .plot-tile{
+    aspect-ratio:1/1; position:relative; overflow:hidden;
+    background:var(--panel);
+    border:3px solid var(--outline);
+    box-shadow:3px 3px 0 rgba(0,0,0,.4);
+    display:flex; align-items:center; justify-content:center;
+    animation:tileIn .35s ease both;
+  }
+  .plot-tile:nth-child(1){animation-delay:.02s}.plot-tile:nth-child(2){animation-delay:.06s}.plot-tile:nth-child(3){animation-delay:.10s}
+  .plot-tile:nth-child(4){animation-delay:.14s}.plot-tile:nth-child(5){animation-delay:.18s}.plot-tile:nth-child(6){animation-delay:.22s}
+  .plot-tile:nth-child(7){animation-delay:.26s}.plot-tile:nth-child(8){animation-delay:.30s}.plot-tile:nth-child(9){animation-delay:.34s}
+  @keyframes tileIn{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+  .plot-tile.locked{ background:#162018; }
+  .plot-tile-inner{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; }
+
+  .tile-top-badge{ position:absolute; top:4px; left:2px; right:2px; text-align:center; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; line-height:1.2; pointer-events:none; }
+  .tile-top-badge.is-ready{ color:var(--accent); animation:readyGlow 1.8s ease-in-out infinite; }
+  .tile-bottom-text{ position:absolute; bottom:4px; left:2px; right:2px; text-align:center; font-size:11px; color:var(--text-muted); pointer-events:none; }
+  .tile-progress{ position:absolute; bottom:5px; left:9px; right:9px; height:5px; background:var(--outline); border:1px solid var(--outline); }
+  .tile-progress-fill{ height:100%; background:repeating-linear-gradient(45deg, var(--accent) 0 3px, var(--accent-dark) 3px 6px); }
+  @keyframes pulseText{ 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  @keyframes readyGlow{
+    0%,100%{ text-shadow:0 0 3px rgba(126,217,87,.7); }
+    50%{ text-shadow:0 0 7px rgba(126,217,87,1), 0 0 12px rgba(126,217,87,.6); }
+  }
+
+  /* ---------- pixel pot + plant stack ---------- */
+  .tile-pot-stack{ display:flex; flex-direction:column; align-items:center; }
+  .tile-plant-slot{ display:flex; align-items:flex-end; justify-content:center; height:32px; }
+  .tile-plus-mini{ font-family:'Press Start 2P'; font-size:13px; color:var(--text-muted); }
+  .pot-wrap-lg{ display:flex; justify-content:center; margin-bottom:14px; }
+  .pix-pot{ display:grid; }
+  .pix-pot > div{ width:100%; height:100%; }
+
+  /* ---------- garden gear: sprinkler + garden light ---------- */
+  .tile-accessory-row{ position:relative; display:inline-block; }
+  .tile-accessory-slot{ position:absolute; right:100%; bottom:0; width:28px; display:flex; align-items:flex-end; justify-content:center; }
+  .pot-accessory-center{ text-align:center; }
+  .pot-accessory-row{ position:relative; display:inline-block; }
+  .pot-accessory-slot{ position:absolute; right:100%; bottom:0; width:56px; display:flex; align-items:flex-end; justify-content:center; }
+  .tile-gear-wrap{ position:relative; display:inline-block; }
+  .pix-gear{ display:grid; }
+  .pix-gear > div{ width:100%; height:100%; }
+  .droplet{ position:absolute; width:2px; height:2px; background:#9FD8F0; border-radius:50%; opacity:0; top:0; left:var(--startX,50%); }
+  @media (prefers-reduced-motion:no-preference){
+    .droplet{ animation:dropletArc var(--dur,1.6s) ease infinite; animation-delay:var(--delay,0s); }
+  }
+  @keyframes dropletArc{
+    0%{ transform:translate(0,0); opacity:0; animation-timing-function:ease-out; }
+    15%{ opacity:1; animation-timing-function:ease-in-out; }
+    50%{ transform:translate(var(--dx,5px),var(--dy,-5px)); opacity:1; animation-timing-function:ease-out; }
+    100%{ transform:translate(var(--dx2,8px),var(--dy2,3px)); opacity:0; }
+  }
+
+  /* ---------- pixel sprite (plants) ---------- */
+  .sprite-wrap-sm{ display:flex; align-items:flex-end; justify-content:center; height:46px; }
+  .sprite-wrap-lg{ display:flex; align-items:flex-end; justify-content:center; height:96px; margin:6px auto 0; }
+  .pix-sprite{ display:grid; image-rendering:pixelated; }
+  .pix-sprite > div{ width:100%; height:100%; }
+  .pix-sprite.is-wilt{ transform:rotate(6deg); opacity:.92; }
+  .pix-sprite.is-glow{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.6)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.35)); }
+  @media (prefers-reduced-motion:no-preference){
+    .pix-sprite.is-glow{ animation:glowPulse 2.2s ease-in-out infinite; }
+    .pix-sprite.is-drift{ animation:gentleSway 4s ease-in-out infinite; }
+  }
+  @keyframes glowPulse{
+    0%,100%{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
+    50%{ filter:drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
+  }
+  @keyframes gentleSway{ 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(3deg); } }
+
+  /* ---------- bottom nav ---------- */
+  nav{ position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; z-index:10; }
+  .nav-btn{ position:relative; flex:1; background:transparent; color:var(--text-muted); padding:13px 2px; font-family:'Press Start 2P'; font-size:9px; }
+  .nav-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel-2); }
+  .nav-badge{ display:none; position:absolute; top:5px; right:10px; width:7px; height:7px; border-radius:50%; background:var(--violet); box-shadow:0 0 4px var(--violet); }
+  .nav-badge.show{ display:block; }
+  .nav-btn-locked{ opacity:.4; }
+
+  /* ---------- herbarium ---------- */
+  .herb-card{ display:flex; align-items:center; gap:13px; background:var(--parchment); color:var(--parchment-ink); border:3px solid var(--parchment-line); padding:14px 13px 12px; margin-bottom:16px; box-shadow:3px 3px 0 rgba(0,0,0,.25); position:relative; cursor:pointer; }
+  .herb-card:active{ transform:translate(1px,1px); }
+  .herb-photo{ position:relative; flex-shrink:0; background:var(--panel); border:3px solid var(--outline); padding:4px 5px 2px; display:flex; align-items:center; justify-content:center; }
+  .herb-photo::before{ content:''; position:absolute; top:-7px; left:50%; width:26px; height:11px; background:rgba(255,201,87,.65); border:1px solid rgba(0,0,0,.2); }
+  .herb-photo.tilt-a{ transform:rotate(-3deg); }
+  .herb-photo.tilt-a::before{ transform:translateX(-50%) rotate(-6deg); }
+  .herb-photo.tilt-b{ transform:rotate(2deg); }
+  .herb-photo.tilt-b::before{ transform:translateX(-50%) rotate(5deg); }
+  .herb-name{ font-size:16px; line-height:1.3; text-transform:uppercase; letter-spacing:.3px; }
+  .herb-meta{ font-size:13px; opacity:.8; margin-top:2px; }
+  .herb-rarity{ font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin-top:3px; font-weight:bold; }
+  .empty-state{ text-align:center; color:var(--text-muted); padding:50px 20px; font-size:16px; line-height:1.6; }
+  .stat-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:15px; padding:8px 2px; border-bottom:1px dashed rgba(255,255,255,.1); }
+  .stat-row span:first-child{ color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; font-size:12px; }
+  .stat-detail{ font-size:13px; color:var(--text-muted); line-height:1.5; padding:8px 2px 0; }
+  #lifetimeStatsList{ background:var(--panel); border:3px solid var(--outline); padding:2px 14px; box-shadow:3px 3px 0 rgba(0,0,0,.35); margin-bottom:6px; }
+  #lifetimeStatsList .stat-row{ border-bottom-color:rgba(255,255,255,.08); }
+
+  /* ---------- upgrades ---------- */
+  .upg-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .upg-card.is-locked{ opacity:.5; }
+  .upg-info{ flex:1; min-width:0; }
+  .upg-name{ font-size:16px; text-transform:uppercase; letter-spacing:.3px; }
+  .upg-desc{ font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .upg-current{ font-size:13px; color:var(--accent); margin-top:3px; }
+  .upg-pips{ display:flex; gap:4px; margin-top:7px; }
+  .upg-pip{ width:11px; height:11px; border:2px solid var(--outline); background:transparent; }
+  .upg-pip.filled{ background:var(--accent); }
+  .upg-btn{ flex-shrink:0; min-width:84px; text-align:center; }
+  .upg-card.is-equipped{ border-color:var(--accent); box-shadow:3px 3px 0 var(--accent-dark); }
+  .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
+
+  /* ---------- task board ---------- */
+  .task-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .task-card.is-claimed{ opacity:.55; }
+  .task-info{ flex:1; min-width:0; }
+  .task-desc{ font-size:15px; text-transform:uppercase; letter-spacing:.3px; margin-bottom:8px; }
+  .task-reward{ font-size:13px; color:var(--accent); margin-top:6px; }
+  .task-bar{ height:8px; background:var(--outline); border:1px solid var(--outline); }
+  .task-bar-fill{ height:100%; background:repeating-linear-gradient(45deg, var(--accent) 0 3px, var(--accent-dark) 3px 6px); }
+  .task-progress-text{ font-size:14px; color:var(--text-muted); flex-shrink:0; min-width:50px; text-align:right; }
+
+  /* ---------- research lab ---------- */
+  .lab-card{ text-align:center; background:var(--panel-2); border:3px solid var(--outline); padding:8px 12px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .lab-name{ font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+  .lab-tier{ font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+  .lab-timer{ text-align:center; font-size:14px; margin:5px 0; }
+  .lab-progress{ height:6px; background:var(--outline); border:1px solid var(--outline); margin-top:6px; }
+  .lab-progress-fill{ height:100%; background:repeating-linear-gradient(45deg, var(--violet) 0 3px, #8B4FC7 3px 6px); transition:width 1s linear; }
+  .lab-machine-wrap{ display:flex; justify-content:center; margin-bottom:16px; }
+  .lab-row{ display:flex; justify-content:center; align-items:flex-end; gap:10px; margin-bottom:2px; }
+  .lab-station{ display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+  .lab-station .lab-machine-wrap{ margin-bottom:0; }
+  .lab-station-locked{ opacity:.5; filter:grayscale(55%); }
+  .lab-station-label{ margin-bottom:4px; font-size:12px; text-align:center; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; }
+  .lab-machine-inner{ position:relative; }
+  .lab-machine{ display:grid; image-rendering:pixelated; }
+  .lab-machine > div{ width:100%; height:100%; }
+  .lab-chamber-sprite{ position:absolute; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .lab-chamber-sprite-scale{ transform:scale(1.8); }
+  @media (prefers-reduced-motion:no-preference){
+    .lab-machine-glow{ animation:labGlowPulse 1.6s ease-in-out infinite; }
+  }
+  @keyframes labGlowPulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.7); } }
+
+  /* ---------- lab bench, shelf, clutter ---------- */
+  .lab-bench{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:14px; }
+  .lab-shelf-board{ height:10px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:3px solid var(--outline); border-top:none; box-shadow:2px 2px 0 rgba(0,0,0,.35); margin:0 auto 16px; width:96%; }
+  .lab-shelf-label{ font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; text-align:center; margin-bottom:6px; }
+  .lab-shelf{ display:flex; justify-content:center; gap:10px; margin-bottom:2px; flex-wrap:wrap; }
+  .lab-jar{ display:flex; flex-direction:column; align-items:center; }
+  .lab-jar-lid{ width:20px; height:6px; background:#8C6A3E; border:2px solid var(--outline); }
+  .lab-jar-glass{ width:34px; height:34px; background:rgba(159,216,240,.14); border:2px solid rgba(159,216,240,.4); display:flex; align-items:flex-end; justify-content:center; overflow:hidden; }
+  .lab-jar-empty{ background:rgba(255,255,255,.03); border-color:rgba(255,255,255,.12); }
+  .lab-jar-sprite{ transform:scale(.6); transform-origin:bottom center; }
+  .lab-clutter-row{ display:flex; justify-content:center; align-items:flex-end; gap:16px; flex-wrap:wrap; opacity:.85; margin-bottom:2px; }
+  .lab-bookshelf{ display:flex; align-items:flex-end; gap:2px; height:30px; border-bottom:3px solid var(--outline); padding:0 4px 2px; }
+  .lab-book{ width:8px; border:2px solid var(--outline); }
+  .lab-chalkboard{ position:relative; width:70px; height:44px; background:#1F3A2A; border:3px solid #6B4A2E; }
+  .lab-chalk-line{ position:absolute; height:2px; background:rgba(255,255,255,.5); }
+  .lab-beaker-group{ display:flex; align-items:flex-end; gap:8px; }
+  .lab-beaker{ display:flex; flex-direction:column; align-items:center; }
+  .lab-beaker-neck{ width:6px; height:6px; border:2px solid rgba(159,216,240,.5); border-bottom:none; }
+  .lab-beaker-body{ position:relative; width:20px; height:18px; border:2px solid rgba(159,216,240,.5); background:rgba(159,216,240,.06); overflow:hidden; }
+  .lab-beaker-liquid{ position:absolute; bottom:0; left:0; right:0; height:60%; opacity:.75; }
+  .lab-liquid-a{ background:var(--accent); }
+  .lab-liquid-b{ background:var(--violet); }
+  .lab-bubble{ position:absolute; width:3px; height:3px; border-radius:50%; background:rgba(255,255,255,.7); bottom:0; opacity:0; }
+  @media (prefers-reduced-motion:no-preference){
+    .lab-bubble{ animation:labBubbleRise 2.4s ease-in infinite; }
+  }
+  @keyframes labBubbleRise{ 0%{ transform:translateY(0); opacity:0; } 15%{ opacity:.8; } 100%{ transform:translateY(-16px); opacity:0; } }
+
+  /* ---------- achievements ---------- */
+  .ach-category{ font-family:'Press Start 2P'; font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px; }
+  .ach-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:10px 12px; margin-bottom:8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
+  .ach-card.is-unlocked{ background:var(--panel-2); border-color:var(--accent-dark); }
+  .ach-card.is-locked{ opacity:.4; }
+  .ach-icon{ flex-shrink:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+  .ach-pix{ display:grid; image-rendering:pixelated; }
+  .ach-info{ flex:1; min-width:0; }
+  .ach-name{ font-size:15px; text-transform:uppercase; letter-spacing:.3px; }
+  .ach-desc{ font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .ach-reward{ font-size:12px; color:var(--accent); margin-top:3px; }
+  .ach-check{ flex-shrink:0; font-size:18px; color:var(--accent); }
+
+  /* ---------- herbarium sets ---------- */
+  .set-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:10px 12px; margin-bottom:8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
+  .set-card.is-complete{ border-color:var(--accent-dark); }
+  .set-info{ flex:1; min-width:0; }
+  .set-name{ font-size:15px; text-transform:uppercase; letter-spacing:.3px; }
+  .set-desc{ font-size:13px; color:var(--text-muted); margin-top:2px; }
+  .set-progress{ font-size:13px; color:var(--text-muted); margin-top:4px; }
+  .set-card.is-complete .set-progress{ color:var(--accent); }
+  .set-reward{ font-size:12px; color:var(--accent); margin-top:2px; }
+  .set-check{ flex-shrink:0; font-size:18px; color:var(--accent); }
+
+  /* ---------- pests ---------- */
+  .pix-pest{ display:grid; }
+  .pix-pest > div{ width:100%; height:100%; }
+  @media (prefers-reduced-motion:no-preference){
+    .pix-pest{ animation:pestTwitch .35s steps(2) infinite; }
+  }
+  @keyframes pestTwitch{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(1px,-1px); } }
+  .tile-pest-badge{ position:absolute; top:3px; right:3px; z-index:2; background:var(--panel); border:2px solid var(--danger); padding:2px; }
+  .plot-tile.has-pest{ box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 0 2px var(--danger); }
+  .pest-alert{ display:flex; align-items:center; gap:10px; background:rgba(162,59,59,.18); border:2px solid var(--danger); padding:8px 10px; margin-bottom:12px; }
+  .pest-alert-text{ flex:1; font-size:13px; color:var(--danger); line-height:1.4; }
+  .btn-danger{ background:var(--danger); color:#2A0A0A; }
+  .reveal-pest{ font-size:12px; color:#A23B3B; margin-top:4px; }
+  .reveal-precision{ font-size:12px; color:var(--accent-dark); margin-top:4px; }
+
+  /* ---------- sheet ---------- */
+  #sheetBackdrop{ position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:opacity .25s; z-index:20; }
+  #sheetBackdrop.open{ opacity:1; pointer-events:auto; }
+  #sheet{ position:fixed; left:0; right:0; bottom:0; background:var(--panel); border-top:4px solid var(--outline); padding:16px 18px calc(22px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .3s cubic-bezier(.32,.72,0,1); z-index:21; max-height:80vh; overflow-y:auto; }
+  #sheet.open{ transform:translateY(0); }
+  .sheet-grab{ width:36px; height:4px; background:var(--outline); margin:0 auto 14px; }
+  .sheet-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .sheet-blurb{ font-size:15px; color:var(--text-muted); margin-bottom:14px; line-height:1.5; }
+  .sheet-timer{ text-align:center; font-size:26px; margin-bottom:14px; }
+  .sheet-subhead{ font-size:13px; color:var(--text-muted); margin:14px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
+
+  .slider-row{ margin-bottom:14px; }
+  .slider-row label{ display:block; font-size:14px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+  input[type=range]{ width:100%; height:8px; -webkit-appearance:none; appearance:none; background:linear-gradient(to right, var(--warn) 0% 18%, var(--accent) 18% 82%, var(--warn) 82% 100%); border:2px solid var(--outline); outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; background:var(--text); border:3px solid var(--accent-dark); cursor:pointer; }
+  input[type=range]::-moz-range-thumb{ width:18px; height:18px; background:var(--text); border:3px solid var(--accent-dark); cursor:pointer; border-radius:0; }
+  input[type=range]::-moz-range-track{ background:transparent; }
+
+  .mutation-line{ font-size:16px; margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px; }
+  .mutation-line span{ color:var(--accent); }
+  .stress-warning{ font-size:14px; color:var(--danger); max-height:0; overflow:hidden; opacity:0; transition:all .25s; }
+  .stress-warning.show{ max-height:30px; opacity:1; margin-bottom:8px; }
+  .hint-toggle{ background:none; color:var(--text-muted); font-size:14px; text-decoration:underline; padding:6px 0; font-family:'VT323'; }
+  .hint{ font-size:14px; color:var(--text-muted); line-height:1.5; max-height:0; overflow:hidden; opacity:0; transition:all .25s; }
+  .hint.show{ max-height:140px; opacity:1; margin-top:4px; }
+
+  .seed-list{ display:flex; flex-direction:column; gap:8px; }
+  .seed-row{ display:flex; align-items:center; gap:11px; background:var(--panel-2); border:3px solid var(--outline); padding:8px 10px; }
+  .seed-row.is-locked{ opacity:.5; }
+  .seed-row-glyph{ flex-shrink:0; width:34px; height:40px; display:flex; align-items:flex-end; justify-content:center; }
+  .seed-row-info{ flex:1; min-width:0; }
+  .seed-row-name{ font-size:15px; text-transform:uppercase; letter-spacing:.3px; }
+  .seed-row-sub{ font-size:13px; color:var(--text-muted); margin-top:1px; }
+  .seed-row-actions{ display:flex; flex-direction:column; gap:4px; flex-shrink:0; }
+
+  .btn{ padding:13px 14px; font-size:15px; background:var(--panel-2); color:var(--text); border:3px solid var(--outline); box-shadow:3px 3px 0 var(--outline); text-transform:uppercase; letter-spacing:.5px; font-family:'VT323'; }
+  .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--outline); }
+  .btn-block{ width:100%; }
+  .btn-primary{ background:var(--accent); color:#0F1A12; }
+  .btn-primary:disabled{ background:var(--panel-2); color:var(--text-muted); box-shadow:none; opacity:.55; transform:none; }
+  .btn-small{ padding:8px 12px; font-size:13px; box-shadow:2px 2px 0 var(--outline); flex-shrink:0; }
+  .btn-small:active{ transform:translate(1px,1px); box-shadow:1px 1px 0 var(--outline); }
+  .btn-accent{ background:var(--violet); color:#2A1140; }
+  .btn:disabled{ opacity:.5; cursor:default; transform:none; box-shadow:none; }
+
+  .reveal-card{ text-align:center; background:var(--parchment); color:var(--parchment-ink); border:3px solid var(--parchment-line); padding:22px 16px 18px; position:relative; margin-bottom:16px; animation:revealIn .45s steps(6) forwards; box-shadow:4px 4px 0 rgba(0,0,0,.35); }
+  @keyframes revealIn{ 0%{opacity:0; transform:scale(.7);} 60%{opacity:1; transform:scale(1.08);} 100%{opacity:1; transform:scale(1);} }
+  .reveal-badge{ position:absolute; top:-10px; right:-6px; background:var(--warn); color:#3B2E1E; font-family:'Press Start 2P'; font-size:9px; padding:5px 7px; border:2px solid var(--outline); }
+  .reveal-name{ font-size:17px; margin-top:6px; text-transform:uppercase; letter-spacing:.3px; }
+  .reveal-cross{ font-size:13px; opacity:.75; margin-top:4px; }
+  .reveal-rewards{ font-size:16px; margin-top:10px; color:var(--accent-dark); }
+  .harvest-all-stat{ font-size:14px; margin-top:6px; }
+  .harvest-all-stat.is-new{ color:var(--warn); }
+  .harvest-all-stat.is-mutation{ color:var(--violet); }
+  .sparkle{ position:absolute; width:7px; height:7px; opacity:0; animation:sparklePop 1s steps(3) forwards; }
+  @keyframes sparklePop{ 0%{ opacity:0; transform:scale(0); } 40%{ opacity:1; transform:scale(1.3); } 100%{ opacity:0; transform:scale(.6); } }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="xp-bar-wrap" onclick="openLevelTree()"><div class="xp-bar-fill" id="xpBarFill"></div><span class="xp-bar-level" id="farmLevel">LV 1</span><span class="xp-bar-label" id="xpBarLabel"></span></div>
+    <div class="header-inner">
+      <div class="spore-counter"><span class="spore-icon" id="sporeIcon"></span><span id="sporeCount">0</span></div>
+      <div class="gem-counter"><span class="gem-icon" id="gemIcon"></span><span id="gemCount">0</span></div>
+    </div>
+  </header>
+
+  <div class="hint-banner">Tap an empty pot to place your first seed.</div>
+  <div id="toast"></div>
+
+  <main>
+    <section class="screen active" id="screen-greenhouse">
+      <div class="window" id="windowScene">
+        <div class="sky-layer sky-under" id="skyUnder"></div>
+        <div class="sky-layer sky-over" id="skyOver"></div>
+        <div class="hills"></div>
+        <div class="clouds">
+          <div class="cloud cloud-a"><span></span><span></span></div>
+          <div class="cloud cloud-b"><span></span><span></span></div>
+        </div>
+        <div class="bird"></div>
+        <div class="firefly firefly-a"></div>
+        <div class="firefly firefly-b"></div>
+        <div class="stars">
+          <span style="top:10%;left:15%;"></span>
+          <span style="top:22%;left:40%;"></span>
+          <span style="top:14%;left:30%;"></span>
+          <span style="top:30%;left:80%;"></span>
+          <span style="top:8%;left:85%;"></span>
+          <span style="top:35%;left:8%;"></span>
+          <span style="top:18%;left:90%;"></span>
+          <span style="top:40%;left:20%;"></span>
+        </div>
+        <div class="celestial"></div>
+        <div class="mullion mullion-v"></div>
+        <div class="mullion mullion-h"></div>
+      </div>
+      <div class="ledge"></div>
+      <div class="screen-title-row">
+        <div class="screen-title">Place a seed, tend the pot, see what grows</div>
+        <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
+      </div>
+      <div class="plot-grid" id="plotGrid"></div>
+    </section>
+
+    <section class="screen" id="screen-tasks">
+      <div class="screen-title-row">
+        <div class="screen-title">Refreshes in <span id="taskRefreshTimer">--:--</span></div>
+        <button class="btn btn-small" id="rerollTasksBtn" onclick="onRerollTaskBoard()">Reroll</button>
+      </div>
+      <div id="taskList"></div>
+    </section>
+
+    <section class="screen" id="screen-upgrades">
+      <div class="screen-title">Permanent upgrades for every pot</div>
+      <div id="upgList"></div>
+      <div class="ach-category" style="margin-top:18px;">Consumables</div>
+      <div id="consumablesList"></div>
+      <div class="ach-category" style="margin-top:18px;">Pot &amp; Furniture Finish</div>
+      <div id="potDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
+      <div id="wallpaperDecorList"></div>
+    </section>
+
+    <section class="screen" id="screen-herbarium">
+      <div class="screen-title"><span id="herbCount">0</span> strains pressed</div>
+      <div class="ach-category">Collections</div>
+      <div id="herbSetsList"></div>
+      <div class="screen-title-row" style="margin-top:6px;">
+        <div class="ach-category" style="margin:0;">Specimens</div>
+        <button class="btn btn-small" id="herbFilterBtn" onclick="openHerbFilterMenu()">Sort/Filter</button>
+      </div>
+      <div id="herbList"></div>
+    </section>
+
+    <section class="screen" id="screen-achievements">
+      <div class="screen-title"><span id="achCount">0</span> / <span id="achTotal">0</span> unlocked</div>
+      <div class="ach-category">Prestige</div>
+      <div id="prestigeSummary"></div>
+      <div id="prestigeTreeList"></div>
+      <div id="lifetimeStatsList" style="margin-top:18px;"></div>
+      <div class="ach-category" style="margin-top:18px;">Trophies</div>
+      <div id="achList"></div>
+    </section>
+
+    <section class="screen" id="screen-lab">
+      <div class="screen-title">Research a seed to press it and earn a payout</div>
+      <div id="labRow" class="lab-row"></div>
+      <div class="lab-bench"></div>
+      <div id="labShelf"></div>
+      <div class="lab-shelf-board"></div>
+      <div class="lab-clutter-row">
+        <div class="lab-bookshelf">
+          <div class="lab-book" style="background:#B5764A;height:24px;"></div>
+          <div class="lab-book" style="background:#7ED957;height:20px;"></div>
+          <div class="lab-book" style="background:#C77DFF;height:26px;"></div>
+          <div class="lab-book" style="background:#FFC857;height:18px;"></div>
+          <div class="lab-book" style="background:#7EC8E3;height:22px;"></div>
+        </div>
+        <div class="lab-chalkboard">
+          <div class="lab-chalk-line" style="width:55%;top:20%;left:15%;"></div>
+          <div class="lab-chalk-line" style="width:38%;top:46%;left:22%;"></div>
+          <div class="lab-chalk-line" style="width:48%;top:72%;left:12%;"></div>
+        </div>
+        <div class="lab-beaker-group">
+          <div class="lab-beaker">
+            <div class="lab-beaker-neck"></div>
+            <div class="lab-beaker-body">
+              <div class="lab-beaker-liquid lab-liquid-a"></div>
+              <span class="lab-bubble" style="left:35%;animation-delay:0s;"></span>
+              <span class="lab-bubble" style="left:60%;animation-delay:1.1s;"></span>
+            </div>
+          </div>
+          <div class="lab-beaker">
+            <div class="lab-beaker-neck"></div>
+            <div class="lab-beaker-body">
+              <div class="lab-beaker-liquid lab-liquid-b"></div>
+              <span class="lab-bubble" style="left:45%;animation-delay:.6s;"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="lab-shelf-board"></div>
+    </section>
+  </main>
+
+  <nav>
+    <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
+    <button class="nav-btn" data-screen="tasks" onclick="showScreen('tasks')">TASKS</button>
+    <button class="nav-btn" data-screen="achievements" onclick="showScreen('achievements')">TROPHIES<span class="nav-badge" id="prestigeBadge"></span></button>
+    <button class="nav-btn" data-screen="upgrades" onclick="showScreen('upgrades')">UPGRADES</button>
+    <button class="nav-btn" data-screen="herbarium" onclick="showScreen('herbarium')">HERBS</button>
+    <button class="nav-btn" data-screen="lab" onclick="showScreen('lab')" id="labNavBtn"><span class="nav-btn-text">LAB</span><span class="nav-badge" id="labBadge"></span></button>
+  </nav>
+
+  <div id="sheetBackdrop" onclick="closeSheet()"></div>
+  <div id="sheet">
+    <div class="sheet-grab"></div>
+    <div id="sheetBody"></div>
+  </div>
+
+<script>
+/* ===================== DATA ===================== */
+const SPECIES = {
+  mossputt:   { name:'Mossputt',   hue:128, growthSec:50,  baseSell:4,  deathResist:0.0,  seedCost:0,  lightTarget:50, waterTarget:50, blurb:'A hardy ground cover. Sprouts fast, asks for little.' },
+  fernling:   { name:'Fernling',   hue:150, growthSec:85,  baseSell:6,  deathResist:0.15, seedCost:5,  lightTarget:30, waterTarget:65, blurb:'Delicate fronds. Prefers shade and a steady hand.' },
+  glowbloom:  { name:'Glowbloom',  hue:280, growthSec:120, baseSell:9,  deathResist:0.0,  seedCost:12, glowBias:0.08, lightTarget:70, waterTarget:40, blurb:'Already half in love with bioluminescence.' },
+  thornvine:  { name:'Thornvine',  hue:24,  growthSec:150, baseSell:13, deathResist:0.45, seedCost:9,  lightTarget:65, waterTarget:25, blurb:'Tough and slow. Barely notices stress.' },
+  duskvelvet: { name:'Duskvelvet', hue:320, growthSec:170, baseSell:16, deathResist:0.2,  seedCost:18, glowBias:0.05, lightTarget:20, waterTarget:55, blurb:'Blooms richest after dusk. Craves shade and a little neglect.', unlockLevel:10 },
+  starforge:  { name:'Starforge',  hue:190, growthSec:200, baseSell:22, deathResist:0.3,  seedCost:28, lightTarget:50, waterTarget:50, blurb:'Grown from crystallized spores. Slow, radiant, richly rewarding.', unlockLevel:20 }
+};
+function isSpeciesUnlocked(key, level){
+  const lvl = level!=null ? level : getLevelFromXp(state.xp||0);
+  return lvl >= (SPECIES[key].unlockLevel||1);
+}
+function getUnlockedSpeciesKeys(level){
+  const lvl = level||1;
+  return Object.keys(SPECIES).filter(k => (SPECIES[k].unlockLevel||1) <= lvl);
+}
+
+const RARE_TRAITS = [
+  { id:'sunseeker',   name:'Sunseeker',   desc:'Leans hard into the light — grows noticeably faster.' },
+  { id:'ironroot',    name:'Ironroot',    desc:'Roots like iron. Immune to stress, whatever you do to it.' },
+  { id:'featherseed', name:'Featherseed', desc:'Sheds an extra seed at harvest.' },
+  { id:'emberbloom',  name:'Emberbloom',  desc:'A warm ember glow. Fetches a much better price.' },
+  { id:'driftpetal',  name:'Driftpetal',  desc:'Sways with a restless energy.' },
+  { id:'mimicleaf',   name:'Mimicleaf',   desc:'Borrows its color from whatever grows beside it.' },
+  { id:'stargazer',   name:'Stargazer',   desc:'Glows brighter after dark.' },
+  { id:'gianthusk',   name:'Gianthusk',   desc:'Grows unusually large — slow, but a big yield.' }
+];
+const RARE_TRAITS_BY_ID = Object.fromEntries(RARE_TRAITS.map(t=>[t.id,t]));
+
+const NEIGHBORS = [
+  [1,3],[0,2,4],[1,5],
+  [0,4,6],[1,3,5,7],[2,4,8],
+  [3,7],[4,6,8],[5,7]
+];
+
+const INITIAL_UNLOCKED = [0,1,2,3];
+const UNLOCK_COSTS = {4:15,5:22,6:32,7:48,8:70};
+const WILT_LINES = [
+  "Too much, too fast.",
+  "The stress won. It happens.",
+  "Some lines don't make it past one bad week.",
+  "Compost it and try again."
+];
+const STORAGE_KEY = 'gh_state_v1';
+const DAY_CYCLE_MS = 20*60*1000;
+function getGameHour(){
+  return ((Date.now() % DAY_CYCLE_MS) / DAY_CYCLE_MS) * 24;
+}
+const MAX_LEVEL = 30;
+function xpForLevel(lvl){ return Math.floor(20 * Math.pow(lvl, 1.6)); }
+function totalXpForLevel(lvl){ let t=0; for(let i=1;i<lvl;i++) t+=xpForLevel(i); return t; }
+function getLevelFromXp(xp){
+  let lvl=1;
+  while(lvl<MAX_LEVEL && xp>=totalXpForLevel(lvl+1)) lvl++;
+  return lvl;
+}
+function getXpProgress(xp){
+  const lvl = getLevelFromXp(xp);
+  if(lvl>=MAX_LEVEL) return { level:lvl, current:xp-totalXpForLevel(lvl), needed:0, pct:100 };
+  const floor = totalXpForLevel(lvl);
+  const ceil = totalXpForLevel(lvl+1);
+  return { level:lvl, current:xp-floor, needed:ceil-floor, pct:Math.round(((xp-floor)/(ceil-floor))*100) };
+}
+
+const LEVEL_REWARDS = {
+  2:  { pix:'diamond',  name:'Spore Bonus',      desc:'+5% spores from every harvest',        stat:'harvestSpores', value:0.05 },
+  4:  { pix:'seedling', name:'Resilience',       desc:'Wilt risk reduced by 10%',            stat:'wiltResist',   value:0.10 },
+  6:  { pix:'bug',      name:'Pest Sense',       desc:'Pest infestations are 15% less likely', stat:'pestResist', value:0.15 },
+  8:  { pix:'sparkle',  name:'Lucky Roots',      desc:'+3% base mutation chance',             stat:'mutationBonus',value:0.03 },
+  10: { pix:'recycle',  name:'Master Composter', desc:'Compost refunds +50%',                stat:'compostBonus', value:0.50 },
+  13: { pix:'diamond',  name:'Richer Harvest',   desc:'+10% spores from every harvest',      stat:'harvestSpores',value:0.10 },
+  15: { pix:'star',     name:'Green Thumb',      desc:'Well-tended bonus raised to +35%',    stat:'wellTended',   value:0.35 },
+  18: { pix:'bug',      name:'Pest Mastery',     desc:'Pest infestations 30% less likely total', stat:'pestResist', value:0.30 },
+  20: { pix:'sparkle',  name:'Mutant Soil',      desc:'+6% base mutation chance total',      stat:'mutationBonus',value:0.06 },
+  23: { pix:'diamond',  name:'Master Grower',    desc:'+15% spores from every harvest total',stat:'harvestSpores',value:0.15 },
+  25: { pix:'seedling', name:'Iron Will',        desc:'Wilt risk reduced 20% total',        stat:'wiltResist',   value:0.20 },
+  28: { pix:'sparkle',  name:'Rare Affinity',    desc:'+8% base mutation chance total',      stat:'mutationBonus',value:0.08 },
+  30: { pix:'trophy',   name:'Greenhouse Master', desc:'+20% spores total, all bonuses maximised', stat:'harvestSpores', value:0.20 }
+};
+function getLevelBonus(stat){
+  const lvl = getLevelFromXp(state.xp||0);
+  let val = 0;
+  for(const [reqLvl, reward] of Object.entries(LEVEL_REWARDS)){
+    if(lvl >= Number(reqLvl) && reward.stat===stat) val = reward.value;
+  }
+  return val + getPrestigeBonus(stat);
+}
+function levelUpGemReward(level){
+  return 1 + Math.floor(level/10);
+}
+function grantXp(amount){
+  const before = getLevelFromXp(state.xp||0);
+  state.xp = (state.xp||0) + amount;
+  const after = getLevelFromXp(state.xp);
+  if(after>before){
+    let gemsEarned = 0;
+    for(let lvl=before+1; lvl<=after; lvl++) gemsEarned += levelUpGemReward(lvl);
+    addGems(gemsEarned);
+    const reward = LEVEL_REWARDS[after];
+    const rewardText = reward ? ' \u2192 '+reward.name+' unlocked!' : '';
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('arrow', true)+'<span>Level '+after+'! +'+gemsEarned+' '+renderGemIcon(2)+rewardText+'</span></span>');
+    updateLabNavLock();
+  }
+  updateHeader();
+}
+
+/* ===================== PRESTIGE ===================== */
+const MIN_PRESTIGE_LEVEL = 10;
+const SKILL_TREE = {
+  growth:     { name:'Swift Roots',        tier:1, branch:'growth', stat:'growthSpeed',   perLevel:0.03, maxLevel:5, baseCost:1, scale:1.6,
+    desc:(n)=> '+'+Math.round(n*100)+'% growth speed', requires:null },
+  harvest:    { name:'Bountiful Harvest',  tier:1, branch:'harvest', stat:'harvestSpores', perLevel:0.04, maxLevel:5, baseCost:1, scale:1.6,
+    desc:(n)=> '+'+Math.round(n*100)+'% spores per harvest', requires:null },
+  resilience: { name:'Iron Roots',         tier:1, branch:'resist', stat:'wiltResist',    perLevel:0.05, maxLevel:4, baseCost:1, scale:1.6,
+    desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:null },
+
+  mutation:   { name:'Mutant Bloom',       tier:2, branch:'growth', stat:'mutationBonus', perLevel:0.02, maxLevel:5, baseCost:2, scale:1.7,
+    desc:(n)=> '+'+Math.round(n*100)+'% base mutation chance', requires:{key:'growth', level:2} },
+  labSpeed:   { name:'Research Accelerant', tier:2, branch:'harvest', stat:'labSpeedBonus', perLevel:0.05, maxLevel:4, baseCost:2, scale:1.7,
+    desc:(n)=> '-'+Math.round(n*100)+'% research time', requires:{key:'harvest', level:2} },
+  pestResist: { name:'Pest Ward+',         tier:2, branch:'resist', stat:'pestResist',    perLevel:0.06, maxLevel:4, baseCost:2, scale:1.7,
+    desc:(n)=> '-'+Math.round(n*100)+'% pest chance', requires:{key:'resilience', level:2} },
+
+  nestEgg:    { name:'Nest Egg',           tier:3, branch:'growth', stat:'startingSpores', perLevel:50, maxLevel:5, baseCost:3, scale:1.8,
+    desc:(n)=> '+'+Math.round(n)+' starting spores after prestige', requires:{key:'mutation', level:1} },
+  compost:    { name:'Master Composter+',  tier:3, branch:'harvest', stat:'compostBonus',  perLevel:0.08, maxLevel:3, baseCost:3, scale:1.8,
+    desc:(n)=> '+'+Math.round(n*100)+'% compost refund', requires:{key:'labSpeed', level:1} },
+  precision:  { name:'Precision Tending+', tier:3, branch:'resist', stat:'wellTended',    perLevel:0.05, maxLevel:4, baseCost:3, scale:1.8,
+    desc:(n)=> '+'+Math.round(n*100)+' pt well-tended bonus', requires:{key:'pestResist', level:1} }
+};
+function defaultSkillTree(){
+  const tree = {};
+  for(const key in SKILL_TREE) tree[key] = 0;
+  return tree;
+}
+function skillNodeLevel(key){
+  return (state.prestige && state.prestige.skillTree && state.prestige.skillTree[key]) || 0;
+}
+function skillNodeCost(key, level){
+  const cfg = SKILL_TREE[key];
+  return Math.max(1, Math.round(cfg.baseCost * Math.pow(cfg.scale, level)));
+}
+function isSkillNodeLocked(key){
+  const cfg = SKILL_TREE[key];
+  if(!cfg.requires) return false;
+  return skillNodeLevel(cfg.requires.key) < cfg.requires.level;
+}
+function getPrestigeBonus(stat){
+  let total = 0;
+  for(const key in SKILL_TREE){
+    const cfg = SKILL_TREE[key];
+    if(cfg.stat===stat) total += skillNodeLevel(key)*cfg.perLevel;
+  }
+  return total;
+}
+function prestigeSkillPointsAvailable(){
+  const lvl = getLevelFromXp(state.xp||0);
+  if(lvl < MIN_PRESTIGE_LEVEL) return 0;
+  return Math.floor((lvl-MIN_PRESTIGE_LEVEL)/2) + 1;
+}
+function purchaseSkillNode(key){
+  const cfg = SKILL_TREE[key];
+  if(!cfg || isSkillNodeLocked(key)) return false;
+  const level = skillNodeLevel(key);
+  if(level>=cfg.maxLevel) return false;
+  const cost = skillNodeCost(key, level);
+  if((state.prestige.skillPoints||0) < cost) return false;
+  state.prestige.skillPoints -= cost;
+  state.prestige.skillTree[key] = level+1;
+  saveState();
+  renderPrestige();
+  return true;
+}
+function doPrestige(){
+  const earned = prestigeSkillPointsAvailable();
+  if(earned<=0) return false;
+  const keepPrestige = state.prestige;
+  keepPrestige.count = (keepPrestige.count||0) + 1;
+  keepPrestige.skillPoints = (keepPrestige.skillPoints||0) + earned;
+  const keepAchievements = state.achievements;
+  const keepHerbarium = state.herbarium;
+  const keepHerbSets = state.herbSets;
+  const keepAchStats = state.achStats;
+  keepAchStats.totalSkillPointsEarned = (keepAchStats.totalSkillPointsEarned||0) + earned;
+  const keepDecor = state.decor;
+  state = Object.assign(defaultState(), {
+    prestige: keepPrestige,
+    achievements: keepAchievements,
+    herbarium: keepHerbarium,
+    herbSets: keepHerbSets,
+    achStats: keepAchStats,
+    decor: keepDecor
+  });
+  state.spores += getPrestigeBonus('startingSpores');
+  saveState();
+  closeSheet();
+  updateAllTiles();
+  updateHeader();
+  renderUpgrades();
+  renderHerbarium();
+  renderPrestige();
+  showToast('✨ Prestige '+state.prestige.count+'! Earned '+earned+' skill point'+(earned===1?'':'s')+'.');
+  return true;
+}
+/* ===================== TASK BOARD ===================== */
+/* ===================== ACHIEVEMENTS ===================== */
+const ACHIEVEMENTS = [
+  { id:'first_harvest',   cat:'Harvesting',  icon:'\uD83C\uDF31', name:'First Harvest',       desc:'Harvest your first plant',              reward:{spores:10,  xp:5 } },
+  { id:'harvest_10',      cat:'Harvesting',  icon:'\uD83C\uDF3F', name:'Green Thumb',          desc:'Harvest 10 plants',                     reward:{spores:25,  xp:15} },
+  { id:'harvest_50',      cat:'Harvesting',  icon:'\uD83C\uDF3E', name:'Prolific Grower',       desc:'Harvest 50 plants',                     reward:{spores:75,  xp:40} },
+  { id:'harvest_100',     cat:'Harvesting',  icon:'\uD83C\uDFC6', name:'Century Harvest',       desc:'Harvest 100 plants',                    reward:{spores:150, xp:80} },
+  { id:'well_tended_5',   cat:'Harvesting',  icon:'\u2728',       name:'Careful Hands',        desc:'Land 5 well-tended harvests',           reward:{spores:40,  xp:20} },
+  { id:'all_species',     cat:'Harvesting',  icon:'\uD83C\uDF1F', name:'Full Garden',           desc:'Harvest all 6 species at least once',   reward:{spores:50,  xp:30} },
+  { id:'first_mutation',  cat:'Mutations',   icon:'\u2728',       name:'Something Changed',     desc:'Discover your first mutation',          reward:{spores:15,  xp:10} },
+  { id:'first_hybrid',    cat:'Mutations',   icon:'\uD83D\uDD00', name:'Cross-Pollinated',      desc:'Discover your first hybrid',            reward:{spores:20,  xp:15} },
+  { id:'rare_trait',      cat:'Mutations',   icon:'\u2B50',       name:'Rare Find',             desc:'Discover a plant with a rare trait',    reward:{spores:30,  xp:20} },
+  { id:'double_mutation', cat:'Mutations',   icon:'\uD83C\uDF1F', name:'Double Trouble',        desc:'Discover a plant with two rare traits', reward:{spores:120, xp:70} },
+  { id:'herbarium_5',     cat:'Mutations',   icon:'\uD83D\uDCD6', name:'Budding Botanist',      desc:'Press 5 unique strains',                reward:{spores:20,  xp:10} },
+  { id:'herbarium_15',    cat:'Mutations',   icon:'\uD83D\uDCDA', name:'Field Guide',           desc:'Press 15 unique strains',               reward:{spores:60,  xp:35} },
+  { id:'herbarium_25',    cat:'Mutations',   icon:'\uD83C\uDF38', name:'Master Botanist',       desc:'Press 25 unique strains',               reward:{spores:120, xp:60} },
+  { id:'first_pest',      cat:'Pests',       icon:'\uD83D\uDC1B', name:'Pest Control',          desc:'Squash your first pest',                reward:{spores:10,  xp:5 } },
+  { id:'pest_10',         cat:'Pests',       icon:'\uD83E\uDEB2', name:'Exterminator',          desc:'Squash 10 pests',                       reward:{spores:35,  xp:20} },
+  { id:'pest_free',       cat:'Pests',       icon:'\uD83D\uDEE1', name:'Spotless',              desc:'Harvest 5 plants with no pests ever',   reward:{spores:40,  xp:20} },
+  { id:'first_task',      cat:'Tasks',       icon:'\uD83D\uDCCB', name:'Board Member',          desc:'Complete your first task',              reward:{spores:15,  xp:10} },
+  { id:'tasks_10',        cat:'Tasks',       icon:'\u2705',       name:'Task Master',           desc:'Complete 10 tasks total',               reward:{spores:50,  xp:30} },
+  { id:'first_upgrade',   cat:'Upgrades',    icon:'\uD83D\uDD27', name:'Investor',              desc:'Buy your first upgrade',                reward:{spores:10,  xp:5 } },
+  { id:'max_upgrade',     cat:'Upgrades',    icon:'\uD83D\uDD31', name:'Maxed Out',             desc:'Max out any single upgrade',            reward:{spores:60,  xp:30} },
+  { id:'level_5',         cat:'Levelling',   icon:'\u2B06',       name:'Apprentice',            desc:'Reach level 5',                         reward:{spores:30,  xp:0 } },
+  { id:'level_10',        cat:'Levelling',   icon:'\u2B06',       name:'Journeyman',            desc:'Reach level 10',                        reward:{spores:75,  xp:0 } },
+  { id:'level_20',        cat:'Levelling',   icon:'\u2B06',       name:'Expert',                desc:'Reach level 20',                        reward:{spores:150, xp:0 } },
+  { id:'spores_500',      cat:'Milestones',  icon:'\u25C6',       name:'Saving Up',             desc:'Earn 500 total spores',                 reward:{spores:0,   xp:15} },
+  { id:'spores_2000',     cat:'Milestones',  icon:'\u25C6\u25C6', name:'Spore Hoarder',         desc:'Earn 2,000 total spores ever',          reward:{spores:50,  xp:40} },
+  { id:'unlock_all',      cat:'Milestones',  icon:'\uD83D\uDD13', name:'Full House',            desc:'Unlock all 9 pots',                     reward:{spores:80,  xp:40} },
+  { id:'first_research',  cat:'Research',    icon:'\uD83D\uDD2C', name:'Lab Rat',               desc:'Complete your first research',          reward:{spores:15,  xp:10} },
+  { id:'research_10',     cat:'Research',    icon:'\uD83D\uDD2C', name:'Dedicated Researcher',  desc:'Complete 10 research runs',             reward:{spores:60,  xp:30} },
+  { id:'research_rare',   cat:'Research',    icon:'\u2B50',       name:'Rare Discovery',        desc:'Collect a Rare-tier research or better', reward:{spores:40,  xp:20} },
+  { id:'research_exceptional', cat:'Research', icon:'\uD83C\uDFC6', name:'Breakthrough',        desc:'Collect an Exceptional-tier research',  reward:{spores:80,  xp:40} },
+  { id:'research_legendary', cat:'Research', icon:'\uD83C\uDFC6', name:'Legendary Breakthrough', desc:'Collect a Legendary-tier research',  reward:{spores:200, xp:100} },
+  { id:'gems_10',         cat:'Milestones',  icon:'\u2728',           name:'Gem Collector',        desc:'Earn 10 gems (lifetime)',               reward:{spores:40,  xp:20} },
+  { id:'gems_50',         cat:'Milestones',  icon:'\u2B50',           name:'Gem Hoarder',          desc:'Earn 50 gems (lifetime)',               reward:{spores:100, xp:50} },
+  { id:'first_prestige',  cat:'Prestige',    icon:'\uD83C\uDFC6',           name:'Fresh Start',          desc:'Prestige for the first time',           reward:{spores:100, xp:50} },
+  { id:'prestige_5',      cat:'Prestige',    icon:'\uD83C\uDFC6',           name:'Reborn Again',         desc:'Prestige 5 times',                      reward:{spores:300, xp:150} },
+  { id:'first_decor',     cat:'Collection',  icon:'\uD83D\uDD33',           name:'Decorator',            desc:'Unlock your first decoration',          reward:{spores:30,  xp:15} },
+  { id:'all_decor',       cat:'Collection',  icon:'\uD83D\uDD33',           name:'Interior Designer',    desc:'Unlock every pot finish and wallpaper', reward:{spores:180, xp:90} },
+];
+const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+
+/* ---- Achievement pixel icons ---- */
+const ACH_PIX = {
+  seedling:{color:'#7ED957',rows:['...#...','..###..','#######','...#...','...#...','..###..','.......' ]},
+  wheat:   {color:'#FFD24C',rows:['..#.#..','..#.#..','#.#.#.#','..###..','...#...','...#...','..###..' ]},
+  sparkle: {color:'#C77DFF',rows:['...#...','#..#..#','.#####.','#######','.#####.','#..#..#','...#...' ]},
+  book:    {color:'#D9A84C',rows:['.#####.','##...##','##.#.##','##.#.##','##.#.##','##...##','.#####.' ]},
+  bug:     {color:'#FF5C5C',rows:['#.###.#','.#####.','#######','.#.#.#.','#######','.#####.','.......' ]},
+  shield:  {color:'#7EC8E3',rows:['.#####.','#######','##.#.##','##.#.##','.##.##.','..###..','...#...' ]},
+  check:   {color:'#7ED957',rows:['.......','.....#.','....##.','#..##..','##.##..','#####..','..##...' ]},
+  gear:    {color:'#A8B0AC',rows:['..#.#..','#######','#.###.#','#######','#.###.#','#######','..#.#..' ]},
+  arrow:   {color:'#7ED957',rows:['...#...','..###..','#######','...#...','...#...','...#...','.......' ]},
+  diamond: {color:'#7EE8D9',rows:['...#...','..###..','#######','.#####.','..###..','...#...','.......' ]},
+  dotgrid: {color:'#FFD24C',rows:['.......','#..#..#','.......','#..#..#','.......','#..#..#','.......' ]},
+  recycle: {color:'#B5764A',rows:['..#.#..','.#...#.','#.....#','#.....#','.#...#.','..#.#..','.......' ]},
+  star:    {color:'#FFC857',rows:['...#...','..###..','.#####.','#######','..#.#..','.#...#.','#.....#' ]},
+  trophy:  {color:'#FFD24C',rows:['.#####.','#.....#','#.....#','.#####.','..###..','.#####.','#######' ]},
+};
+const ACH_ICON_MAP = {
+  first_harvest:'seedling', harvest_10:'seedling', harvest_50:'wheat', harvest_100:'wheat',
+  well_tended_5:'sparkle', all_species:'dotgrid',
+  first_mutation:'sparkle', first_hybrid:'sparkle', rare_trait:'sparkle', double_mutation:'star',
+  herbarium_5:'book', herbarium_15:'book', herbarium_25:'book',
+  first_pest:'bug', pest_10:'bug', pest_free:'shield',
+  first_task:'check', tasks_10:'check',
+  first_upgrade:'gear', max_upgrade:'gear',
+  level_5:'arrow', level_10:'arrow', level_20:'arrow',
+  spores_500:'diamond', spores_2000:'diamond',
+  unlock_all:'dotgrid',
+  first_research:'gear', research_10:'gear', research_rare:'star', research_exceptional:'trophy', research_legendary:'trophy',
+  gems_10:'sparkle', gems_50:'star',
+  first_prestige:'trophy', prestige_5:'trophy',
+  first_decor:'dotgrid', all_decor:'dotgrid',
+};
+function renderPixIcon(key, unlocked){
+  const icon = ACH_PIX[key] || ACH_PIX.diamond;
+  const cell = 4;
+  const cols = icon.rows[0].length;
+  const color = unlocked ? icon.color : '#3A4540';
+  let html = '';
+  for(const row of icon.rows)
+    for(const ch of row)
+      html += '<div style="background:'+(ch==='#'?color:'transparent')+'"></div>';
+  return '<div class="ach-pix" style="grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+html+'</div>';
+}
+const SPORE_ICON = {
+  color: '#FFFFFF',
+  rows: [
+    '..#####..',
+    '.#.....#.',
+    '#.......#',
+    '#.......#',
+    '#.......#',
+    '#.......#',
+    '#.......#',
+    '.#.....#.',
+    '..#####..'
+  ]
+};
+function renderSporeIcon(cellSize){
+  const cell = cellSize || 4;
+  const cols = SPORE_ICON.rows[0].length;
+  let html = '';
+  for(const row of SPORE_ICON.rows)
+    for(const ch of row)
+      html += '<div style="background:'+(ch==='#'?SPORE_ICON.color:'transparent')+'"></div>';
+  return '<div class="ach-pix spore-icon-px" style="display:inline-grid;vertical-align:middle;grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+html+'</div>';
+}
+function renderGemIcon(){
+  return '<span style="color:#C77DFF;">◆</span>';
+}
+function renderAchIcon(achId, unlocked){
+  return renderPixIcon(ACH_ICON_MAP[achId]||'diamond', unlocked);
+}
+function checkAchievements(){
+  if(!state.achStats) return;
+  const s = state.achStats;
+  const lvl = getLevelFromXp(state.xp||0);
+  const checks = {
+    first_harvest:  s.harvests>=1,
+    harvest_10:     s.harvests>=10,
+    harvest_50:     s.harvests>=50,
+    harvest_100:    s.harvests>=100,
+    well_tended_5:  s.wellTended>=5,
+    all_species:    Object.keys(s.speciesSeen||{}).length>=Object.keys(SPECIES).length,
+    first_mutation: s.mutations>=1,
+    first_hybrid:   s.hybrids>=1,
+    rare_trait:     s.rareTraits>=1,
+    herbarium_5:    (state.herbarium||[]).length>=5,
+    herbarium_15:   (state.herbarium||[]).length>=15,
+    herbarium_25:   (state.herbarium||[]).length>=25,
+    first_pest:     s.pestsSquashed>=1,
+    pest_10:        s.pestsSquashed>=10,
+    pest_free:      s.pestFreeHarvests>=5,
+    first_task:     s.tasksClaimed>=1,
+    tasks_10:       s.tasksClaimed>=10,
+    first_upgrade:  s.upgradesBought>=1,
+    max_upgrade:    Object.entries(state.upgrades||{}).some(([k,v])=>v>=(UPGRADES[k]&&UPGRADES[k].maxLevel)),
+    level_5:        lvl>=5,
+    level_10:       lvl>=10,
+    level_20:       lvl>=20,
+    spores_500:     s.totalSpores>=500,
+    spores_2000:    s.totalSpores>=2000,
+    unlock_all:     (state.plots||[]).filter(p=>!p.locked).length>=9,
+    first_research: (s.researchCompleted||0)>=1,
+    research_10:    (s.researchCompleted||0)>=10,
+    research_rare:  (s.bestResearchTier||-1)>=2,
+    research_exceptional: (s.bestResearchTier||-1)>=3,
+    research_legendary: (s.bestResearchTier||-1)>=4,
+    double_mutation: (s.doubleMutations||0)>=1,
+    gems_10: (s.totalGemsEarned||0)>=10,
+    gems_50: (s.totalGemsEarned||0)>=50,
+    first_prestige: (state.prestige.count||0)>=1,
+    prestige_5: (state.prestige.count||0)>=5,
+    first_decor: (state.decor.ownedPots.length + state.decor.ownedWallpapers.length) > 2,
+    all_decor: state.decor.ownedPots.length>=Object.keys(POT_THEMES).length && state.decor.ownedWallpapers.length>=Object.keys(WALLPAPER_THEMES).length,
+  };
+  let anyNew = false;
+  for(const [id, met] of Object.entries(checks)){
+    if(met && !(state.achievements||{})[id]){
+      state.achievements = state.achievements||{};
+      state.achievements[id] = Date.now();
+      const ach = ACH_BY_ID[id];
+      if(ach){
+        if(ach.reward.spores) addSpores(ach.reward.spores);
+        if(ach.reward.xp) grantXp(ach.reward.xp);
+        showToast(ach.icon+' Achievement: '+ach.name+(ach.reward.spores ? '  +'+ach.reward.spores+'\u25C6' : ''));
+      }
+      anyNew = true;
+    }
+  }
+  if(anyNew) scheduleSave();
+}
+function getRarestFind(){
+  if(!state.herbarium.length) return null;
+  let best = null, bestTier = -1;
+  for(const e of state.herbarium){
+    const tier = getSeedRarityTier(e.genome);
+    if(tier > bestTier){ bestTier = tier; best = e; }
+  }
+  return { entry:best, tier:bestTier };
+}
+function statRow(label, value){
+  return '<div class="stat-row"><span>'+label+'</span><span>'+value+'</span></div>';
+}
+function renderLifetimeStats(){
+  const list = document.getElementById('lifetimeStatsList');
+  if(!list) return;
+  const s = state.achStats;
+  const lvl = getLevelFromXp(state.xp||0);
+  const rarest = getRarestFind();
+  const rarestText = rarest ? RESEARCH_TIERS[rarest.tier].name+' — '+rarest.entry.name : 'None yet';
+  const potsUnlocked = state.plots.filter(p=>!p.locked).length;
+  const achCount = Object.keys(state.achievements||{}).length;
+  const setCount = Object.keys(state.herbSets||{}).length;
+  list.innerHTML =
+    '<div class="ach-category" style="margin-top:2px;">Progress</div>'
+    + statRow('Level', lvl)
+    + statRow('Pots Unlocked', potsUnlocked+' / 9')
+    + statRow('Trophies Unlocked', achCount+' / '+ACHIEVEMENTS.length)
+    + statRow('Collections Completed', setCount+' / '+HERB_SETS.length)
+    + '<div class="ach-category">Harvesting</div>'
+    + statRow('Total Harvests', s.harvests||0)
+    + statRow('Well-Tended Harvests', s.wellTended||0)
+    + statRow('Best Pest-Free Streak', s.bestPestFreeStreak||0)
+    + statRow('Pests Squashed', s.pestsSquashed||0)
+    + '<div class="ach-category">Discoveries</div>'
+    + statRow('Unique Specimens', state.herbarium.length)
+    + statRow('Mutations Discovered', s.mutations||0)
+    + statRow('Hybrids Discovered', s.hybrids||0)
+    + statRow('Rare Traits Found', s.rareTraits||0)
+    + statRow('Double Mutations', s.doubleMutations||0)
+    + statRow('Rarest Find', rarestText)
+    + '<div class="ach-category">Economy</div>'
+    + statRow('Spores Earned (Lifetime)', s.totalSporesEarned||0)
+    + statRow('Gems Earned (Lifetime)', s.totalGemsEarned||0)
+    + statRow('Tasks Completed', s.tasksClaimed||0)
+    + statRow('Upgrades Purchased', s.upgradesBought||0)
+    + '<div class="ach-category">Prestige</div>'
+    + statRow('Times Prestiged', state.prestige.count||0)
+    + statRow('Skill Points Earned (Lifetime)', s.totalSkillPointsEarned||0)
+    + '<div class="ach-category">Decorations</div>'
+    + statRow('Pot Finishes Owned', state.decor.ownedPots.length+' / '+Object.keys(POT_THEMES).length)
+    + statRow('Wallpapers Owned', state.decor.ownedWallpapers.length+' / '+Object.keys(WALLPAPER_THEMES).length);
+}
+function renderAchievements(){
+  const list = document.getElementById('achList');
+  if(!list) return;
+  const unlocked = state.achievements||{};
+  const total = ACHIEVEMENTS.length;
+  const unlockedCount = Object.keys(unlocked).length;
+  const countEl = document.getElementById('achCount');
+  const totalEl = document.getElementById('achTotal');
+  if(countEl) countEl.textContent = unlockedCount;
+  if(totalEl) totalEl.textContent = total;
+  const cats = [...new Set(ACHIEVEMENTS.map(a=>a.cat))];
+  list.innerHTML = cats.map(cat=>{
+    const catAchs = ACHIEVEMENTS.filter(a=>a.cat===cat);
+    const rows = catAchs.map(a=>{
+      const done = !!unlocked[a.id];
+      const rewardText = [a.reward.spores ? '+'+a.reward.spores+'\u25C6' : '', a.reward.xp ? '+'+a.reward.xp+' XP' : ''].filter(Boolean).join('  ');
+      return '<div class="ach-card '+(done?'is-unlocked':'is-locked')+'">'
+        + '<div class="ach-icon">'+renderAchIcon(a.id, done)+'</div>'
+        + '<div class="ach-info">'
+        + '<div class="ach-name">'+a.name+'</div>'
+        + '<div class="ach-desc">'+a.desc+'</div>'
+        + (rewardText ? '<div class="ach-reward">'+rewardText+'</div>' : '')
+        + '</div>'
+        + (done ? '<div class="ach-check">\u2714</div>' : '')
+        + '</div>';
+    }).join('');
+    return '<div class="ach-category">'+cat+'</div>'+rows;
+  }).join('');
+}
+
+const BOARD_CYCLE_MS = 3*60*60*1000; // 3 hours
+function taskLevelScale(level){
+  return 1 + ((level||1)-1)*0.06;
+}
+const TASK_TEMPLATES = [
+  (seed,scale,level)=>{ const goal=Math.round((3+Math.floor(seed*3))*scale); const keys=getUnlockedSpeciesKeys(level); const bonusSp=keys[Math.floor(seed*keys.length)%keys.length];
+    return { key:'harvest_any', type:'harvest_any', goal, reward:{spores:goal*6, seed:bonusSp, seedQty:1}, desc:'Harvest '+goal+' plants (any kind)' }; },
+  (seed,scale,level)=>{ const keys=getUnlockedSpeciesKeys(level); const spKey=keys[Math.floor(seed*keys.length)%keys.length]; const goal=Math.round((2+Math.floor(seed*2))*scale);
+    return { key:'harvest_species_'+spKey, type:'harvest_species', species:spKey, goal, reward:{spores:goal*9, seed:spKey, seedQty:1}, desc:'Harvest '+goal+' '+SPECIES[spKey].name+(goal>1?'s':'') }; },
+  (seed,scale)=>{ return { key:'discover_mutation', type:'discover_mutation', goal:1, reward:{spores:Math.round(28*scale), boost:'luck'}, desc:'Discover a new mutation' }; },
+  (seed,scale)=>{ const goal=Math.round((2+Math.floor(seed*2))*scale); return { key:'squash_pest', type:'squash_pest', goal, reward:{spores:goal*11}, desc:'Squash '+goal+' pest'+(goal>1?'s':'') }; },
+  (seed,scale)=>{ const goal=Math.round((40+Math.floor(seed*40))*scale); return { key:'earn_spores', type:'earn_spores', goal, reward:{spores:Math.round(goal*0.5)}, desc:'Earn '+goal+' \u25C6 from harvests' }; },
+  (seed,scale)=>{ return { key:'unlock_plot', type:'unlock_plot', goal:1, reward:{spores:Math.round(22*scale)}, desc:'Unlock a new pot' }; },
+  (seed,scale)=>{ return { key:'buy_upgrade', type:'buy_upgrade', goal:1, reward:{spores:Math.round(22*scale)}, desc:'Buy any upgrade level' }; },
+  (seed,scale)=>{ const goal=Math.round((1+Math.floor(seed*2))*scale); return { key:'well_tended', type:'well_tended', goal, reward:{spores:goal*16, boost:'luck'}, desc:'Harvest '+goal+' well-tended plant'+(goal>1?'s':'') }; },
+  (seed,scale)=>{ return { key:'research_seed', type:'research_seed', goal:1, reward:{spores:Math.round(35*scale)}, desc:'Complete a research in the Lab' }; }
+];
+function rewardSummary(reward){
+  const parts = [reward.spores+' \u25C6'];
+  if(reward.seed) parts.push('+'+(reward.seedQty||1)+' '+SPECIES[reward.seed].name+' seed'+((reward.seedQty||1)>1?'s':''));
+  if(reward.boost==='luck') parts.push('+luck boost');
+  return parts.join('  \u00B7  ');
+}
+function getBoardSlot(){ return Math.floor(Date.now()/BOARD_CYCLE_MS); }
+function rollNewTasks(level){
+  const used = new Set();
+  const tasks = [];
+  const scale = taskLevelScale(level);
+  for(let i=0;i<5;i++){
+    let idx = Math.floor(Math.random()*TASK_TEMPLATES.length);
+    while(used.has(idx)) idx = (idx+1) % TASK_TEMPLATES.length;
+    used.add(idx);
+    tasks.push(TASK_TEMPLATES[idx](Math.random(), scale, level));
+  }
+  return tasks;
+}
+function getCurrentTasks(){
+  return state.taskBoard.tasks;
+}
+function ensureTaskBoardCurrent(){
+  const slot = getBoardSlot();
+  if(state.taskBoard.slot !== slot || !Array.isArray(state.taskBoard.tasks)){
+    state.taskBoard = { slot, tasks: rollNewTasks(getLevelFromXp(state.xp||0)), progress:{}, claimed:{} };
+    saveState();
+    return true;
+  }
+  return false;
+}
+function bumpTaskProgress(type, amount, matchSpecies){
+  ensureTaskBoardCurrent();
+  const tasks = getCurrentTasks();
+  let changed = false;
+  tasks.forEach(t=>{
+    if(t.type!==type) return;
+    if(type==='harvest_species' && t.species!==matchSpecies) return;
+    if(state.taskBoard.claimed[t.key]) return;
+    const cur = state.taskBoard.progress[t.key]||0;
+    if(cur>=t.goal) return;
+    state.taskBoard.progress[t.key] = Math.min(t.goal, cur+amount);
+    changed = true;
+  });
+  if(changed) saveState();
+}
+function isTaskPossible(task){
+  if(task.type==='unlock_plot') return state.plots.some(p=>p.locked);
+  if(task.type==='buy_upgrade') return Object.entries(UPGRADES).some(([k,cfg])=>(state.upgrades[k]||0)<cfg.maxLevel);
+  return true;
+}
+function pruneImpossibleTasks(){
+  if(!state.taskBoard || !Array.isArray(state.taskBoard.tasks)) return 0;
+  const tasks = state.taskBoard.tasks;
+  let replaced = 0;
+  for(let i=0;i<tasks.length;i++){
+    const t = tasks[i];
+    if(state.taskBoard.claimed[t.key]) continue;
+    const progress = state.taskBoard.progress[t.key]||0;
+    if(progress >= t.goal) continue;
+    if(isTaskPossible(t)) continue;
+    const usedTypes = new Set(tasks.filter((_,j)=>j!==i).map(x=>x.type));
+    const lvl = getLevelFromXp(state.xp||0);
+    const scale = taskLevelScale(lvl);
+    let candidate = null, attempts = 0;
+    while(attempts<20){
+      const idx = Math.floor(Math.random()*TASK_TEMPLATES.length);
+      const roll = TASK_TEMPLATES[idx](Math.random(), scale, lvl);
+      if(!usedTypes.has(roll.type) && isTaskPossible(roll)){ candidate = roll; break; }
+      attempts++;
+    }
+    if(candidate){
+      delete state.taskBoard.progress[t.key];
+      tasks[i] = candidate;
+      replaced++;
+    }
+  }
+  if(replaced) saveState();
+  return replaced;
+}
+function claimTask(key){
+  ensureTaskBoardCurrent();
+  const tasks = getCurrentTasks();
+  const task = tasks.find(t=>t.key===key);
+  if(!task || state.taskBoard.claimed[key]) return;
+  const progress = state.taskBoard.progress[key]||0;
+  if(progress < task.goal) return;
+  state.taskBoard.claimed[key] = true;
+  addSpores(task.reward.spores);
+  grantXp(20);
+  state.achStats.tasksClaimed = (state.achStats.tasksClaimed||0)+1;
+  if(task.reward.seed){
+    const sp = SPECIES[task.reward.seed];
+    const genome = { species:task.reward.seed, hue:sp.hue, glow:false, growthMult:1, yieldMult:1, sellMult:1, extraSeed:0, rareTrait:null, rareTrait2:null, hybridWith:null };
+    addToInventory(task.reward.seed, genome, task.reward.seedQty||1);
+  }
+  if(task.reward.boost==='luck'){ state.nextMutationBoost = 0.15; }
+  checkAchievements();
+  saveState();
+  renderTasks(); updateHeader();
+  showToast('Task complete! '+rewardSummary(task.reward));
+}
+function rerollTaskBoardCost(){
+  return 2;
+}
+function rerollTaskBoard(){
+  const cost = rerollTaskBoardCost();
+  if((state.gems||0) < cost) return false;
+  state.gems -= cost;
+  const level = getLevelFromXp(state.xp||0);
+  state.taskBoard.tasks = rollNewTasks(level);
+  state.taskBoard.progress = {};
+  state.taskBoard.claimed = {};
+  saveState();
+  return true;
+}
+function onRerollTaskBoard(){
+  if(rerollTaskBoard()){
+    renderTasks();
+    updateHeader();
+  }
+}
+function renderTasks(){
+  ensureTaskBoardCurrent();
+  pruneImpossibleTasks();
+  const tasks = getCurrentTasks();
+  const list = document.getElementById('taskList');
+  if(!list) return;
+  const slotEnd = (state.taskBoard.slot+1)*BOARD_CYCLE_MS;
+  const timerEl = document.getElementById('taskRefreshTimer');
+  if(timerEl) timerEl.textContent = fmtTime(slotEnd-Date.now());
+  const rerollBtn = document.getElementById('rerollTasksBtn');
+  if(rerollBtn){
+    const cost = rerollTaskBoardCost();
+    rerollBtn.innerHTML = 'Reroll '+cost+' '+renderGemIcon(2);
+    rerollBtn.disabled = (state.gems||0) < cost;
+  }
+  list.innerHTML = tasks.map(t=>{
+    const progress = state.taskBoard.progress[t.key]||0;
+    const claimed = !!state.taskBoard.claimed[t.key];
+    const complete = progress>=t.goal;
+    let actionHtml;
+    if(claimed) actionHtml = '<button class="btn btn-small" disabled>Claimed</button>';
+    else if(complete) actionHtml = '<button class="btn btn-small btn-primary" onclick="claimTask(\''+t.key+'\')">Claim</button>';
+    else actionHtml = '<div class="task-progress-text">'+progress+' / '+t.goal+'</div>';
+    return '<div class="task-card'+(claimed?' is-claimed':'')+'">'
+      + '<div class="task-info">'
+      + '<div class="task-desc">'+t.desc+'</div>'
+      + '<div class="task-bar"><div class="task-bar-fill" style="width:'+Math.min(100,(progress/t.goal)*100)+'%"></div></div>'
+      + '<div class="task-reward">Reward: '+rewardSummary(t.reward)+'</div>'
+      + '</div>'
+      + actionHtml
+      + '</div>';
+  }).join('');
+}
+
+/* ===================== UPGRADES ===================== */
+const UPGRADES = {
+  growth:     { name:'Faster Growing',  tagline:'growth speed',  sign:'+', perLevel:5,  maxLevel:6, baseCost:18, scale:1.55 },
+  yield:      { name:'Greener Thumb',   tagline:'sell value',    sign:'+', perLevel:5,  maxLevel:6, baseCost:18, scale:1.55 },
+  resist:     { name:'Hardy Roots',     tagline:'wilt risk',     sign:'-', perLevel:10, maxLevel:5,  baseCost:22, scale:1.6  },
+  luck:       { name:'Lucky Soil',      tagline:'mutation odds', sign:'+', perLevel:3,  maxLevel:5,  baseCost:25, scale:1.65 },
+  ladybugs:   { name:'Ladybugs',        tagline:'pest risk',     sign:'-', perLevel:12, maxLevel:5,  baseCost:20, scale:1.6  },
+  sprinkler:  { name:'Sprinkler System', perLevel:0.4, maxLevel:5, baseCost:30, scale:1.7,
+    desc:'Automatically waters each pot toward what\u2019s growing in it wants. Light is still up to you.',
+    currentLabel:(total)=> 'Current: corrects water '+total.toFixed(1)+' pts/sec' },
+  gardenLight: { name:'Garden Light', perLevel:0.4, maxLevel:5, baseCost:30, scale:1.7,
+    desc:'Automatically lights each pot toward what\u2019s growing in it wants. Water is still up to you.',
+    currentLabel:(total)=> 'Current: corrects light '+total.toFixed(1)+' pts/sec' },
+  labSpeed:   { name:'Lab Efficiency', tagline:'research time', sign:'-', perLevel:8, maxLevel:5, baseCost:35, scale:1.6 }
+};
+function upgradeCost(key, level){
+  const cfg = UPGRADES[key];
+  return Math.round(cfg.baseCost * Math.pow(cfg.scale, level));
+}
+function purchaseUpgrade(key){
+  const cfg = UPGRADES[key];
+  const level = state.upgrades[key]||0;
+  if(level>=cfg.maxLevel) return;
+  const cost = upgradeCost(key, level);
+  if(state.spores < cost) return;
+  state.spores -= cost;
+  state.upgrades[key] = level+1;
+  bumpTaskProgress('buy_upgrade', 1);
+  state.achStats.upgradesBought = (state.achStats.upgradesBought||0)+1;
+  checkAchievements();
+  if(pruneImpossibleTasks()) showToast('A task board slot refreshed since a task became impossible.');
+  saveState();
+  renderUpgrades();
+  updateHeader();
+}
+function renderUpgrades(){
+  const list = document.getElementById('upgList');
+  list.innerHTML = Object.entries(UPGRADES).map(([key,cfg])=>{
+    const level = state.upgrades[key]||0;
+    const maxed = level>=cfg.maxLevel;
+    const cost = upgradeCost(key, level);
+    const unit = cfg.unit || '%';
+    const currentTotal = level*cfg.perLevel;
+    const descText = cfg.desc || (cfg.sign+cfg.perLevel+unit+' '+cfg.tagline+' per level');
+    const currentText = cfg.currentLabel ? cfg.currentLabel(currentTotal) : ('Current: '+cfg.sign+currentTotal+unit+' '+cfg.tagline);
+    const pips = Array.from({length:cfg.maxLevel}, (_,i)=> '<span class="upg-pip'+(i<level?' filled':'')+'"></span>').join('');
+    return '<div class="upg-card">'
+      + '<div class="upg-info">'
+      + '<div class="upg-name">'+cfg.name+'</div>'
+      + '<div class="upg-desc">'+descText+'</div>'
+      + (level>0 ? '<div class="upg-current">'+currentText+'</div>' : '')
+      + '<div class="upg-pips">'+pips+'</div>'
+      + '</div>'
+      + '<button class="btn btn-small upg-btn '+(maxed?'':'btn-primary')+'" '+(maxed||state.spores<cost?'disabled':'')+' onclick="purchaseUpgrade(\''+key+'\')">'+(maxed?'MAXED':cost+' \u25C6')+'</button>'
+      + '</div>';
+  }).join('');
+  renderConsumables();
+  renderDecorShop();
+}
+
+/* ===================== CONSUMABLES ===================== */
+const LUCKY_CHARM_COST = 2;
+const LUCKY_CHARM_BOOST = 0.15;
+const LUCKY_CHARM_CAP = 0.4;
+function buyLuckyCharm(){
+  if((state.gems||0) < LUCKY_CHARM_COST) return false;
+  if((state.nextMutationBoost||0) >= LUCKY_CHARM_CAP) return false;
+  state.gems -= LUCKY_CHARM_COST;
+  state.nextMutationBoost = Math.min(LUCKY_CHARM_CAP, (state.nextMutationBoost||0) + LUCKY_CHARM_BOOST);
+  saveState();
+  renderConsumables();
+  updateHeader();
+  return true;
+}
+function renderConsumables(){
+  const el = document.getElementById('consumablesList');
+  if(!el) return;
+  const boost = state.nextMutationBoost||0;
+  const atCap = boost >= LUCKY_CHARM_CAP;
+  el.innerHTML = '<div class="upg-card">'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">Lucky Charm</div>'
+    + '<div class="upg-desc">+'+Math.round(LUCKY_CHARM_BOOST*100)+'% mutation chance on your next harvest</div>'
+    + (boost>0 ? '<div class="upg-current">Active boost: +'+Math.round(boost*100)+'%'+(atCap?' (max)':'')+'</div>' : '')
+    + '</div>'
+    + '<button class="btn btn-small '+((state.gems||0)>=LUCKY_CHARM_COST && !atCap?'btn-primary':'')+'" '+((state.gems||0)<LUCKY_CHARM_COST||atCap?'disabled':'')+' onclick="buyLuckyCharm()">'+(atCap?'MAXED':LUCKY_CHARM_COST+' '+renderGemIcon(2))+'</button>'
+    + '</div>';
+}
+
+/* ===================== DECORATIONS ===================== */
+const POT_THEMES = {
+  terracotta: { name:'Terracotta',     cost:0,   colors:{ light:'#D98B55', mid:'#B5764A', dark:'#7A431F' } },
+  sage:       { name:'Sage Ceramic',   cost:150, colors:{ light:'#B7C9A8', mid:'#8CA37A', dark:'#556B45' } },
+  slate:      { name:'Midnight Slate', cost:220, colors:{ light:'#7A8494', mid:'#565F6E', dark:'#2E3340' } },
+  rosewood:   { name:'Rosewood Clay',  cost:200, colors:{ light:'#E3A5A0', mid:'#C97A73', dark:'#8C4A42' } },
+  gilded:     { name:'Gilded Bronze',  cost:380, colors:{ light:'#F0D080', mid:'#D4A544', dark:'#8C6A1E' } }
+};
+const WALLPAPER_THEMES = {
+  cedar:     { name:'Cedar Planks',    cost:0,   hill:'#16261A', planks:{ hseam:'rgb(140,98,56)',  vseam:'rgb(58,36,18)', a:'rgb(124,84,48)',  b:'rgb(110,70,36)',  c:'rgb(104,66,34)',  d:'rgb(118,80,46)'  } },
+  moss:      { name:'Mossy Stone',     cost:180, hill:'#243828', planks:{ hseam:'rgb(90,100,78)',  vseam:'rgb(38,44,34)', a:'rgb(74,86,66)',   b:'rgb(64,76,58)',   c:'rgb(58,68,52)',   d:'rgb(70,82,62)'   } },
+  driftwood: { name:'Driftwood',       cost:220, hill:'#5C5646', planks:{ hseam:'rgb(150,148,140)',vseam:'rgb(70,68,62)', a:'rgb(126,122,112)',b:'rgb(112,108,98)', c:'rgb(104,100,92)', d:'rgb(120,116,106)'} },
+  cherry:    { name:'Cherry Blossom',  cost:320, hill:'#4A2436', planks:{ hseam:'rgb(196,120,140)',vseam:'rgb(90,40,54)', a:'rgb(176,96,118)', b:'rgb(158,80,104)', c:'rgb(148,72,96)',  d:'rgb(168,90,112)' } }
+};
+function defaultDecorState(){
+  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
+}
+function buildPlankDataUri(c){
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
+    + "<rect x='0' y='0' width='192' height='2' fill='"+c.hseam+"'/>"
+    + "<rect x='0' y='2' width='92' height='46' fill='"+c.a+"'/>"
+    + "<rect x='92' y='2' width='4' height='46' fill='"+c.vseam+"'/>"
+    + "<rect x='96' y='2' width='92' height='46' fill='"+c.b+"'/>"
+    + "<rect x='188' y='2' width='4' height='46' fill='"+c.vseam+"'/>"
+    + "<rect x='0' y='48' width='192' height='2' fill='"+c.hseam+"'/>"
+    + "<rect x='0' y='50' width='44' height='46' fill='"+c.c+"'/>"
+    + "<rect x='44' y='50' width='4' height='46' fill='"+c.vseam+"'/>"
+    + "<rect x='48' y='50' width='92' height='46' fill='"+c.d+"'/>"
+    + "<rect x='140' y='50' width='4' height='46' fill='"+c.vseam+"'/>"
+    + "<rect x='144' y='50' width='48' height='46' fill='"+c.c+"'/>"
+    + "</svg>";
+  return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
+}
+function applyPotTheme(key){
+  const cfg = POT_THEMES[key];
+  if(!cfg) return;
+  const root = document.documentElement.style;
+  root.setProperty('--pot-light', cfg.colors.light);
+  root.setProperty('--pot', cfg.colors.mid);
+  root.setProperty('--pot-dark', cfg.colors.dark);
+}
+function applyWallpaperTheme(key){
+  const cfg = WALLPAPER_THEMES[key];
+  if(!cfg) return;
+  document.documentElement.style.setProperty('--hill', cfg.hill);
+  const bg = 'repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px), ' + buildPlankDataUri(cfg.planks);
+  document.body.style.backgroundImage = bg;
+  document.documentElement.style.backgroundImage = bg;
+}
+function applyEquippedDecor(){
+  applyPotTheme(state.decor.equippedPot);
+  applyWallpaperTheme(state.decor.equippedWallpaper);
+}
+function decorConfig(kind){ return kind==='pot' ? POT_THEMES : WALLPAPER_THEMES; }
+function decorOwned(kind){ return kind==='pot' ? state.decor.ownedPots : state.decor.ownedWallpapers; }
+function purchaseDecor(kind, key){
+  const cfg = decorConfig(kind)[key];
+  if(!cfg) return false;
+  const owned = decorOwned(kind);
+  if(owned.includes(key)) return false;
+  if(state.spores < cfg.cost) return false;
+  state.spores -= cfg.cost;
+  owned.push(key);
+  equipDecor(kind, key);
+  saveState();
+  return true;
+}
+function equipDecor(kind, key){
+  if(!decorOwned(kind).includes(key)) return false;
+  if(kind==='pot'){ state.decor.equippedPot = key; applyPotTheme(key); }
+  else { state.decor.equippedWallpaper = key; applyWallpaperTheme(key); }
+  saveState();
+  renderDecorShop();
+  updateHeader();
+  return true;
+}
+function renderDecorGallery(kind){
+  const el = document.getElementById(kind==='pot' ? 'potDecorList' : 'wallpaperDecorList');
+  if(!el) return;
+  const cfg = decorConfig(kind);
+  const owned = decorOwned(kind);
+  const equipped = kind==='pot' ? state.decor.equippedPot : state.decor.equippedWallpaper;
+  el.innerHTML = Object.entries(cfg).map(([key, theme])=>{
+    const isOwned = owned.includes(key);
+    const isEquipped = equipped===key;
+    const swatchBg = kind==='pot'
+      ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
+      : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';
+    let actionHtml;
+    if(isEquipped) actionHtml = '<button class="btn btn-small" disabled>Equipped</button>';
+    else if(isOwned) actionHtml = '<button class="btn btn-small btn-primary" onclick="equipDecor(\''+kind+'\',\''+key+'\')">Equip</button>';
+    else actionHtml = '<button class="btn btn-small '+(state.spores>=theme.cost?'btn-primary':'')+'" '+(state.spores>=theme.cost?'':'disabled')+' onclick="purchaseDecor(\''+kind+'\',\''+key+'\')">'+theme.cost+' ◆</button>';
+    return '<div class="upg-card'+(isEquipped?' is-equipped':'')+'">'
+      + '<div class="decor-swatch" style="background:'+swatchBg+';"></div>'
+      + '<div class="upg-info">'
+      + '<div class="upg-name">'+theme.name+'</div>'
+      + '<div class="upg-desc">'+(isOwned ? 'Owned' : 'Cosmetic only')+'</div>'
+      + '</div>'
+      + actionHtml
+      + '</div>';
+  }).join('');
+}
+function renderDecorShop(){
+  renderDecorGallery('pot');
+  renderDecorGallery('wallpaper');
+}
+
+/* ===================== RENDER: PRESTIGE ===================== */
+function renderPrestigeSummary(){
+  const el = document.getElementById('prestigeSummary');
+  if(!el) return;
+  const lvl = getLevelFromXp(state.xp||0);
+  const unlocked = lvl >= MIN_PRESTIGE_LEVEL;
+  const preview = prestigeSkillPointsAvailable();
+  let html = '<div class="upg-card" style="flex-direction:column;align-items:stretch;">'
+    + '<div class="upg-name">Prestige '+(state.prestige.count||0)+'</div>'
+    + '<div class="upg-desc">Unspent Skill Points: <strong>'+(state.prestige.skillPoints||0)+' \u2605</strong></div>';
+  if(unlocked){
+    html += '<div class="upg-current">Prestige now to earn <strong>'+preview+' \u2605</strong>. Resets spores, plots, upgrades, level and research \u2014 achievements, herbarium and Skill Points stay.</div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="openPrestigeConfirm()">Prestige Now</button>';
+  } else {
+    html += '<div class="upg-current">Reach Level '+MIN_PRESTIGE_LEVEL+' to unlock prestige ('+lvl+' / '+MIN_PRESTIGE_LEVEL+')</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+function renderPrestigeTree(){
+  const el = document.getElementById('prestigeTreeList');
+  if(!el) return;
+  if(!(state.prestige.count>0)){
+    el.innerHTML = '<div class="upg-desc" style="margin-top:10px;">Prestige once to unlock your Skill Tree.</div>';
+    return;
+  }
+  const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III'};
+  let html = '';
+  for(let tier=1; tier<=3; tier++){
+    html += '<div class="ach-category" style="margin-top:18px;">'+tierNames[tier]+'</div>';
+    for(const key in SKILL_TREE){
+      const cfg = SKILL_TREE[key];
+      if(cfg.tier!==tier) continue;
+      const level = skillNodeLevel(key);
+      const maxed = level>=cfg.maxLevel;
+      const locked = isSkillNodeLocked(key);
+      const cost = skillNodeCost(key, level);
+      const canAfford = (state.prestige.skillPoints||0) >= cost;
+      const pips = Array.from({length:cfg.maxLevel}, (_,i)=> '<span class="upg-pip'+(i<level?' filled':'')+'"></span>').join('');
+      let actionHtml;
+      if(locked){
+        actionHtml = '<div class="upg-desc" style="max-width:80px;text-align:right;">Requires '+SKILL_TREE[cfg.requires.key].name+' Lv.'+cfg.requires.level+'</div>';
+      } else if(maxed){
+        actionHtml = '<button class="btn btn-small" disabled>MAXED</button>';
+      } else {
+        actionHtml = '<button class="btn btn-small '+(canAfford?'btn-primary':'')+'" '+(canAfford?'':'disabled')+' onclick="purchaseSkillNode(\''+key+'\')">'+cost+' \u2605</button>';
+      }
+      html += '<div class="upg-card'+(locked?' is-locked':'')+'">'
+        + '<div class="upg-info">'
+        + '<div class="upg-name">'+cfg.name+'</div>'
+        + '<div class="upg-desc">'+cfg.desc(cfg.perLevel)+' per level</div>'
+        + (level>0 ? '<div class="upg-current">Current: '+cfg.desc(level*cfg.perLevel)+'</div>' : '')
+        + '<div class="upg-pips">'+pips+'</div>'
+        + '</div>'
+        + actionHtml
+        + '</div>';
+    }
+  }
+  el.innerHTML = html;
+}
+function renderPrestige(){
+  renderPrestigeSummary();
+  renderPrestigeTree();
+}
+function openPrestigeConfirm(){
+  currentSheetIdx = null;
+  revealShowing = false;
+  const lvl = getLevelFromXp(state.xp||0);
+  const preview = prestigeSkillPointsAvailable();
+  const body = document.getElementById('sheetBody');
+  body.innerHTML = '<div class="sheet-head"><h3>Confirm Prestige</h3></div>'
+    + '<p class="sheet-blurb">You are Level '+lvl+'. Prestiging will earn <strong>'+preview+' Skill Point'+(preview===1?'':'s')+'</strong> and reset your spores, plots, upgrades, level/XP, seed bank, task board and research slots back to the start.</p>'
+    + '<p class="sheet-blurb">Your achievements, herbarium collection, lifetime stats and Skill Tree stay exactly as they are.</p>'
+    + '<button class="btn btn-primary btn-block" onclick="confirmPrestige()">Confirm Prestige</button>'
+    + '<button class="btn btn-block" style="margin-top:8px;" onclick="closeSheet()">Cancel</button>';
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function confirmPrestige(){
+  doPrestige();
+}
+
+/* ===================== RENDER: RESEARCH LAB ===================== */
+function fmtDuration(ms){
+  const mins = Math.round(ms/60000);
+  return mins<60 ? mins+'m' : (mins/60)+'h';
+}
+const LAB_MACHINE_W = 31;
+const LAB_MACHINE_H = 48;
+function buildLabMachineRows(){
+  const W = LAB_MACHINE_W, H = LAB_MACHINE_H, CX = 15;
+  const g = Array.from({length:H}, ()=>Array(W).fill('.'));
+  const px=(x,y,t)=>{ if(x>=0&&x<W&&y>=0&&y<H) g[y][x]=t; };
+  const rect=(x,y,w,h,t)=>{ for(let j=0;j<h;j++) for(let i=0;i<w;i++) px(x+i,y+j,t); };
+  const hline=(x,y,w,t)=>rect(x,y,w,1,t);
+  const vline=(x,y,h,t)=>rect(x,y,1,h,t);
+  const border=(x,y,w,h,t)=>{ hline(x,y,w,t); hline(x,y+h-1,w,t); vline(x,y,h,t); vline(x+w-1,y,h,t); };
+  const cspan=(hw)=>({ x:CX-hw, w:hw*2+1 });
+
+  // antenna posts + tip lights
+  vline(12,1,7,'M'); vline(18,1,7,'M');
+  px(12,0,'L'); px(18,0,'L');
+
+  // stepped top cap
+  { const s1=cspan(6); hline(s1.x,8,s1.w,'H'); }
+  { const s2=cspan(8); rect(s2.x,9,s2.w,2,'H'); border(s2.x,9,s2.w,2,'D'); }
+
+  // upper vented band
+  { const s=cspan(10); rect(s.x,11,s.w,6,'M'); border(s.x,11,s.w,6,'D');
+    for(let y=12;y<16;y++){ px(s.x+2,y,'D'); px(s.x+s.w-3,y,'D'); }
+    for(let y=13;y<16;y+=2){ px(s.x+4,y,'D'); px(s.x+s.w-5,y,'D'); }
+  }
+
+  // chamber housing
+  { const s=cspan(12); rect(s.x,17,s.w,22,'M'); border(s.x,17,s.w,22,'D'); }
+  // chamber frame
+  { const s=cspan(10); rect(s.x,19,s.w,18,'F');
+    px(s.x,19,'D'); px(s.x+s.w-1,19,'D'); px(s.x,36,'D'); px(s.x+s.w-1,36,'D');
+  }
+  // glass viewport
+  { const s=cspan(7); rect(s.x,21,s.w,13,'C'); }
+  // gauge clusters either side of the glass
+  for(const y of [23,27,31]){ px(CX-9,y,'L'); px(CX+9,y,'L'); }
+  // pedestal
+  { const s=cspan(7); rect(s.x,34,s.w,2,'S'); }
+
+  // band under chamber
+  { const s=cspan(12); rect(s.x,39,s.w,2,'M'); }
+
+  // control panel
+  { const s=cspan(10); rect(s.x,41,s.w,3,'D');
+    const scr=cspan(4); rect(scr.x,42,scr.w,1,'Z');
+    px(CX+5,42,'r'); px(CX+7,42,'g'); px(CX+9,42,'v');
+  }
+
+  // base cap
+  { const s=cspan(10); hline(s.x,44,s.w,'H'); }
+  // hazard stripe
+  { const s=cspan(11); for(let i=0;i<s.w;i++) px(s.x+i,45,(i%2===0)?'D':'y'); }
+  // base + feet
+  { const s=cspan(11); hline(s.x,46,s.w,'D');
+    rect(CX-9,47,3,1,'D'); rect(CX+7,47,3,1,'D');
+  }
+
+  return g.map(row=>row.join(''));
+}
+const LAB_MACHINE_ROWS = buildLabMachineRows();
+const LAB_CHAMBER_RECT = { left:8, top:21, width:15, height:15 };
+function labMachineColor(token, phase){
+  if(token==='.') return null;
+  if(token==='H') return '#A8B0AC';
+  if(token==='M' || token==='P') return '#5C6660';
+  if(token==='D') return '#3A4540';
+  if(token==='F') return '#2A1140';
+  if(token==='S') return '#6B6058';
+  if(token==='Z') return '#3E6B63';
+  if(token==='r') return 'var(--danger)';
+  if(token==='g') return 'var(--accent)';
+  if(token==='v') return 'var(--violet)';
+  if(token==='y') return 'var(--warn)';
+  if(token==='C') return phase==='active' ? 'var(--violet)' : phase==='done' ? 'var(--accent)' : 'rgba(199,125,255,.18)';
+  if(token==='L') return phase==='active' ? 'var(--violet)' : phase==='done' ? 'var(--accent)' : '#3A4540';
+  return null;
+}
+function renderLabMachine(phase, genome, cell){
+  cell = cell || 6;
+  const cols = LAB_MACHINE_ROWS[0].length;
+  let cellsHtml = '';
+  for(const row of LAB_MACHINE_ROWS){
+    for(const ch of row){
+      const color = labMachineColor(ch, phase);
+      const glow = phase!=='idle' && (ch==='C'||ch==='L') && color;
+      cellsHtml += '<div'+(glow?' class="lab-machine-glow"':'')+' style="background:'+(color||'transparent')+'"></div>';
+    }
+  }
+  const chamberStyle = 'left:'+(LAB_CHAMBER_RECT.left*cell)+'px;top:'+(LAB_CHAMBER_RECT.top*cell)+'px;width:'+(LAB_CHAMBER_RECT.width*cell)+'px;height:'+(LAB_CHAMBER_RECT.height*cell)+'px;';
+  const spriteHtml = genome ? '<div class="lab-chamber-sprite" style="'+chamberStyle+'"><div class="lab-chamber-sprite-scale">'+renderSprite(genome,'sm','bloom',{})+'</div></div>' : '';
+  return '<div class="lab-machine-wrap"><div class="lab-machine-inner">'
+    + '<div class="lab-machine" style="grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>'
+    + spriteHtml
+    + '</div></div>';
+}
+const LAB_ROW_CELL = [3.0, 4.0, 3.0];
+function renderLabStationPreview(slot){
+  const cell = LAB_ROW_CELL[slot];
+  let label, machineHtml, lockedClass = '';
+  if(!isLabSlotUnlocked(slot)){
+    lockedClass = ' lab-station-locked';
+    machineHtml = renderLabMachine('idle', null, cell);
+    label = LAB_SLOTS[slot].cost+' \u25C6';
+  } else {
+    const status = getResearchStatus(slot);
+    const phase = status==='empty' ? 'idle' : status==='researching' ? 'active' : 'done';
+    machineHtml = renderLabMachine(phase, null, cell);
+    if(status==='empty') label = 'Empty';
+    else if(status==='researching'){
+      const r = state.researchSlots[slot];
+      label = fmtTime((r.startedAt+r.durationMs)-Date.now());
+    } else label = 'Ready!';
+  }
+  return '<div class="lab-station'+lockedClass+'" onclick="openLabSlot('+slot+')">'
+    + '<div class="lab-station-label">'+label+'</div>'
+    + machineHtml
+    + '</div>';
+}
+function renderLab(){
+  const row = document.getElementById('labRow');
+  if(!row) return;
+  row.innerHTML = [0,1,2].map(renderLabStationPreview).join('');
+}
+function renderLabShelf(){
+  const container = document.getElementById('labShelf');
+  if(!container) return;
+  const entries = state.herbarium.slice(0,4);
+  let jars = '';
+  for(let i=0;i<4;i++){
+    const e = entries[i];
+    jars += e
+      ? '<div class="lab-jar"><div class="lab-jar-lid"></div><div class="lab-jar-glass"><div class="lab-jar-sprite">'+renderSprite(e.genome,'sm','bloom',{})+'</div></div></div>'
+      : '<div class="lab-jar"><div class="lab-jar-lid"></div><div class="lab-jar-glass lab-jar-empty"></div></div>';
+  }
+  container.innerHTML = '<div class="lab-shelf-label">Recent Specimens</div><div class="lab-shelf">'+jars+'</div>';
+}
+let currentLabSlot = null;
+let lastLabSlotStatus = null;
+function openLabSlot(slot){
+  currentSheetIdx = null;
+  revealShowing = false;
+  currentLabSlot = slot;
+  lastLabSlotStatus = null;
+  renderLabSlotSheet(slot);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderLabSlotSheet(slot){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const cfg = LAB_SLOTS[slot];
+  if(!isLabSlotUnlocked(slot)){
+    lastLabSlotStatus = 'locked';
+    const machineHtml = renderLabMachine('idle', null, 6);
+    body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>'
+      + machineHtml
+      + '<p class="sheet-blurb">Unlock another research station to run experiments side by side.</p>'
+      + '<button class="btn btn-primary btn-block" '+(state.spores<cfg.cost?'disabled':'')+' onclick="onUnlockLabSlot('+slot+')">Unlock for '+cfg.cost+' \u25C6</button>';
+    return;
+  }
+  const status = getResearchStatus(slot);
+  lastLabSlotStatus = status;
+  const phase = status==='empty' ? 'idle' : status==='researching' ? 'active' : 'done';
+  if(status==='empty'){
+    const machineHtml = renderLabMachine(phase, null, 6);
+    if(!state.inventory.length){
+      body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>' + machineHtml + '<div class="empty-state">No seeds in your seed bank yet.<br>Harvest something to get seeds to research.</div>';
+      return;
+    }
+    const rows = getSortedInventory().map(stack=>{
+      const tier = getSeedRarityTier(stack.genome);
+      const tcfg = RESEARCH_TIERS[tier];
+      return '<div class="seed-row">'
+        + '<div class="seed-row-glyph">'+renderSprite(stack.genome,'sm','bloom')+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+buildSpecimenName(stack.species, stack.genome)+'</div>'
+        + '<div class="seed-row-sub">'+tcfg.name+' \u00B7 '+fmtDuration(getEffectiveResearchDuration(tier))+' \u00B7 \u00D7'+stack.qty+' in stock</div></div>'
+        + '<button class="btn btn-small btn-accent" '+(state.spores<tcfg.fee?'disabled':'')+' onclick="onStartResearch(\''+stack.id+'\','+slot+')">Research '+tcfg.fee+' \u25C6</button>'
+        + '</div>';
+    }).join('');
+    body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>' + machineHtml + '<div class="seed-list">'+rows+'</div>';
+  } else if(status==='researching'){
+    const r = state.researchSlots[slot];
+    const tcfg = RESEARCH_TIERS[r.tier];
+    const remaining = (r.startedAt+r.durationMs) - Date.now();
+    const pct = clamp(((Date.now()-r.startedAt)/r.durationMs)*100, 0, 100);
+    const machineHtml = renderLabMachine(phase, r.genome, 6);
+    body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>' + machineHtml + '<div class="lab-card">'
+      + '<div class="lab-name">'+buildSpecimenName(r.species, r.genome)+'</div>'
+      + '<div class="lab-tier">'+tcfg.name+' specimen \u00B7 researching</div>'
+      + '<div class="lab-timer" id="labTimer">'+fmtTime(remaining)+'</div>'
+      + '<div class="lab-progress"><div class="lab-progress-fill" id="labProgressFill" style="width:'+pct+'%"></div></div>'
+      + '</div>';
+  } else {
+    const r = state.researchSlots[slot];
+    const tcfg = RESEARCH_TIERS[r.tier];
+    const machineHtml = renderLabMachine(phase, r.genome, 6);
+    body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>' + machineHtml + '<div class="lab-card">'
+      + '<div class="lab-name">'+buildSpecimenName(r.species, r.genome)+'</div>'
+      + '<div class="lab-tier">'+tcfg.name+' specimen \u00B7 research complete</div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="onCollectResearch('+slot+')">Collect ('+tcfg.reward.spores+' \u25C6, '+tcfg.reward.xp+' XP)</button>'
+      + '</div>';
+  }
+}
+function updateLabSlotLiveBits(slot){
+  const r = state.researchSlots[slot];
+  if(!r) return;
+  const remaining = (r.startedAt+r.durationMs) - Date.now();
+  const timerEl = document.getElementById('labTimer');
+  if(timerEl) timerEl.textContent = fmtTime(remaining);
+  const pct = clamp(((Date.now()-r.startedAt)/r.durationMs)*100, 0, 100);
+  const fillEl = document.getElementById('labProgressFill');
+  if(fillEl) fillEl.style.width = pct+'%';
+}
+function onStartResearch(stackId, slot){
+  if(!startResearch(stackId, slot)) return;
+  renderLabSlotSheet(slot);
+  renderLab();
+  updateHeader();
+  updateLabBadge();
+}
+function onUnlockLabSlot(slot){
+  if(!unlockLabSlot(slot)) return;
+  renderLabSlotSheet(slot);
+  renderLab();
+  updateHeader();
+  showToast('Unlocked the '+LAB_SLOTS[slot].label+'!');
+}
+function researchRevealResult(result){
+  return {
+    isNew: result.mutant.isNew,
+    genome: result.mutant.genome,
+    name: result.mutant.name,
+    crossInfo: null,
+    pestPenalty: 0,
+    precisionBonus: 0,
+    sellValue: result.spores,
+    seedQty: 1,
+    gemsEarned: result.gemsEarned
+  };
+}
+function onCollectResearch(slot){
+  const result = collectResearch(slot);
+  if(!result) return;
+  renderLab();
+  renderLabShelf();
+  updateHeader();
+  renderHerbarium();
+  updateLabBadge();
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  revealShowing = true;
+  renderReveal(researchRevealResult(result));
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function updateLabBadge(){
+  const badge = document.getElementById('labBadge');
+  if(!badge) return;
+  const anyDone = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
+  badge.classList.toggle('show', anyDone);
+}
+
+/* ===================== PIXEL SPRITES ===================== */
+const HEAD_W = 9;
+const HEAD_ROWS = 6;
+
+function expandHalf(half){
+  return half + half.slice(0,-1).split('').reverse().join('');
+}
+function padRowsTop(rows, targetLen, width){
+  const blank = '.'.repeat(width);
+  const pad = [];
+  for(let i=0;i<targetLen-rows.length;i++) pad.push(blank);
+  return pad.concat(rows);
+}
+const SPECIES_HALF = {
+  mossputt:   ['..cb.','.cbba','cbbba','cbbba','.bbaa','..aa.'],
+  fernling:   ['...c.','..cb.','.cbb.','cbba.','.bba.','..aa.'],
+  glowbloom:  ['..c..','.cbc.','cbbbc','.cbc.','..b..'],
+  thornvine:  ['..c..','.a.a.','.bba.','abba.','.ba..'],
+  duskvelvet: ['....c','..bbc','.bcba','cbbba','.bbaa','..aaa'],
+  starforge:  ['....c','..bba','.babc','abbbc','.bbcc','..bba']
+};
+const SPECIES_HEAD_FULL = {};
+const SPECIES_HEAD_BUD = {};
+for(const key in SPECIES_HALF){
+  const expanded = SPECIES_HALF[key].map(expandHalf);
+  const full = padRowsTop(expanded, HEAD_ROWS, HEAD_W);
+  SPECIES_HEAD_FULL[key] = full;
+  const bottomCount = Math.max(2, Math.ceil(expanded.length/2));
+  const bottomRows = full.slice(HEAD_ROWS-bottomCount).map(r=>r.replace(/c/g,'b'));
+  SPECIES_HEAD_BUD[key] = padRowsTop(bottomRows, HEAD_ROWS, HEAD_W);
+}
+function buildHybridHead(gridOwn, gridCross, splitRow){
+  return gridOwn.slice(0, splitRow).concat(gridCross.slice(splitRow));
+}
+const HYBRID_HEAD_FULL = {};
+const HYBRID_HEAD_BUD = {};
+for(const a in SPECIES_HALF){
+  for(const b in SPECIES_HALF){
+    if(a===b) continue;
+    const key = a+'|'+b;
+    HYBRID_HEAD_FULL[key] = buildHybridHead(SPECIES_HEAD_FULL[a], SPECIES_HEAD_FULL[b], 3);
+    HYBRID_HEAD_BUD[key]  = buildHybridHead(SPECIES_HEAD_BUD[a], SPECIES_HEAD_BUD[b], 5);
+  }
+}
+function getHybridSpeciesKey(genome){
+  if(!genome.hybridWith) return null;
+  if(genome.crossSpecies && SPECIES[genome.crossSpecies]) return genome.crossSpecies;
+  for(const key in SPECIES){ if(SPECIES[key].name===genome.hybridWith) return key; }
+  return null;
+}
+const SPROUT_ROWS = ['.....','..t..','.t.t.','..s..'];
+const POT_ROWS = ['.RRRRRRR.','.BBBBBBB.','..BBBBB..','..BBDBB..','...DDD...'];
+const PEST_ROWS = ['.x.x.','xxxxx','.xxx.','.x.x.'];
+const PEST_COLOR = '#A23B3B';
+
+const STEM_STYLES = {
+  mossputt:   (i) => '...ttt...',
+  fernling:   (i) => i%2===0 ? '...tt....' : '....tt...',
+  glowbloom:  (i) => i%2===0 ? '..gtttg..' : '...ttt...',
+  thornvine:  (i) => i%2===1 ? '..ktttk..' : '...ttt...',
+  duskvelvet: (i) => i%2===0 ? '..vtttv..' : '...ttt...',
+  starforge:  (i) => i%2===0 ? '..pttt...' : '...tttp..'
+};
+function stemRows(height, speciesKey, crossKey){
+  const rows = [];
+  const n = height-1;
+  const splitAt = Math.ceil(n/2);
+  for(let i=0;i<n;i++){
+    const key = (crossKey && i>=splitAt) ? crossKey : speciesKey;
+    const style = STEM_STYLES[key] || STEM_STYLES.mossputt;
+    rows.push(style(i));
+  }
+  rows.push('...sss...');
+  return rows;
+}
+function spriteRows(genome, stage){
+  if(stage==='sprout') return { rows: SPROUT_ROWS, width:5 };
+  const crossKey = getHybridSpeciesKey(genome);
+  const useHybrid = crossKey && crossKey!==genome.species;
+  let head;
+  if(stage==='bloom'){
+    head = useHybrid ? HYBRID_HEAD_FULL[genome.species+'|'+crossKey] : SPECIES_HEAD_FULL[genome.species];
+  } else {
+    head = useHybrid ? HYBRID_HEAD_BUD[genome.species+'|'+crossKey] : SPECIES_HEAD_BUD[genome.species];
+  }
+  const stHeight = stage==='bloom' ? 5 : 3;
+  return { rows: head.concat(stemRows(stHeight, genome.species, useHybrid ? crossKey : null)), width: HEAD_W };
+}
+function cellColor(token, hue, wilt){
+  if(token==='.') return null;
+  if(token==='t') return wilt ? '#7A6A52' : '#3F6B42';
+  if(token==='s') return wilt ? '#5C4F3D' : '#2C4A2E';
+  if(token==='g') return wilt ? '#6B6358' : 'hsl('+hue+' 75% 82%)';
+  if(token==='k') return wilt ? '#4A4038' : '#5C4A32';
+  if(token==='v') return wilt ? '#5C4558' : '#8C4A8C';
+  if(token==='p') return wilt ? '#5C7A74' : '#7EE8D9';
+  if(wilt){
+    if(token==='a') return '#6B5A45';
+    if(token==='b') return '#8A7558';
+    if(token==='c') return '#A4906F';
+  }
+  if(token==='a') return 'hsl('+hue+' 55% 34%)';
+  if(token==='b') return 'hsl('+hue+' 60% 50%)';
+  if(token==='c') return 'hsl('+hue+' 65% 68%)';
+  return null;
+}
+function potColor(token, locked){
+  if(token==='.') return null;
+  if(locked){
+    if(token==='R') return '#5A5A52';
+    if(token==='B') return '#454540';
+    if(token==='D') return '#2C2C28';
+  }
+  if(token==='R') return 'var(--pot-light)';
+  if(token==='B') return 'var(--pot)';
+  if(token==='D') return 'var(--pot-dark)';
+  return null;
+}
+function computeStage(pct){
+  if(pct<30) return 'sprout';
+  if(pct<70) return 'budding';
+  return 'bloom';
+}
+function getHybridHue(genome){
+  if(!genome.hybridWith) return null;
+  if(genome.crossHue!=null) return genome.crossHue;
+  for(const key in SPECIES){ if(SPECIES[key].name===genome.hybridWith) return SPECIES[key].hue; }
+  return null;
+}
+const TRAIT_ACCENTS = {
+  sunseeker:   [ {r:2,c:3,color:'#FFC857'}, {r:2,c:5,color:'#FFC857'} ],
+  ironroot:    [ {r:5,c:2,color:'#A8B0AC'}, {r:5,c:6,color:'#A8B0AC'} ],
+  featherseed: [ {r:1,c:2,color:'#EAF2E2'}, {r:1,c:6,color:'#EAF2E2'} ],
+  emberbloom:  [ {r:3,c:2,color:'#FF7A45'}, {r:3,c:6,color:'#FF7A45'} ],
+  driftpetal:  [ {r:4,c:1,color:'#9FD8F0'} ],
+  mimicleaf:   [ {r:4,c:3,color:'#FFC857'}, {r:4,c:5,color:'#C77DFF'} ],
+  stargazer:   [ {r:2,c:1,color:'#F4F1E0'}, {r:2,c:7,color:'#F4F1E0'} ],
+  gianthusk:   [ {r:3,c:1,color:'#7A431F'}, {r:3,c:7,color:'#7A431F'} ]
+};
+function hasTrait(genome, id){ return genome.rareTrait===id || genome.rareTrait2===id; }
+function renderSprite(genome, size, stage, opts){
+  opts = opts || {};
+  if(!genome) return '';
+  let hue = genome.hue;
+  const wilt = !!opts.wilt;
+  let glow=false, drift=false;
+  if(!wilt){
+    if(genome.glow) glow = true;
+    if(hasTrait(genome,'driftpetal')) drift = true;
+    if(hasTrait(genome,'stargazer')){ const h=getGameHour(); if(h>=19||h<6) glow=true; }
+    if(hasTrait(genome,'mimicleaf') && opts.neighborHue!=null) hue = opts.neighborHue;
+  }
+  const useStage = wilt ? 'bloom' : stage;
+  const { rows, width } = spriteRows(genome, useStage);
+  const cell = size==='lg' ? 8 : 4;
+  const accents = (!wilt && useStage==='bloom')
+    ? [genome.rareTrait, genome.rareTrait2].filter(Boolean).flatMap(id => TRAIT_ACCENTS[id] || [])
+    : [];
+  const hybridHue = (!wilt && useStage!=='sprout') ? getHybridHue(genome) : null;
+  const hybridSplitRow = useStage==='bloom' ? 3 : 5;
+  let cellsHtml = '';
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r];
+    for(let c=0; c<row.length; c++){
+      const ch = row[c];
+      let color = cellColor(ch, hue, wilt);
+      if(hybridHue!=null && (ch==='b'||ch==='c') && r>=hybridSplitRow){
+        color = cellColor(ch, hybridHue, wilt);
+      }
+      if(accents.length && ch!=='.' && r<HEAD_ROWS){
+        const accent = accents.find(a=>a.r===r && a.c===c);
+        if(accent) color = accent.color;
+      }
+      cellsHtml += '<div style="background:'+(color||'transparent')+'"></div>';
+    }
+  }
+  const classes = ['pix-sprite'];
+  if(glow) classes.push('is-glow');
+  if(drift) classes.push('is-drift');
+  if(wilt) classes.push('is-wilt');
+  return '<div class="'+classes.join(' ')+'" style="--hue:'+Math.round(hue)+';grid-template-columns:repeat('+width+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function renderPot(size, locked){
+  const cell = size==='lg' ? 8 : 3.5;
+  let cellsHtml = '';
+  for(const row of POT_ROWS){
+    for(const ch of row){
+      const color = potColor(ch, locked);
+      cellsHtml += '<div style="background:'+(color||'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-pot" style="grid-template-columns:repeat(9,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function renderPest(size){
+  const cell = size==='lg' ? 6 : 3;
+  let cellsHtml = '';
+  for(const row of PEST_ROWS){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(ch==='x' ? PEST_COLOR : 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-pest" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+const SPRINKLER_ROWS = ['..H..','.HHH.','..P..','..P..','..P..','.GGG.'];
+function gardenGearColor(token){
+  if(token==='.') return null;
+  if(token==='H') return '#A8B0AC';
+  if(token==='P') return '#5C6660';
+  if(token==='G') return '#3A4540';
+  return null;
+}
+function gearCells(rows, cell, glowTokens){
+  const cols = rows[0].length;
+  let cellsHtml = '';
+  for(const row of rows){
+    for(const ch of row){
+      const cls = (glowTokens && glowTokens.includes(ch)) ? ' class="gear-glow"' : '';
+      cellsHtml += '<div'+cls+' style="background:'+(gardenGearColor(ch)||'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-gear" style="grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function renderDroplet(){
+  const dir = Math.random()<0.5 ? -1 : 1;
+  const dx = (dir*(3+Math.random()*4)).toFixed(1);
+  const dy = (-(3+Math.random()*4)).toFixed(1);
+  const dx2 = (dir*(6+Math.random()*5)).toFixed(1);
+  const dy2 = (2+Math.random()*3).toFixed(1);
+  const dur = (1.1+Math.random()*0.9).toFixed(2);
+  const delay = (Math.random()*1.4).toFixed(2);
+  const startX = (40+Math.random()*20).toFixed(0);
+  return '<span class="droplet" style="--dx:'+dx+'px;--dy:'+dy+'px;--dx2:'+dx2+'px;--dy2:'+dy2+'px;--dur:'+dur+'s;--delay:'+delay+'s;--startX:'+startX+'%"></span>';
+}
+function renderSprinkler(size){
+  const cell = size==='lg' ? 6 : 3;
+  const count = 2 + Math.floor(Math.random()*2);
+  let droplets = '';
+  for(let i=0;i<count;i++) droplets += renderDroplet();
+  return '<div class="tile-gear-wrap">'+gearCells(SPRINKLER_ROWS, cell) + droplets + '</div>';
+}
+function tilePotStack(plantSlotHtml, locked){
+  return '<div class="tile-pot-stack"><div class="tile-plant-slot">'+plantSlotHtml+'</div>'+renderPot('sm', locked)+'</div>';
+}
+function gearAccessoryRow(rowClass, slotClass, potHtml, showSprinkler, size){
+  return '<div class="'+rowClass+'">'
+    + (showSprinkler ? '<div class="'+slotClass+'">'+renderSprinkler(size)+'</div>' : '')
+    + potHtml
+    + '</div>';
+}
+function tileAccessoryRow(potStackHtml, showSprinkler){
+  return gearAccessoryRow('tile-accessory-row', 'tile-accessory-slot', potStackHtml, showSprinkler, 'sm');
+}
+function sheetAccessoryRow(potWrapHtml, showSprinkler){
+  return '<div class="pot-accessory-center">'+gearAccessoryRow('pot-accessory-row', 'pot-accessory-slot', potWrapHtml, showSprinkler, 'lg')+'</div>';
+}
+
+/* ===================== STATE ===================== */
+let state = null;
+let currentSheetIdx = null;
+let currentSkyPhase = null;
+function applyWindowPhase(){
+  const h = getGameHour();
+  let phase;
+  if(h>=20 || h<5) phase='night';
+  else if(h<7) phase='dawn';
+  else if(h<17) phase='day';
+  else phase='dusk';
+  const el = document.getElementById('windowScene');
+  if(el) el.className = 'window is-'+phase;
+  if(phase===currentSkyPhase) return;
+  const prevPhase = currentSkyPhase;
+  currentSkyPhase = phase;
+  const under = document.getElementById('skyUnder');
+  const over = document.getElementById('skyOver');
+  if(!under || !over) return;
+  if(!prevPhase){
+    under.className = 'sky-layer sky-under is-'+phase;
+    over.className = 'sky-layer sky-over is-'+phase;
+    over.style.opacity = '1';
+    return;
+  }
+  under.className = 'sky-layer sky-under is-'+prevPhase;
+  over.style.opacity = '0';
+  over.className = 'sky-layer sky-over is-'+phase;
+  void over.offsetWidth;
+  over.style.opacity = '1';
+}
+let revealShowing = false;
+let lastSheetDisplayStatus = null;
+let saveTimer = null;
+let toastTimer = null;
+
+function buildInitialPlots(){
+  const arr = [];
+  for(let i=0;i<9;i++){
+    arr.push({ idx:i, locked: !INITIAL_UNLOCKED.includes(i), unlockCost: UNLOCK_COSTS[i]||0,
+      status:'empty', genome:null, plantedAt:0, growthDurationMs:0, light:50, water:50, lastDeathCheck:0,
+      pest:null, lastPestCheck:0, lastSprinklerCheck:0, lastLightCheck:0 });
+  }
+  return arr;
+}
+function defaultState(){
+  return { spores:20, gems:0, xp:0, everPlanted:false, plots:buildInitialPlots(), inventory:[], herbarium:[],
+    upgrades:{ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 },
+    taskBoard:{ slot:getBoardSlot(), tasks:rollNewTasks(), progress:{}, claimed:{} }, nextMutationBoost:0,
+    achievements:{}, herbSets:{}, researchSlots:[null,null,null], labSlotUnlocked:[false,true,false],
+    achStats:{ harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0, totalGemsEarned:0, totalSkillPointsEarned:0 },
+    prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
+    decor: defaultDecorState(),
+    lastSavedAt:Date.now() };
+}
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      const merged = Object.assign(defaultState(), parsed);
+      if(!Array.isArray(merged.plots) || merged.plots.length!==9) merged.plots = buildInitialPlots();
+      merged.upgrades = Object.assign({ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 }, parsed.upgrades||{});
+      if(typeof merged.xp!=='number') merged.xp = 0;
+      if(typeof merged.gems!=='number') merged.gems = 0;
+      if(!merged.taskBoard || typeof merged.taskBoard.slot!=='number' || !Array.isArray(merged.taskBoard.tasks)) merged.taskBoard = { slot:getBoardSlot(), tasks:rollNewTasks(getLevelFromXp(merged.xp)), progress:{}, claimed:{} };
+      if(!merged.achievements) merged.achievements = {};
+      if(!merged.herbSets) merged.herbSets = {};
+      if(typeof parsed.researchSlots==='undefined' && typeof parsed.research!=='undefined'){
+        merged.researchSlots = [null, parsed.research, null];
+      } else if(!Array.isArray(merged.researchSlots) || merged.researchSlots.length!==3){
+        merged.researchSlots = [null, null, null];
+      }
+      if(!Array.isArray(merged.labSlotUnlocked) || merged.labSlotUnlocked.length!==3) merged.labSlotUnlocked = [false, true, false];
+      if(!merged.achStats) merged.achStats = { harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0 };
+      if(typeof merged.achStats.totalSporesEarned!=='number') merged.achStats.totalSporesEarned = merged.achStats.totalSpores||0;
+      if(typeof merged.achStats.bestPestFreeStreak!=='number') merged.achStats.bestPestFreeStreak = merged.achStats.pestFreeHarvests||0;
+      if(typeof merged.achStats.researchCompleted!=='number') merged.achStats.researchCompleted = 0;
+      if(typeof merged.achStats.bestResearchTier!=='number') merged.achStats.bestResearchTier = -1;
+      if(typeof merged.achStats.doubleMutations!=='number') merged.achStats.doubleMutations = 0;
+      if(typeof merged.achStats.totalGemsEarned!=='number') merged.achStats.totalGemsEarned = 0;
+      if(typeof merged.achStats.totalSkillPointsEarned!=='number') merged.achStats.totalSkillPointsEarned = 0;
+      if(!merged.prestige || typeof merged.prestige!=='object'){
+        merged.prestige = { count:0, skillPoints:0, skillTree: defaultSkillTree() };
+      } else {
+        merged.prestige.count = merged.prestige.count||0;
+        merged.prestige.skillPoints = merged.prestige.skillPoints||0;
+        merged.prestige.skillTree = Object.assign(defaultSkillTree(), merged.prestige.skillTree||{});
+      }
+      if(!merged.decor || typeof merged.decor!=='object'){
+        merged.decor = defaultDecorState();
+      } else {
+        if(!Array.isArray(merged.decor.ownedPots) || !merged.decor.ownedPots.length) merged.decor.ownedPots = ['terracotta'];
+        if(!Array.isArray(merged.decor.ownedWallpapers) || !merged.decor.ownedWallpapers.length) merged.decor.ownedWallpapers = ['cedar'];
+        if(!merged.decor.ownedPots.includes('terracotta')) merged.decor.ownedPots.unshift('terracotta');
+        if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
+        if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
+        if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
+      }
+      return merged;
+    }
+  }catch(e){ /* no saved state yet */ }
+  return defaultState();
+}
+async function saveState(){
+  try{
+    state.lastSavedAt = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){ console.warn('save failed', e); }
+}
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
+
+/* ===================== HELPERS ===================== */
+function addSpores(amount){
+  state.spores += amount;
+  state.achStats.totalSporesEarned = (state.achStats.totalSporesEarned||0) + amount;
+}
+function addGems(amount){
+  state.gems = (state.gems||0) + amount;
+  state.achStats.totalGemsEarned = (state.achStats.totalGemsEarned||0) + amount;
+}
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function randRange(a,b){ return a + Math.random()*(b-a); }
+function sliderGradient(target){
+  const safeStart = clamp(target-15, 0, 100);
+  const safeEnd = clamp(target+15, 0, 100);
+  return 'linear-gradient(to right, var(--warn) 0% '+safeStart+'%, var(--accent) '+safeStart+'% '+safeEnd+'%, var(--warn) '+safeEnd+'% 100%)';
+}
+function fmtTime(ms){
+  if(ms<0) ms = 0;
+  const s = Math.ceil(ms/1000);
+  const m = Math.floor(s/60);
+  const sec = s%60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+function timeAgo(ts){
+  const d = Date.now()-ts;
+  if(d<60000) return 'just now';
+  if(d<3600000) return Math.floor(d/60000)+'m ago';
+  if(d<86400000) return Math.floor(d/3600000)+'h ago';
+  return Math.floor(d/86400000)+'d ago';
+}
+function hueToColorName(hue){
+  const h = ((hue%360)+360)%360;
+  const buckets = [[15,'Crimson'],[40,'Amber'],[65,'Gold'],[150,'Verdant'],[195,'Teal'],[250,'Azure'],[290,'Violet'],[330,'Magenta'],[360,'Crimson']];
+  for(const [max,name] of buckets){ if(h<=max) return name; }
+  return 'Crimson';
+}
+function getSpeciesTargets(speciesKey){
+  const sp = SPECIES[speciesKey];
+  return {
+    lightTarget: (sp && sp.lightTarget!=null) ? sp.lightTarget : 50,
+    waterTarget: (sp && sp.waterTarget!=null) ? sp.waterTarget : 50
+  };
+}
+function computeStress(plot){
+  const { lightTarget, waterTarget } = getSpeciesTargets(plot.genome && plot.genome.species);
+  const lightStress = Math.abs(plot.light-lightTarget);
+  const waterStress = Math.abs(plot.water-waterTarget);
+  return { lightStress, waterStress, maxStress: Math.max(lightStress,waterStress), lightTarget, waterTarget };
+}
+function instantGrowCost(plot){
+  const remainingSec = Math.max(0, (plot.plantedAt+plot.growthDurationMs) - Date.now())/1000;
+  return Math.max(1, Math.ceil(remainingSec / 180));
+}
+function instantGrowPlot(idx){
+  const plot = state.plots[idx];
+  if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='growing') return false;
+  const cost = instantGrowCost(plot);
+  if((state.gems||0) < cost) return false;
+  state.gems -= cost;
+  plot.plantedAt = Date.now() - plot.growthDurationMs;
+  const now = Date.now();
+  plot.lastDeathCheck = now; plot.lastPestCheck = now; plot.lastSprinklerCheck = now; plot.lastLightCheck = now;
+  saveState();
+  return true;
+}
+function onInstantGrow(idx){
+  if(instantGrowPlot(idx)){
+    renderSheetFull(idx);
+    updateAllTiles();
+    updateHeader();
+  }
+}
+function getDisplayStatus(plot){
+  if(plot.locked) return 'locked';
+  if(plot.status==='wilted') return 'wilted';
+  if(plot.status==='empty') return 'empty';
+  if(plot.status==='growing'){
+    return (Date.now() >= plot.plantedAt+plot.growthDurationMs) ? 'ready' : 'growing';
+  }
+  return 'empty';
+}
+function neighborHueFor(idx){
+  for(const n of (NEIGHBORS[idx]||[])){
+    const np = state.plots[n];
+    if(np && !np.locked && np.genome){ return np.genome.hue; }
+  }
+  return null;
+}
+function hasAdjacentDifferentSpecies(idx, speciesKey){
+  for(const n of (NEIGHBORS[idx]||[])){
+    const np = state.plots[n];
+    if(np && !np.locked && np.genome && np.status==='growing' && np.genome.species!==speciesKey) return true;
+  }
+  return false;
+}
+function adjacentDifferentGenome(idx, speciesKey){
+  for(const n of (NEIGHBORS[idx]||[])){
+    const np = state.plots[n];
+    if(np && !np.locked && np.genome && np.status==='growing' && np.genome.species!==speciesKey){
+      return { genome: np.genome, name: SPECIES[np.genome.species].name };
+    }
+  }
+  return null;
+}
+
+/* ===================== NAMING ===================== */
+function buildSpecimenName(speciesKey, genome){
+  const base = SPECIES[speciesKey].name;
+  const color = hueToColorName(genome.hue);
+  let name = genome.hybridWith ? (base+' \u00D7 '+genome.hybridWith) : base;
+  name += ' var. '+color;
+  if(genome.rareTrait) name += ' \u2018'+RARE_TRAITS_BY_ID[genome.rareTrait].name+'\u2019';
+  if(genome.rareTrait2) name += ' \u2018'+RARE_TRAITS_BY_ID[genome.rareTrait2].name+'\u2019';
+  return name;
+}
+
+/* ===================== GAME LOGIC ===================== */
+function computeMutationChance(plot, idx){
+  const s = computeStress(plot);
+  let chance = 0.05;
+  if(s.maxStress>30) chance += 0.30;
+  else if(s.maxStress>15) chance += 0.12;
+  if(hasAdjacentDifferentSpecies(idx, plot.genome.species)) chance += 0.15;
+  const sp = SPECIES[plot.genome.species];
+  if(sp && sp.glowBias) chance += sp.glowBias;
+  const luckLevel = (state.upgrades && state.upgrades.luck) || 0;
+  chance += luckLevel * (UPGRADES.luck.perLevel/100);
+  if(state.nextMutationBoost) chance += state.nextMutationBoost;
+  chance += getLevelBonus('mutationBonus');
+  return Math.min(chance, 0.70);
+}
+function applyTraitEffect(genome, traitId){
+  switch(traitId){
+    case 'sunseeker': genome.growthMult = clamp((genome.growthMult||1)-0.2, 0.4, 2.5); break;
+    case 'featherseed': genome.extraSeed = (genome.extraSeed||0)+1; break;
+    case 'emberbloom': genome.sellMult = (genome.sellMult||1)*1.4; genome.glow = true; break;
+    case 'gianthusk':
+      genome.yieldMult = clamp((genome.yieldMult||1)*1.5, 0.4, 4);
+      genome.growthMult = clamp((genome.growthMult||1)+0.5, 0.4, 2.5);
+      break;
+    case 'stargazer': genome.glow = true; break;
+    default: break;
+  }
+}
+function rollTraitMutation(genome){
+  if(genome.rareTrait && genome.rareTrait2) return null;
+  const usedIds = new Set([genome.rareTrait, genome.rareTrait2].filter(Boolean));
+  const available = RARE_TRAITS.filter(t=>!usedIds.has(t.id));
+  if(!available.length) return null;
+  const trait = available[Math.floor(Math.random()*available.length)];
+  applyTraitEffect(genome, trait.id);
+  if(!genome.rareTrait){ genome.rareTrait = trait.id; return 'first'; }
+  genome.rareTrait2 = trait.id;
+  return 'second';
+}
+function rollResearchMutation(baseGenome, tier){
+  const genome = Object.assign({}, baseGenome);
+  const traitChance = 0.20 + tier*0.10;
+  const glowChance = 0.20;
+  const r = Math.random();
+  if(r < traitChance){
+    const outcome = rollTraitMutation(genome);
+    if(outcome) genome.hue = (genome.hue + randRange(-30,30) + 360)%360;
+    else genome.hue = (genome.hue + randRange(-40,40) + 360)%360;
+  } else if(r < traitChance+glowChance){
+    genome.glow = true;
+  } else {
+    const which = Math.random();
+    if(which<0.34) genome.growthMult = clamp((genome.growthMult||1)+randRange(-0.2,0.2), 0.4, 2.5);
+    else if(which<0.67) genome.yieldMult = clamp((genome.yieldMult||1)+randRange(-0.1,0.3), 0.4, 4);
+    else genome.hue = (genome.hue + randRange(-40,40) + 360)%360;
+  }
+  return genome;
+}
+function rollMutation(plot, idx){
+  const chance = computeMutationChance(plot, idx);
+  const mutated = Math.random() < chance;
+  const genome = Object.assign({}, plot.genome);
+  let crossInfo = null;
+  if(mutated){
+    const r = Math.random();
+    if(r<0.18){
+      const outcome = rollTraitMutation(genome);
+      if(outcome) genome.hue = (genome.hue + randRange(-30,30) + 360)%360;
+      else genome.hue = (genome.hue + randRange(-40,40) + 360)%360;
+    } else if(r<0.30){
+      genome.glow = true;
+    } else {
+      const which = Math.random();
+      if(which<0.34) genome.growthMult = clamp((genome.growthMult||1)+randRange(-0.2,0.2), 0.4, 2.5);
+      else if(which<0.67) genome.yieldMult = clamp((genome.yieldMult||1)+randRange(-0.1,0.3), 0.4, 4);
+      else genome.hue = (genome.hue + randRange(-40,40) + 360)%360;
+    }
+    const cross = adjacentDifferentGenome(idx, plot.genome.species);
+    if(cross && Math.random()<0.5){
+      genome.hue = Math.round((genome.hue + cross.genome.hue)/2);
+      genome.yieldMult = clamp(((genome.yieldMult||1)+(cross.genome.yieldMult||1))/2*1.1, 0.4, 4);
+      genome.hybridWith = cross.name;
+      genome.crossHue = cross.genome.hue;
+      genome.crossSpecies = cross.genome.species;
+      crossInfo = cross.name;
+    }
+  }
+  return { genome, mutated, crossInfo };
+}
+function applyDeathRisk(plot, nowMs){
+  if(plot.status!=='growing') return;
+  if(plot.genome && (plot.genome.rareTrait==='ironroot' || plot.genome.rareTrait2==='ironroot')) { plot.lastDeathCheck = nowMs; return; }
+  const finishAt = plot.plantedAt + plot.growthDurationMs;
+  const periodEnd = Math.min(nowMs, finishAt);
+  const last = plot.lastDeathCheck || plot.plantedAt;
+  if(periodEnd<=last) return;
+  const elapsedSec = (periodEnd-last)/1000;
+  plot.lastDeathCheck = periodEnd;
+  const stress = computeStress(plot);
+  if(stress.maxStress>30){
+    const baseChancePerSec = 0.0045;
+    const resist = (SPECIES[plot.genome.species] && SPECIES[plot.genome.species].deathResist) || 0;
+    const resistLevel = (state.upgrades && state.upgrades.resist) || 0;
+    const upgradeFactor = Math.max(0, 1 - resistLevel*(UPGRADES.resist.perLevel/100));
+    const levelFactor = Math.max(0, 1 - getLevelBonus('wiltResist'));
+    const perSec = baseChancePerSec*(1-resist)*upgradeFactor*levelFactor;
+    const survival = Math.pow(1-perSec, elapsedSec);
+    if(Math.random() > survival){ plot.status = 'wilted'; }
+  }
+}
+function applyPestRisk(plot, nowMs){
+  if(plot.status!=='growing') return;
+  if(plot.pest) return; // already infested, severity grows on its own via timestamp
+  const finishAt = plot.plantedAt + plot.growthDurationMs;
+  const periodEnd = Math.min(nowMs, finishAt);
+  const last = plot.lastPestCheck || plot.plantedAt;
+  if(periodEnd<=last) return;
+  const elapsedSec = (periodEnd-last)/1000;
+  plot.lastPestCheck = periodEnd;
+  const stress = computeStress(plot);
+  const basePerSec = 0.0022 * (stress.maxStress>30 ? 1.6 : 1);
+  const ladybugLevel = (state.upgrades && state.upgrades.ladybugs) || 0;
+  const ladybugFactor = Math.max(0, 1 - ladybugLevel*(UPGRADES.ladybugs.perLevel/100));
+  const levelPestFactor = Math.max(0, 1 - getLevelBonus('pestResist'));
+  const noInfestProb = Math.pow(1-(basePerSec*ladybugFactor*levelPestFactor), elapsedSec);
+  if(Math.random() > noInfestProb){ plot.pest = { startedAt: periodEnd }; }
+}
+function pestSeverity(plot){
+  if(!plot.pest) return 0;
+  return clamp((Date.now()-plot.pest.startedAt)/plot.growthDurationMs*1.5, 0, 1);
+}
+function moveToward(value, target, maxDelta){
+  if(value < target) return Math.min(target, value+maxDelta);
+  if(value > target) return Math.max(target, value-maxDelta);
+  return value;
+}
+function applySprinkler(plot, nowMs){
+  if(plot.status!=='growing') return;
+  const level = (state.upgrades && state.upgrades.sprinkler) || 0;
+  if(level<=0){ plot.lastSprinklerCheck = nowMs; return; }
+  const finishAt = plot.plantedAt + plot.growthDurationMs;
+  const periodEnd = Math.min(nowMs, finishAt);
+  const last = plot.lastSprinklerCheck || plot.plantedAt;
+  if(periodEnd<=last) return;
+  const elapsedSec = (periodEnd-last)/1000;
+  plot.lastSprinklerCheck = periodEnd;
+  const maxDelta = level * UPGRADES.sprinkler.perLevel * elapsedSec;
+  const { waterTarget } = getSpeciesTargets(plot.genome && plot.genome.species);
+  plot.water = moveToward(plot.water, waterTarget, maxDelta);
+}
+function applyGardenLight(plot, nowMs){
+  if(plot.status!=='growing') return;
+  const level = (state.upgrades && state.upgrades.gardenLight) || 0;
+  if(level<=0){ plot.lastLightCheck = nowMs; return; }
+  const finishAt = plot.plantedAt + plot.growthDurationMs;
+  const periodEnd = Math.min(nowMs, finishAt);
+  const last = plot.lastLightCheck || plot.plantedAt;
+  if(periodEnd<=last) return;
+  const elapsedSec = (periodEnd-last)/1000;
+  plot.lastLightCheck = periodEnd;
+  const maxDelta = level * UPGRADES.gardenLight.perLevel * elapsedSec;
+  const { lightTarget } = getSpeciesTargets(plot.genome && plot.genome.species);
+  plot.light = moveToward(plot.light, lightTarget, maxDelta);
+}
+function invSig(speciesKey, genome){
+  return [speciesKey, genome.rareTrait||'-', genome.rareTrait2||'-', genome.glow?1:0, Math.round(genome.hue/15), genome.hybridWith||'-'].join('|');
+}
+function addToInventory(speciesKey, genome, qty){
+  const sig = invSig(speciesKey, genome);
+  let stack = state.inventory.find(s=>s.sig===sig);
+  if(stack){ stack.qty += qty; }
+  else { state.inventory.push({ id: sig+'_'+Date.now(), sig, species: speciesKey, genome: Object.assign({},genome), qty }); }
+}
+function compostStackValue(stack){
+  const sp = SPECIES[stack.species];
+  let perSeed = Math.max(1, Math.round(sp.seedCost*0.4));
+  if(stack.genome.rareTrait) perSeed += 3;
+  if(stack.genome.rareTrait2) perSeed += 5;
+  if(stack.genome.hybridWith) perSeed += 2;
+  const lvlBonus = 1 + getLevelBonus('compostBonus');
+  return Math.round(perSeed * stack.qty * lvlBonus);
+}
+function compostStack(stackId){
+  const stack = state.inventory.find(s=>s.id===stackId);
+  if(!stack) return;
+  const refund = compostStackValue(stack);
+  addSpores(refund);
+  state.inventory = state.inventory.filter(s=>s.id!==stackId);
+  saveState();
+  if(currentSheetIdx!=null) renderSheetFull(currentSheetIdx);
+  updateHeader();
+}
+function getSortedInventory(){
+  return [...state.inventory].sort((a,b)=> getSeedRarityTier(b.genome)-getSeedRarityTier(a.genome));
+}
+function compostAllCommons(){
+  const commons = state.inventory.filter(s=>getSeedRarityTier(s.genome)===0);
+  if(!commons.length) return;
+  let totalRefund = 0;
+  commons.forEach(stack=>{ totalRefund += compostStackValue(stack); });
+  state.inventory = state.inventory.filter(s=>getSeedRarityTier(s.genome)!==0);
+  addSpores(totalRefund);
+  saveState();
+  if(currentSheetIdx!=null) renderSheetFull(currentSheetIdx);
+  updateHeader();
+  showToast('Composted '+commons.length+' common seed stack'+(commons.length>1?'s':'')+' for +'+totalRefund+'◆');
+}
+function logHerbarium(speciesKey, genome){
+  const colorName = hueToColorName(genome.hue);
+  const key = [speciesKey, genome.rareTrait||'-', genome.rareTrait2||'-', genome.glow?1:0, colorName, genome.hybridWith||'-'].join('|');
+  let entry = state.herbarium.find(e=>e.key===key);
+  if(entry){ entry.count++; entry.lastFound = Date.now(); return { isNew:false, name: entry.name }; }
+  const name = buildSpecimenName(speciesKey, genome);
+  entry = { key, species: speciesKey, genome: Object.assign({},genome), name, firstFound: Date.now(), lastFound: Date.now(), count:1 };
+  state.herbarium.unshift(entry);
+  return { isNew:true, name };
+}
+
+/* ===================== HERBARIUM SETS ===================== */
+const HERB_COLOR_NAMES = ['Crimson','Amber','Gold','Verdant','Teal','Azure','Violet','Magenta'];
+function speciesPairs(){
+  const keys = Object.keys(SPECIES);
+  const pairs = [];
+  for(let i=0;i<keys.length;i++) for(let j=i+1;j<keys.length;j++) pairs.push([keys[i],keys[j]]);
+  return pairs;
+}
+function pairSatisfied(a,b){
+  const nameA = SPECIES[a].name, nameB = SPECIES[b].name;
+  return state.herbarium.some(e => (e.species===a && e.genome.hybridWith===nameB) || (e.species===b && e.genome.hybridWith===nameA));
+}
+const HERB_SETS = [
+  { id:'species_set', name:'Species Sampler', desc:'Press one specimen of every species.',
+    reward:{spores:40, xp:20},
+    total:()=>Object.keys(SPECIES).length,
+    progress:()=>new Set(state.herbarium.map(e=>e.species)).size },
+  { id:'color_set', name:'Color Wheel', desc:'Press a specimen in every named color.',
+    reward:{spores:80, xp:40},
+    total:()=>HERB_COLOR_NAMES.length,
+    progress:()=>new Set(state.herbarium.map(e=>hueToColorName(e.genome.hue))).size },
+  { id:'trait_set', name:'Trait Collector', desc:'Press a specimen with every rare trait.',
+    reward:{spores:100, xp:50},
+    total:()=>RARE_TRAITS.length,
+    progress:()=>{
+      const seen = new Set();
+      state.herbarium.forEach(e=>{
+        if(e.genome.rareTrait) seen.add(e.genome.rareTrait);
+        if(e.genome.rareTrait2) seen.add(e.genome.rareTrait2);
+      });
+      return seen.size;
+    } },
+  { id:'hybrid_set', name:'Cross-Pollinator', desc:'Discover a hybrid between every pair of species.',
+    reward:{spores:90, xp:45},
+    total:()=>speciesPairs().length,
+    progress:()=>speciesPairs().filter(([a,b])=>pairSatisfied(a,b)).length }
+];
+function checkHerbSets(){
+  let anyNew = false;
+  for(const set of HERB_SETS){
+    if(state.herbSets[set.id]) continue;
+    if(set.progress() >= set.total()){
+      state.herbSets[set.id] = Date.now();
+      addSpores(set.reward.spores);
+      if(set.reward.xp) grantXp(set.reward.xp);
+      showToast('✨ Set complete: '+set.name+'  +'+set.reward.spores+'◆');
+      anyNew = true;
+    }
+  }
+  if(anyNew) scheduleSave();
+}
+
+/* ===================== RESEARCH MACHINE ===================== */
+const RESEARCH_TIERS = [
+  { id:0, name:'Common',      durationMs:30*60*1000,      fee:10,  reward:{spores:20,  xp:10} },
+  { id:1, name:'Uncommon',    durationMs:60*60*1000,      fee:30,  reward:{spores:55,  xp:25} },
+  { id:2, name:'Rare',        durationMs:2*60*60*1000,    fee:70,  reward:{spores:130, xp:60} },
+  { id:3, name:'Exceptional', durationMs:4*60*60*1000,    fee:150, reward:{spores:280, xp:120} },
+  { id:4, name:'Legendary',   durationMs:8*60*60*1000,    fee:320, reward:{spores:600, xp:260} }
+];
+function getSeedRarityTier(genome){
+  const hasTrait = !!genome.rareTrait;
+  const hasSecondTrait = !!genome.rareTrait2;
+  const hasHybrid = !!genome.hybridWith;
+  if(hasSecondTrait) return 4;
+  if(hasTrait && hasHybrid) return 3;
+  if(hasTrait || hasHybrid) return 2;
+  if(genome.glow || Math.abs((genome.growthMult||1)-1)>0.15 || Math.abs((genome.yieldMult||1)-1)>0.2) return 1;
+  return 0;
+}
+const RARITY_COLORS_DARK = ['var(--text-muted)', 'var(--accent)', 'var(--violet)', 'var(--warn)', '#FF9F1C'];
+const RARITY_COLORS_PARCHMENT = ['#8C6A3E', '#3F8C2A', '#7B3FA0', '#B8860B', '#B8460E'];
+const LAB_SLOTS = [
+  { pos:'left', label:'Left Station', cost:250 },
+  { pos:'center', label:'Main Station', cost:0 },
+  { pos:'right', label:'Right Station', cost:400 }
+];
+function isLabSlotUnlocked(slot){
+  return !!(state.labSlotUnlocked && state.labSlotUnlocked[slot]);
+}
+function unlockLabSlot(slot){
+  if(isLabSlotUnlocked(slot)) return false;
+  const cost = LAB_SLOTS[slot].cost;
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  state.labSlotUnlocked[slot] = true;
+  saveState();
+  return true;
+}
+function getResearchStatus(slot){
+  const r = state.researchSlots[slot];
+  if(!r) return 'empty';
+  const finishAt = r.startedAt + r.durationMs;
+  return Date.now() >= finishAt ? 'done' : 'researching';
+}
+function getEffectiveResearchDuration(tier){
+  const cfg = RESEARCH_TIERS[tier];
+  const labSpeedLevel = (state.upgrades && state.upgrades.labSpeed) || 0;
+  const speedFactor = Math.max(0.3, 1 - labSpeedLevel*(UPGRADES.labSpeed.perLevel/100));
+  const prestigeSpeedFactor = Math.max(0.4, 1 - getPrestigeBonus('labSpeedBonus'));
+  return Math.round(cfg.durationMs * speedFactor * prestigeSpeedFactor);
+}
+function startResearch(stackId, slot){
+  if(!isLabSlotUnlocked(slot)) return false;
+  if(state.researchSlots[slot]) return false;
+  const stack = state.inventory.find(s=>s.id===stackId);
+  if(!stack || stack.qty<=0) return false;
+  const tier = getSeedRarityTier(stack.genome);
+  const cfg = RESEARCH_TIERS[tier];
+  if(state.spores < cfg.fee) return false;
+  state.spores -= cfg.fee;
+  stack.qty -= 1;
+  if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s.qty>0);
+  state.researchSlots[slot] = {
+    species: stack.species,
+    genome: Object.assign({}, stack.genome),
+    tier,
+    startedAt: Date.now(),
+    durationMs: getEffectiveResearchDuration(tier)
+  };
+  saveState();
+  return true;
+}
+function collectResearch(slot){
+  if(getResearchStatus(slot)!=='done') return null;
+  const { species, genome, tier } = state.researchSlots[slot];
+  const cfg = RESEARCH_TIERS[tier];
+  const { isNew, name } = logHerbarium(species, genome);
+  let xpGain = cfg.reward.xp;
+  if(isNew) xpGain += 15;
+  addSpores(cfg.reward.spores);
+
+  const mutantGenome = rollResearchMutation(genome, tier);
+  addToInventory(species, mutantGenome, 1);
+  const mutantLog = logHerbarium(species, mutantGenome);
+  if(mutantLog.isNew) xpGain += 15;
+  if(mutantGenome.rareTrait2) state.achStats.doubleMutations = (state.achStats.doubleMutations||0)+1;
+  const gemsEarned = mutantLog.isNew ? (tier+1) : 0;
+  if(gemsEarned) addGems(gemsEarned);
+
+  state.achStats.researchCompleted = (state.achStats.researchCompleted||0)+1;
+  state.achStats.bestResearchTier = Math.max(state.achStats.bestResearchTier||-1, tier);
+  bumpTaskProgress('research_seed', 1);
+
+  grantXp(xpGain);
+  state.researchSlots[slot] = null;
+  checkAchievements();
+  checkHerbSets();
+  saveState();
+  return { name, species, genome, tier, spores:cfg.reward.spores, xp:xpGain, isNew,
+    mutant: { genome: mutantGenome, name: mutantLog.name, isNew: mutantLog.isNew }, gemsEarned };
+}
+function plantSeed(idx, source){
+  const plot = state.plots[idx];
+  if(plot.locked || plot.status!=='empty') return false;
+  let genome;
+  if(source.type==='base'){
+    const sp = SPECIES[source.speciesKey];
+    if(state.spores < sp.seedCost) return false;
+    state.spores -= sp.seedCost;
+    genome = { species: source.speciesKey, hue:(sp.hue+randRange(-10,10)+360)%360, glow:false, growthMult:1, yieldMult:1, sellMult:1, extraSeed:0, rareTrait:null, rareTrait2:null, hybridWith:null };
+  } else {
+    const stack = state.inventory.find(s=>s.id===source.stackId);
+    if(!stack || stack.qty<=0) return false;
+    stack.qty -= 1;
+    genome = Object.assign({}, stack.genome);
+    if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s.qty>0);
+  }
+  const sp = SPECIES[genome.species];
+  const growthLevel = (state.upgrades && state.upgrades.growth) || 0;
+  const growthFactor = Math.max(0.3, 1 - growthLevel*(UPGRADES.growth.perLevel/100));
+  const prestigeGrowthFactor = Math.max(0.5, 1 - getPrestigeBonus('growthSpeed'));
+  plot.genome = genome;
+  plot.status = 'growing';
+  plot.plantedAt = Date.now();
+  plot.growthDurationMs = Math.max(8, sp.growthSec*(genome.growthMult||1)*growthFactor*prestigeGrowthFactor)*1000;
+  plot.light = 50; plot.water = 50;
+  plot.lastDeathCheck = plot.plantedAt;
+  plot.pest = null; plot.lastPestCheck = plot.plantedAt; plot.lastSprinklerCheck = plot.plantedAt; plot.lastLightCheck = plot.plantedAt;
+  state.everPlanted = true;
+  document.body.classList.remove('show-hint');
+  saveState();
+  return true;
+}
+function harvestPlot(idx){
+  const plot = state.plots[idx];
+  if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='ready') return null;
+  const { genome: finalGenome, mutated, crossInfo } = rollMutation(plot, idx);
+  if(state.nextMutationBoost) state.nextMutationBoost = 0;
+  const sp = SPECIES[plot.genome.species];
+  const yieldLevel = (state.upgrades && state.upgrades.yield) || 0;
+  const yieldUpgradeFactor = 1 + yieldLevel*(UPGRADES.yield.perLevel/100);
+  const severity = pestSeverity(plot);
+  const pestPenalty = plot.pest ? clamp(0.15 + severity*0.45, 0.15, 0.6) : 0;
+  const stress = computeStress(plot);
+  const precisionLight = clamp(1 - stress.lightStress/15, 0, 1);
+  const precisionWater = clamp(1 - stress.waterStress/15, 0, 1);
+  const precisionBonus = Math.min(precisionLight, precisionWater) * (getLevelBonus('wellTended') || 0.25);
+  const speciesKey = plot.genome.species;
+  const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
+  const sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * randRange(0.85,1.15));
+  addSpores(sellValue);
+  const seedQty = 1 + (finalGenome.extraSeed||0);
+  addToInventory(plot.genome.species, finalGenome, seedQty);
+  const { isNew, name } = logHerbarium(plot.genome.species, finalGenome);
+  bumpTaskProgress('harvest_any', 1);
+  bumpTaskProgress('harvest_species', 1, speciesKey);
+  bumpTaskProgress('earn_spores', sellValue);
+  if(isNew) bumpTaskProgress('discover_mutation', 1);
+  if(precisionBonus>0) bumpTaskProgress('well_tended', 1);
+  const s = state.achStats;
+  s.harvests = (s.harvests||0)+1;
+  s.totalSpores = (s.totalSpores||0)+sellValue;
+  if(precisionBonus>0) s.wellTended = (s.wellTended||0)+1;
+  if(!plot.pest) s.pestFreeHarvests = (s.pestFreeHarvests||0)+1; else s.pestFreeHarvests = 0;
+  s.bestPestFreeStreak = Math.max(s.bestPestFreeStreak||0, s.pestFreeHarvests);
+  s.speciesSeen = s.speciesSeen||{}; s.speciesSeen[speciesKey] = 1;
+  if(isNew) s.mutations = (s.mutations||0)+1;
+  if(finalGenome.hybridWith) s.hybrids = (s.hybrids||0)+1;
+  if(finalGenome.rareTrait) s.rareTraits = (s.rareTraits||0)+1;
+  if(finalGenome.rareTrait2){ s.rareTraits = (s.rareTraits||0)+1; s.doubleMutations = (s.doubleMutations||0)+1; }
+  let xpGain = sp.baseSell + Math.round(sp.baseSell*(finalGenome.yieldMult-1||0));
+  if(isNew) xpGain += 15;
+  if(precisionBonus>0) xpGain += 5;
+  if(finalGenome.rareTrait) xpGain += 8;
+  if(finalGenome.rareTrait2) xpGain += 15;
+  if(finalGenome.hybridWith) xpGain += 6;
+  grantXp(xpGain);
+  plot.status='empty'; plot.genome=null; plot.plantedAt=0; plot.growthDurationMs=0; plot.light=50; plot.water=50; plot.lastDeathCheck=0;
+  plot.pest=null; plot.lastPestCheck=0; plot.lastSprinklerCheck=0; plot.lastLightCheck=0;
+  const gemsEarned = (mutated && isNew) ? 1 : 0;
+  if(gemsEarned) addGems(gemsEarned);
+  checkAchievements();
+  checkHerbSets();
+  saveState();
+  return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned };
+}
+function countReadyPlots(){
+  return state.plots.filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
+}
+function harvestAllReady(){
+  const results = [];
+  state.plots.forEach((p, idx)=>{
+    if(!p.locked && getDisplayStatus(p)==='ready'){
+      const r = harvestPlot(idx);
+      if(r) results.push(r);
+    }
+  });
+  return results;
+}
+
+/* ===================== RENDER: GREENHOUSE ===================== */
+let tileEls = [];
+let tileDisplayCache = [];
+function buildPlotTiles(){
+  const grid = document.getElementById('plotGrid');
+  grid.innerHTML = '';
+  tileEls = [];
+  tileDisplayCache = new Array(9).fill(null);
+  for(let i=0;i<9;i++){
+    const wrap = document.createElement('div');
+    wrap.className = 'plot-tile';
+    wrap.dataset.idx = i;
+    wrap.innerHTML = '<div class="plot-tile-inner"></div>';
+    wrap.addEventListener('click', ()=>openSheet(i));
+    grid.appendChild(wrap);
+    tileEls.push(wrap);
+  }
+}
+function buildTileInnerHTML(plot, idx){
+  const ds = getDisplayStatus(plot);
+  if(ds==='locked'){
+    return '<div class="tile-top-badge">Locked</div><div class="tile-bottom-text">'+plot.unlockCost+' \u25C6</div>';
+  }
+  if(ds==='empty'){
+    return tilePotStack('<span class="tile-plus-mini">+</span>', false)
+      + '<div class="tile-bottom-text">Empty</div>';
+  }
+  if(ds==='growing'){
+    const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
+    const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+    const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
+    return '<div class="tile-top-badge">'+fmtTime(remaining)+'</div>'
+      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm')+'</div>' : '')
+      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm',computeStage(pct),{neighborHue:neighborHueFor(idx)}), false), sprinklerOn)
+      + '<div class="tile-progress"><div class="tile-progress-fill" style="width:'+pct+'%"></div></div>';
+  }
+  if(ds==='ready'){
+    const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
+    return '<div class="tile-top-badge is-ready">Ready!</div>'
+      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm')+'</div>' : '')
+      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm','bloom',{neighborHue:neighborHueFor(idx)}), false), sprinklerOn);
+  }
+  if(ds==='wilted'){
+    return '<div class="tile-top-badge">Wilted</div>'
+      + tilePotStack(renderSprite(plot.genome,'sm','bloom',{wilt:true}), false);
+  }
+  return '';
+}
+function updateTileLiveBits(tileEl, plot){
+  const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
+  const badge = tileEl.querySelector('.tile-top-badge');
+  if(badge) badge.textContent = fmtTime(remaining);
+  const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+  const fill = tileEl.querySelector('.tile-progress-fill');
+  if(fill) fill.style.width = pct+'%';
+}
+function updateAllTiles(){
+  const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
+  for(let i=0;i<9;i++){
+    const plot = state.plots[i];
+    const ds = getDisplayStatus(plot);
+    const pestFlag = !!(plot.pest && (ds==='growing'||ds==='ready'));
+    let stage = null;
+    if(ds==='growing'){
+      const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+      stage = computeStage(pct);
+    }
+    const prev = tileDisplayCache[i];
+    const changed = !prev || prev.ds!==ds || prev.pest!==pestFlag || prev.sprinklerOn!==sprinklerOn || prev.stage!==stage;
+    tileEls[i].className = 'plot-tile' + (ds==='locked' ? ' locked' : '') + (pestFlag ? ' has-pest' : '');
+    if(changed){
+      tileEls[i].querySelector('.plot-tile-inner').innerHTML = buildTileInnerHTML(plot, i);
+    } else if(ds==='growing'){
+      updateTileLiveBits(tileEls[i], plot);
+    }
+    tileDisplayCache[i] = { ds, pest:pestFlag, sprinklerOn, stage };
+  }
+  updateHarvestAllButton();
+}
+function updateHarvestAllButton(){
+  const btn = document.getElementById('harvestAllBtn');
+  if(!btn) return;
+  const count = countReadyPlots();
+  if(count>0){
+    btn.style.display = '';
+    btn.textContent = 'Harvest All ('+count+')';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+const LAB_UNLOCK_LEVEL = 5;
+function isLabUnlockedByLevel(){
+  return getLevelFromXp(state.xp||0) >= LAB_UNLOCK_LEVEL;
+}
+function updateLabNavLock(){
+  const btn = document.getElementById('labNavBtn');
+  if(!btn) return;
+  const locked = !isLabUnlockedByLevel();
+  btn.classList.toggle('nav-btn-locked', locked);
+  const textEl = btn.querySelector('.nav-btn-text');
+  if(textEl) textEl.textContent = locked ? 'LV.'+LAB_UNLOCK_LEVEL : 'LAB';
+}
+function updatePrestigeBadge(){
+  const badge = document.getElementById('prestigeBadge');
+  if(badge) badge.classList.toggle('show', (state.prestige.skillPoints||0) > 0);
+}
+function updateHeader(){
+  document.getElementById('sporeCount').textContent = Math.round(state.spores);
+  document.getElementById('gemCount').textContent = Math.round(state.gems||0);
+  const prog = getXpProgress(state.xp||0);
+  const lvlEl = document.getElementById('farmLevel');
+  if(lvlEl) lvlEl.textContent = 'LV '+prog.level;
+  const barEl = document.getElementById('xpBarFill');
+  if(barEl) barEl.style.width = prog.pct+'%';
+  const labelEl = document.getElementById('xpBarLabel');
+  if(labelEl) labelEl.textContent = prog.level>=MAX_LEVEL ? 'MAX' : prog.current+' / '+prog.needed+' XP';
+  updateLabNavLock();
+  updatePrestigeBadge();
+}
+
+/* ===================== RENDER: HERBARIUM ===================== */
+function renderHerbSets(){
+  const list = document.getElementById('herbSetsList');
+  if(!list) return;
+  list.innerHTML = HERB_SETS.map(set=>{
+    const done = !!state.herbSets[set.id];
+    const total = set.total();
+    const progress = Math.min(total, set.progress());
+    const rewardText = [set.reward.spores ? '+'+set.reward.spores+'\u25C6' : '', set.reward.xp ? '+'+set.reward.xp+' XP' : ''].filter(Boolean).join('  ');
+    return '<div class="set-card'+(done?' is-complete':'')+'">'
+      + '<div class="set-info">'
+      + '<div class="set-name">'+set.name+'</div>'
+      + '<div class="set-desc">'+set.desc+'</div>'
+      + '<div class="set-progress">'+progress+' / '+total+'</div>'
+      + (rewardText ? '<div class="set-reward">'+rewardText+'</div>' : '')
+      + '</div>'
+      + (done ? '<div class="set-check">\u2714</div>' : '')
+      + '</div>';
+  }).join('');
+}
+const HERB_SORT_OPTIONS = [
+  { id:'recent', label:'Newest First' },
+  { id:'oldest', label:'Oldest First' },
+  { id:'rarity', label:'Rarity (High to Low)' },
+  { id:'name', label:'Name (A-Z)' }
+];
+const HERB_FILTER_OPTIONS = [
+  { id:'all', label:'All Specimens' },
+  { id:'common', label:'Common Only' },
+  { id:'uncommon', label:'Uncommon Only' },
+  { id:'rare', label:'Rare Only' },
+  { id:'exceptional', label:'Exceptional Only' },
+  { id:'legendary', label:'Legendary Only' },
+  { id:'hybrids', label:'Hybrids Only' },
+  { id:'glowing', label:'Glowing Only' }
+];
+const HERB_RARITY_IDS = ['common','uncommon','rare','exceptional','legendary'];
+let herbSortMode = 'recent';
+let herbFilterMode = 'all';
+function getSortedFilteredHerbarium(){
+  let list = state.herbarium.slice();
+  if(herbFilterMode==='hybrids') list = list.filter(e=>e.genome.hybridWith);
+  else if(herbFilterMode==='glowing') list = list.filter(e=>e.genome.glow);
+  else if(HERB_RARITY_IDS.includes(herbFilterMode)) list = list.filter(e=>getSeedRarityTier(e.genome)===HERB_RARITY_IDS.indexOf(herbFilterMode));
+  if(herbSortMode==='oldest') list.sort((a,b)=>a.firstFound-b.firstFound);
+  else if(herbSortMode==='rarity') list.sort((a,b)=>getSeedRarityTier(b.genome)-getSeedRarityTier(a.genome));
+  else if(herbSortMode==='name') list.sort((a,b)=>a.name.localeCompare(b.name));
+  return list;
+}
+function setHerbSort(mode){ herbSortMode = mode; renderHerbFilterMenu(); renderHerbarium(); }
+function setHerbFilter(mode){ herbFilterMode = mode; renderHerbFilterMenu(); renderHerbarium(); }
+function herbMenuRow(o, activeId, onClickFn){
+  const active = o.id===activeId;
+  return '<div class="seed-row" style="cursor:pointer;" onclick="'+onClickFn+'(\''+o.id+'\')">'
+    + '<div class="seed-row-info"><div class="seed-row-name">'+o.label+'</div></div>'
+    + (active ? '<div style="color:var(--accent);font-size:20px;">\u2714</div>' : '')
+    + '</div>';
+}
+function renderHerbFilterMenu(){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  let html = '<div class="sheet-head"><h3>Sort &amp; Filter</h3></div>'
+    + '<div class="sheet-subhead">Sort by</div>'
+    + HERB_SORT_OPTIONS.map(o=>herbMenuRow(o, herbSortMode, 'setHerbSort')).join('')
+    + '<div class="sheet-subhead">Filter</div>'
+    + HERB_FILTER_OPTIONS.map(o=>herbMenuRow(o, herbFilterMode, 'setHerbFilter')).join('')
+    + '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Done</button>';
+  body.innerHTML = html;
+}
+function openHerbFilterMenu(){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderHerbFilterMenu();
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function updateHerbFilterBtnLabel(){
+  const btn = document.getElementById('herbFilterBtn');
+  if(!btn) return;
+  const active = herbSortMode!=='recent' || herbFilterMode!=='all';
+  btn.textContent = active ? 'Sort/Filter \u2022' : 'Sort/Filter';
+  btn.classList.toggle('btn-accent', active);
+}
+function renderHerbarium(){
+  const list = document.getElementById('herbList');
+  document.getElementById('herbCount').textContent = state.herbarium.length;
+  renderHerbSets();
+  updateHerbFilterBtnLabel();
+  if(!state.herbarium.length){
+    list.innerHTML = '<div class="empty-state">Nothing pressed yet.<br>Harvest something strange.</div>';
+    return;
+  }
+  const filtered = getSortedFilteredHerbarium();
+  if(!filtered.length){
+    list.innerHTML = '<div class="empty-state">No specimens match this filter.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map((e,i)=>{
+    const tilt = i%2===0 ? 'tilt-a' : 'tilt-b';
+    const tier = getSeedRarityTier(e.genome);
+    return '<div class="herb-card" onclick="openHerbDetail(\''+e.key+'\')">'
+      + '<div class="herb-photo '+tilt+'">'+tilePotStack(renderSprite(e.genome,'sm','bloom',{}), false)+'</div>'
+      + '<div class="herb-info">'
+      + '<div class="herb-name">'+e.name+'</div>'
+      + '<div class="herb-meta">'+SPECIES[e.species].name+' \u00B7 found '+timeAgo(e.firstFound)+(e.count>1 ? ' \u00B7 \u00D7'+e.count : '')+'</div>'
+      + '<div class="herb-rarity" style="color:'+RARITY_COLORS_PARCHMENT[tier]+'">'+RESEARCH_TIERS[tier].name+'</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+/* ===================== SHEET ===================== */
+function pestAlertHtml(idx){
+  const plot = state.plots[idx];
+  if(!plot.pest) return '';
+  return '<div class="pest-alert">'+renderPest('lg')+'<div class="pest-alert-text">Pests! Squash them before they ruin the harvest.</div><button class="btn btn-small btn-danger" onclick="squashPest('+idx+')">Squash</button></div>';
+}
+function squashPest(idx){
+  const plot = state.plots[idx];
+  plot.pest = null;
+  bumpTaskProgress('squash_pest', 1);
+  state.achStats.pestsSquashed = (state.achStats.pestsSquashed||0)+1;
+  grantXp(3);
+  checkAchievements();
+  saveState();
+  renderSheetFull(idx); updateAllTiles();
+}
+function openLevelTree(){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderLevelTree();
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderLevelTree(){
+  const prog = getXpProgress(state.xp||0);
+  const body = document.getElementById('sheetBody');
+  let html = '<div class="sheet-head"><h3>Level Rewards</h3></div>'
+    + '<p class="sheet-blurb">Tap the level badge anytime to check your progress. Rewards are permanent and stack.</p>'
+    + '<div class="reward-tree">';
+
+  for(let lvl=1; lvl<=MAX_LEVEL; lvl++){
+    const reward = LEVEL_REWARDS[lvl];
+    const unlocked = prog.level >= lvl;
+    const isCurrent = prog.level === lvl;
+    if(reward){
+      const cls = unlocked ? (isCurrent ? 'is-current' : 'is-unlocked') : 'is-locked';
+      html += '<div class="reward-row '+cls+'">'
+        + '<div class="reward-node">'+lvl+'</div>'
+        + '<div class="reward-info">'
+        + '<div class="reward-name">'+renderPixIcon(reward.pix, unlocked)+'<span>'+reward.name+'</span></div>'
+        + '<div class="reward-desc">'+reward.desc+'</div>'
+        + '</div>'
+        + '</div>';
+    } else {
+      const cls = unlocked ? 'is-unlocked' : 'is-locked';
+      html += '<div class="reward-plain-row '+cls+'">'
+        + '<div class="reward-node" style="width:22px;height:22px;margin:0 5px;font-size:9px;">'+lvl+'</div>'
+        + '<div class="reward-desc" style="font-size:12px;">'+xpForLevel(lvl)+' XP to next</div>'
+        + '</div>';
+    }
+  }
+  html += '</div>';
+  html += '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Close</button>';
+  body.innerHTML = html;
+}
+function openHerbDetail(key){
+  const entry = state.herbarium.find(e=>e.key===key);
+  if(!entry) return;
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderHerbDetailSheet(entry);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderHerbDetailSheet(entry){
+  const g = entry.genome;
+  const growthDelta = Math.round((1-(g.growthMult||1))*100);
+  const yieldDelta = Math.round(((g.yieldMult||1)-1)*100);
+  const sellDelta = Math.round(((g.sellMult||1)-1)*100);
+  const tier = getSeedRarityTier(g);
+  const body = document.getElementById('sheetBody');
+  let html = '<div class="sheet-head"><h3>Specimen</h3></div>'
+    + '<div class="sprite-wrap-lg">'+renderSprite(g,'lg','bloom',{})+'</div>'
+    + '<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>'
+    + '<div class="reveal-name" style="text-align:center;margin-bottom:10px;">'+entry.name+'</div>'
+    + '<div class="stat-row"><span>Species</span><span>'+SPECIES[entry.species].name+'</span></div>'
+    + '<div class="stat-row"><span>Rarity</span><span style="color:'+RARITY_COLORS_DARK[tier]+'">'+RESEARCH_TIERS[tier].name+'</span></div>'
+    + '<div class="stat-row"><span>Growth speed</span><span>'+(growthDelta>=0?'+':'')+growthDelta+'%</span></div>'
+    + '<div class="stat-row"><span>Yield</span><span>'+(yieldDelta>=0?'+':'')+yieldDelta+'%</span></div>'
+    + (sellDelta!==0 ? '<div class="stat-row"><span>Sell value</span><span>'+(sellDelta>=0?'+':'')+sellDelta+'%</span></div>' : '')
+    + '<div class="stat-row"><span>Glow</span><span>'+(g.glow?'Yes':'No')+'</span></div>'
+    + (g.rareTrait ? '<div class="stat-row"><span>Trait</span><span>'+RARE_TRAITS_BY_ID[g.rareTrait].name+'</span></div><div class="stat-detail">'+RARE_TRAITS_BY_ID[g.rareTrait].desc+'</div>' : '')
+    + (g.rareTrait2 ? '<div class="stat-row"><span>Trait</span><span>'+RARE_TRAITS_BY_ID[g.rareTrait2].name+'</span></div><div class="stat-detail">'+RARE_TRAITS_BY_ID[g.rareTrait2].desc+'</div>' : '')
+    + (g.hybridWith ? '<div class="stat-row"><span>Cross</span><span>'+g.hybridWith+'</span></div>' : '')
+    + '<div class="stat-row"><span>First found</span><span>'+timeAgo(entry.firstFound)+'</span></div>'
+    + (entry.count>1 ? '<div class="stat-row"><span>Times found</span><span>\u00D7'+entry.count+'</span></div>' : '')
+    + '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Close</button>';
+  body.innerHTML = html;
+}
+function openSheet(idx){
+  currentSheetIdx = idx;
+  revealShowing = false;
+  renderSheetFull(idx);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function closeSheet(){
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  revealShowing = false;
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheetBackdrop').classList.remove('open');
+}
+function renderSheetFull(idx){
+  const plot = state.plots[idx];
+  const ds = getDisplayStatus(plot);
+  lastSheetDisplayStatus = ds;
+  const body = document.getElementById('sheetBody');
+  let html = '';
+
+  if(ds==='locked'){
+    html = '<div class="sheet-head"><h3>Locked pot</h3></div>'
+      + '<div class="pot-wrap-lg">'+renderPot('lg', true)+'</div>'
+      + '<p class="sheet-blurb">Clear ground for another pot. More room, more chances for cross-pollination.</p>'
+      + '<button class="btn btn-primary btn-block" '+(state.spores<plot.unlockCost?'disabled':'')+' onclick="unlockPlot('+idx+')">Unlock for '+plot.unlockCost+' \u25C6</button>';
+
+  } else if(ds==='empty'){
+    const baseRows = Object.entries(SPECIES).map(([key,sp])=>{
+      const locked = !isSpeciesUnlocked(key);
+      const action = locked
+        ? '<button class="btn btn-small" disabled>Lv.'+sp.unlockLevel+'</button>'
+        : '<button class="btn btn-small" '+(state.spores<sp.seedCost?'disabled':'')+' onclick="plantBase('+idx+',\''+key+'\')">'+(sp.seedCost>0 ? sp.seedCost+' \u25C6' : 'Free')+'</button>';
+      return '<div class="seed-row'+(locked?' is-locked':'')+'">'
+        + '<div class="seed-row-glyph">'+renderSprite({species:key,hue:sp.hue,glow:false},'sm','bloom')+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+sp.name+'</div><div class="seed-row-sub">'+(locked ? 'Unlocks at Level '+sp.unlockLevel+'.' : sp.blurb+' Likes light ~'+sp.lightTarget+'%, water ~'+sp.waterTarget+'%.')+'</div></div>'
+        + action
+        + '</div>';
+    }).join('');
+    let invHtml = '';
+    if(state.inventory.length){
+      const invRows = getSortedInventory().map(stack=>{
+        const refund = compostStackValue(stack);
+        return '<div class="seed-row">'
+          + '<div class="seed-row-glyph">'+renderSprite(stack.genome,'sm','bloom')+'</div>'
+          + '<div class="seed-row-info"><div class="seed-row-name">'+buildSpecimenName(stack.species, stack.genome)+'</div><div class="seed-row-sub">\u00D7'+stack.qty+' in stock</div></div>'
+          + '<div class="seed-row-actions">'
+          + '<button class="btn btn-small btn-accent" onclick="plantFromInventory('+idx+',\''+stack.id+'\')">Plant</button>'
+          + '<button class="btn btn-small btn-danger" onclick="compostStack(\''+stack.id+'\')">Compost +'+refund+'\u25C6</button>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+      const commons = state.inventory.filter(s=>getSeedRarityTier(s.genome)===0);
+      const commonsRefund = commons.reduce((sum,s)=>sum+compostStackValue(s),0);
+      const bulkBtn = commons.length>1 ? '<button class="btn btn-small btn-danger btn-block" style="margin-top:8px;" onclick="compostAllCommons()">Compost All Commons ('+commons.length+') +'+commonsRefund+'\u25C6</button>' : '';
+      invHtml = '<div class="sheet-subhead">Your seed bank</div><div class="seed-list">'+invRows+'</div>'+bulkBtn;
+    }
+    html = '<div class="sheet-head"><h3>Place a seed</h3></div>'
+      + '<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>'
+      + '<div class="seed-list">'+baseRows+'</div>'+invHtml;
+
+  } else if(ds==='growing'){
+    const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
+    const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+    const chance = Math.round(computeMutationChance(plot, idx)*100);
+    const growCost = instantGrowCost(plot);
+    const stress = computeStress(plot);
+    const sprinklerLevel = (state.upgrades && state.upgrades.sprinkler) || 0;
+    const gardenLightLevel = (state.upgrades && state.upgrades.gardenLight) || 0;
+    const waterAutoTag = sprinklerLevel>0 ? ' <span style="color:var(--accent);font-size:11px;">(auto)</span>' : '';
+    const lightAutoTag = gardenLightLevel>0 ? ' <span style="color:var(--accent);font-size:11px;">(auto)</span>' : '';
+    const spName = SPECIES[plot.genome.species].name;
+    let autoText = '';
+    if(sprinklerLevel>0 && gardenLightLevel>0) autoText = ' Your Sprinkler System and Garden Light are nudging water and light back toward their ideal on their own.';
+    else if(sprinklerLevel>0) autoText = ' Your Sprinkler System is nudging water back toward its ideal on its own \u2014 light is still on you.';
+    else if(gardenLightLevel>0) autoText = ' Your Garden Light is nudging light back toward its ideal on its own \u2014 water is still on you.';
+    html = '<div class="sheet-head"><h3>'+spName+'</h3></div>'
+      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg',computeStage(pct),{neighborHue:neighborHueFor(idx)})+'</div>'
+      + sheetAccessoryRow('<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>', sprinklerLevel>0)
+      + pestAlertHtml(idx)
+      + '<div class="sheet-timer" id="sheetTimer">'+fmtTime(remaining)+'</div>'
+      + '<button class="btn btn-small btn-block" id="instantGrowBtn" style="margin-bottom:12px;" '+((state.gems||0)<growCost?'disabled':'')+' onclick="onInstantGrow('+idx+')">Finish Growing Now ('+growCost+' '+renderGemIcon(2)+')</button>'
+      + '<div class="slider-row"><label>Light'+lightAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.lightTarget+'%)</span></label><input id="lightSlider" type="range" min="0" max="100" value="'+plot.light+'" style="background:'+sliderGradient(stress.lightTarget)+'" oninput="onSlider('+idx+',\'light\',this.value)"></div>'
+      + '<div class="slider-row"><label>Water'+waterAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.waterTarget+'%)</span></label><input id="waterSlider" type="range" min="0" max="100" value="'+plot.water+'" style="background:'+sliderGradient(stress.waterTarget)+'" oninput="onSlider('+idx+',\'water\',this.value)"></div>'
+      + '<div class="mutation-line">Mutation chance: <span id="sheetChance">'+chance+'%</span>'+(state.nextMutationBoost?' <span style="color:var(--violet);font-size:12px;">(boosted!)</span>':'')+'</div>'
+      + '<div id="sheetWarning" class="stress-warning'+(stress.maxStress>30?' show':'')+'">[!] Pushed this hard, it might not survive.</div>'
+      + '<button class="hint-toggle" onclick="this.nextElementSibling.classList.toggle(\'show\')">[?] How mutations work</button>'
+      + '<p class="hint">'+spName+' is happiest around light '+stress.lightTarget+'% and water '+stress.waterTarget+'% \u2014 every family wants something different, and getting both right earns a yield bonus at harvest. Stray far from its ideal and mutation odds rise \u2014 and so does the risk of losing the plant. A different species growing in a neighboring pot raises the odds of a cross.'+autoText+'</p>';
+
+  } else if(ds==='ready'){
+    const sprinklerLevel = (state.upgrades && state.upgrades.sprinkler) || 0;
+    html = '<div class="sheet-head"><h3>Ready to harvest</h3></div>'
+      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg','bloom',{neighborHue:neighborHueFor(idx)})+'</div>'
+      + sheetAccessoryRow('<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>', sprinklerLevel>0)
+      + pestAlertHtml(idx)
+      + '<button class="btn btn-primary btn-block" onclick="doHarvest('+idx+')">Harvest</button>';
+
+  } else if(ds==='wilted'){
+    const line = WILT_LINES[Math.floor(Math.random()*WILT_LINES.length)];
+    html = '<div class="sheet-head"><h3>Didn\'t make it</h3></div>'
+      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg','bloom',{wilt:true})+'</div>'
+      + '<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>'
+      + '<p class="sheet-blurb">'+line+'</p>'
+      + '<button class="btn btn-block" onclick="clearWilted('+idx+')">Clear pot (+1 \u25C6)</button>';
+  }
+  body.innerHTML = html;
+}
+function updateSheetLiveBits(idx){
+  const plot = state.plots[idx];
+  const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
+  const timerEl = document.getElementById('sheetTimer'); if(timerEl) timerEl.textContent = fmtTime(remaining);
+  const chanceEl = document.getElementById('sheetChance'); if(chanceEl) chanceEl.textContent = Math.round(computeMutationChance(plot, idx)*100)+'%';
+  const warnEl = document.getElementById('sheetWarning');
+  if(warnEl){ const stress = computeStress(plot); warnEl.classList.toggle('show', stress.maxStress>30); }
+  const growBtn = document.getElementById('instantGrowBtn');
+  if(growBtn){ const cost = instantGrowCost(plot); growBtn.innerHTML = 'Finish Growing Now ('+cost+' '+renderGemIcon(2)+')'; growBtn.disabled = (state.gems||0)<cost; }
+  const lightEl = document.getElementById('lightSlider'); if(lightEl && document.activeElement!==lightEl) lightEl.value = plot.light;
+  const waterEl = document.getElementById('waterSlider'); if(waterEl && document.activeElement!==waterEl) waterEl.value = plot.water;
+}
+function renderReveal(result, opts){
+  opts = opts || {};
+  const btnLabel = opts.buttonLabel || 'Done';
+  const btnAction = opts.onButtonClick || 'closeSheet()';
+  const body = document.getElementById('sheetBody');
+  const sparkles = result.isNew ? [0,1,2,3,4,5].map(i=>{
+    const top = [-8,10,40,70,95,30][i], left=[20,90,-6,98,40,75][i], delay=(i*70)+'ms', color=[ 'var(--warn)','var(--accent)','var(--violet)','var(--warn)','var(--accent)','var(--violet)'][i];
+    return '<div class="sparkle" style="top:'+top+'%;left:'+left+'%;background:'+color+';animation-delay:'+delay+'"></div>';
+  }).join('') : '';
+  body.innerHTML = '<div class="reveal-card">'
+    + sparkles
+    + (result.isNew ? '<div class="reveal-badge">NEW</div>' : '')
+    + '<div class="sprite-wrap-lg">'+renderSprite(result.genome,'lg','bloom')+'</div>'
+    + '<div class="reveal-name">'+result.name+'</div>'
+    + (result.crossInfo ? '<div class="reveal-cross">Cross-pollinated with '+result.crossInfo+'</div>' : '')
+    + (result.pestPenalty>0 ? '<div class="reveal-pest">Pests took a bite: \u2212'+Math.round(result.pestPenalty*100)+'% yield</div>' : '')
+    + (result.precisionBonus>0 ? '<div class="reveal-precision">Well-tended: +'+Math.round(result.precisionBonus*100)+'% yield</div>' : '')
+    + '<div class="reveal-rewards">+'+result.sellValue+' \u25C6 &nbsp; +'+result.seedQty+' seed'+(result.seedQty>1?'s':'')+(result.gemsEarned ? ' &nbsp; +'+result.gemsEarned+' '+renderGemIcon(2) : '')+'</div>'
+    + '</div>'
+    + '<button class="btn btn-primary btn-block" onclick="'+btnAction+'">'+btnLabel+'</button>';
+}
+
+/* ===================== UI ACTIONS ===================== */
+function onSlider(idx, key, val){
+  state.plots[idx][key] = Number(val);
+  updateSheetLiveBits(idx);
+  scheduleSave();
+}
+function plantBase(idx, key){
+  if(!isSpeciesUnlocked(key)) return;
+  plantSeed(idx, {type:'base', speciesKey:key});
+  renderSheetFull(idx); updateAllTiles(); updateHeader();
+}
+function plantFromInventory(idx, stackId){
+  plantSeed(idx, {type:'inventory', stackId});
+  renderSheetFull(idx); updateAllTiles(); updateHeader();
+}
+function unlockPlot(idx){
+  const plot = state.plots[idx];
+  if(state.spores < plot.unlockCost) return;
+  state.spores -= plot.unlockCost;
+  plot.locked = false;
+  bumpTaskProgress('unlock_plot', 1);
+  checkAchievements();
+  if(pruneImpossibleTasks()) showToast('A task board slot refreshed since a task became impossible.');
+  saveState();
+  renderSheetFull(idx); updateAllTiles(); updateHeader();
+}
+function doHarvest(idx){
+  const result = harvestPlot(idx);
+  if(!result) return;
+  revealShowing = true;
+  renderReveal(result);
+  updateAllTiles(); updateHeader(); renderHerbarium();
+}
+function renderHarvestAllSummary(results){
+  const body = document.getElementById('sheetBody');
+  const totalSpores = results.reduce((sum,r)=>sum+r.sellValue,0);
+  const totalSeeds = results.reduce((sum,r)=>sum+r.seedQty,0);
+  const totalGems = results.reduce((sum,r)=>sum+(r.gemsEarned||0),0);
+  const newCount = results.filter(r=>r.isNew).length;
+  const mutatedCount = results.filter(r=>r.mutated).length;
+  let html = '<div class="sheet-head"><h3>Harvested '+results.length+' plant'+(results.length>1?'s':'')+'</h3></div>'
+    + '<div class="reveal-card">'
+    + '<div class="reveal-rewards">+'+totalSpores+' ◆ &nbsp; +'+totalSeeds+' seed'+(totalSeeds>1?'s':'')+(totalGems>0 ? ' &nbsp; +'+totalGems+' '+renderGemIcon(2) : '')+'</div>'
+    + (newCount>0 ? '<div class="harvest-all-stat is-new">'+newCount+' new specimen'+(newCount>1?'s':'')+' pressed</div>' : '')
+    + (mutatedCount>0 ? '<div class="harvest-all-stat is-mutation">'+mutatedCount+' mutation'+(mutatedCount>1?'s':'')+' this round</div>' : '')
+    + '</div>'
+    + '<button class="btn btn-primary btn-block" onclick="closeSheet()">Nice!</button>';
+  body.innerHTML = html;
+}
+let harvestAllQueue = [];
+let harvestAllFinalResults = null;
+function showNextHarvestAllReveal(){
+  if(harvestAllQueue.length){
+    const result = harvestAllQueue.shift();
+    const isLast = harvestAllQueue.length===0;
+    renderReveal(result, {
+      buttonLabel: isLast ? 'See Summary' : 'Next (' + harvestAllQueue.length + ' more)',
+      onButtonClick: 'showNextHarvestAllReveal()'
+    });
+  } else {
+    renderHarvestAllSummary(harvestAllFinalResults);
+  }
+}
+function openHarvestAllSummary(results){
+  currentSheetIdx = null;
+  revealShowing = true;
+  harvestAllFinalResults = results;
+  harvestAllQueue = results.filter(r=>r.isNew);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+  showNextHarvestAllReveal();
+}
+function onHarvestAllClick(){
+  const results = harvestAllReady();
+  if(!results.length) return;
+  updateAllTiles(); updateHeader(); renderHerbarium();
+  openHarvestAllSummary(results);
+}
+function clearWilted(idx){
+  const plot = state.plots[idx];
+  plot.status='empty'; plot.genome=null; plot.plantedAt=0; plot.growthDurationMs=0; plot.light=50; plot.water=50; plot.lastDeathCheck=0;
+  plot.pest=null; plot.lastPestCheck=0; plot.lastSprinklerCheck=0; plot.lastLightCheck=0;
+  addSpores(1);
+  saveState();
+  renderSheetFull(idx); updateAllTiles(); updateHeader();
+}
+function showScreen(name){
+  if(name==='lab' && !isLabUnlockedByLevel()){
+    showToast('🔬 The Research Lab unlocks at Level '+LAB_UNLOCK_LEVEL);
+    return;
+  }
+  document.getElementById('screen-greenhouse').classList.toggle('active', name==='greenhouse');
+  document.getElementById('screen-tasks').classList.toggle('active', name==='tasks');
+  document.getElementById('screen-achievements').classList.toggle('active', name==='achievements');
+  document.getElementById('screen-upgrades').classList.toggle('active', name==='upgrades');
+  document.getElementById('screen-herbarium').classList.toggle('active', name==='herbarium');
+  document.getElementById('screen-lab').classList.toggle('active', name==='lab');
+  document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.screen===name));
+  if(name==='herbarium') renderHerbarium();
+  if(name==='upgrades') renderUpgrades();
+  if(name==='tasks') renderTasks();
+  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); }
+  if(name==='lab'){ renderLab(); renderLabShelf(); }
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 6000);
+}
+function showToastHtml(html){
+  const t = document.getElementById('toast');
+  t.innerHTML = html;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 6000);
+}
+function harvestAllFromWelcome(){
+  const results = harvestAllReady();
+  updateAllTiles(); updateHeader(); renderHerbarium();
+  if(results.length) openHarvestAllSummary(results);
+  else closeSheet();
+}
+function collectResearchFromWelcome(){
+  const doneSlot = [0,1,2].find(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
+  const result = doneSlot!=null ? collectResearch(doneSlot) : null;
+  updateHeader(); renderHerbarium(); updateLabBadge(); renderLabShelf();
+  if(result){
+    currentSheetIdx = null;
+    currentLabSlot = null;
+    revealShowing = true;
+    renderReveal(researchRevealResult(result));
+  } else {
+    closeSheet();
+  }
+}
+function renderWelcomeBackSheet(wiltedCount, readyCount, researchDone){
+  const body = document.getElementById('sheetBody');
+  let html = '<div class="sheet-head"><h3>Welcome back!</h3></div>'
+    + '<p class="sheet-blurb">Here’s what happened while you were away.</p>';
+  if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
+  if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
+  if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
+  html += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">';
+  if(readyCount>0) html += '<button class="btn btn-primary btn-block" onclick="harvestAllFromWelcome()">Harvest All ('+readyCount+')</button>';
+  if(researchDone) html += '<button class="btn btn-accent btn-block" onclick="collectResearchFromWelcome()">Collect Research</button>';
+  html += '<button class="btn btn-block" onclick="closeSheet()">'+((readyCount>0||researchDone)?'Later':'Okay')+'</button>';
+  html += '</div>';
+  body.innerHTML = html;
+}
+function openWelcomeBack(wiltedCount, readyCount, researchDone){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderWelcomeBackSheet(wiltedCount, readyCount, researchDone);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+
+/* ===================== TICK ===================== */
+function tick(){
+  const now = Date.now();
+  state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  updateAllTiles();
+  updateHeader();
+  applyWindowPhase();
+  if(document.getElementById('screen-tasks').classList.contains('active')){
+    const refreshed = ensureTaskBoardCurrent();
+    if(refreshed){ renderTasks(); showToast('The task board refreshed with new tasks!'); }
+    else renderTasks();
+  }
+  updateLabBadge();
+  if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
+  if(currentSheetIdx!=null && !revealShowing){
+    const p = state.plots[currentSheetIdx];
+    const ds = getDisplayStatus(p);
+    if(ds!==lastSheetDisplayStatus) renderSheetFull(currentSheetIdx);
+    else if(ds==='growing') updateSheetLiveBits(currentSheetIdx);
+  }
+  if(currentLabSlot!=null && !revealShowing){
+    const status = isLabSlotUnlocked(currentLabSlot) ? getResearchStatus(currentLabSlot) : 'locked';
+    if(status !== lastLabSlotStatus) renderLabSlotSheet(currentLabSlot);
+    else if(status==='researching') updateLabSlotLiveBits(currentLabSlot);
+  }
+  scheduleSave();
+}
+
+/* ===================== INIT ===================== */
+async function init(){
+  state = await loadState();
+  applyEquippedDecor();
+  document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
+  document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
+  ensureTaskBoardCurrent();
+  const now = Date.now();
+  const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
+  let wiltedCount = 0, readyCount = 0;
+  state.plots.forEach(p=>{
+    if(p.status==='growing'){
+      const before = p.status;
+      applyDeathRisk(p, now);
+      applyPestRisk(p, now);
+      applySprinkler(p, now);
+      applyGardenLight(p, now);
+      if(p.status==='wilted' && before!=='wilted') wiltedCount++;
+      else if(getDisplayStatus(p)==='ready') readyCount++;
+    }
+  });
+  buildPlotTiles();
+  updateAllTiles();
+  updateHeader();
+  renderHerbarium();
+  renderUpgrades();
+  applyWindowPhase();
+  checkAchievements();
+  checkHerbSets();
+  updateLabBadge();
+  const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
+  if(!state.everPlanted) document.body.classList.add('show-hint');
+  if(away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn)) openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+  saveState();
+  setInterval(tick, 1000);
+}
+window.addEventListener('DOMContentLoaded', init);
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(e=>console.warn('sw register failed',e)); });
+}
+</script>
+</body>
+</html>

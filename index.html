@@ -313,6 +313,13 @@
   .upg-card.is-equipped{ border-color:var(--accent); box-shadow:3px 3px 0 var(--accent-dark); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
+  .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
+  .bestiary-icon-wrap.is-mystery{ font-family:'Press Start 2P'; font-size:15px; color:var(--text-muted); }
+  .bestiary-name{ font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+  .bestiary-name.is-mystery{ color:var(--text-muted); }
+  .bestiary-count{ font-size:11px; color:var(--text-muted); }
   .merchant-swatch-glow{ animation:merchantSwatchPulse 2.2s ease-in-out infinite; }
   @keyframes merchantSwatchPulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.35), 0 0 6px 1px rgba(255,255,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.35), 0 0 12px 4px rgba(255,255,255,.55); } }
 
@@ -616,6 +623,8 @@
         <button class="btn btn-small" id="herbFilterBtn" onclick="openHerbFilterMenu()">Sort/Filter</button>
       </div>
       <div id="herbList"></div>
+      <div class="ach-category" style="margin-top:18px;">Pest Bestiary</div>
+      <div id="pestBestiaryList" class="bestiary-grid"></div>
     </section>
 
     <section class="screen" id="screen-achievements">
@@ -930,6 +939,8 @@ const ACHIEVEMENTS = [
   { id:'prestige_5',      cat:'Prestige',    icon:'\uD83C\uDFC6',           name:'Reborn Again',         desc:'Prestige 5 times',                      reward:{spores:300, xp:150} },
   { id:'first_decor',     cat:'Collection',  icon:'\uD83D\uDD33',           name:'Decorator',            desc:'Unlock your first decoration',          reward:{spores:30,  xp:15} },
   { id:'all_decor',       cat:'Collection',  icon:'\uD83D\uDD33',           name:'Interior Designer',    desc:'Unlock every pot finish and wallpaper', reward:{spores:180, xp:90} },
+  { id:'first_pest_id',   cat:'Pests',       icon:'\uD83D\uDC1B',           name:'Know Your Enemy',      desc:'Identify your first pest species',      reward:{spores:20,  xp:10} },
+  { id:'pest_bestiary',   cat:'Pests',       icon:'\uD83D\uDCD6',           name:'Pest Bestiary',        desc:'Identify every pest species',           reward:{spores:120, xp:60} },
 ];
 const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
 
@@ -965,6 +976,7 @@ const ACH_ICON_MAP = {
   gems_10:'sparkle', gems_50:'star',
   first_prestige:'trophy', prestige_5:'trophy',
   first_decor:'dotgrid', all_decor:'dotgrid',
+  first_pest_id:'bug', pest_bestiary:'book',
 };
 function renderPixIcon(key, unlocked){
   const icon = ACH_PIX[key] || ACH_PIX.diamond;
@@ -1028,6 +1040,8 @@ function checkAchievements(){
     prestige_5: (state.prestige.count||0)>=5,
     first_decor: (state.decor.ownedPots.length + state.decor.ownedWallpapers.length) > 2,
     all_decor: state.decor.ownedPots.length>=Object.keys(POT_THEMES).length && state.decor.ownedWallpapers.length>=Object.keys(WALLPAPER_THEMES).length,
+    first_pest_id: Object.keys(state.pestsSeen||{}).length>=1,
+    pest_bestiary: Object.keys(state.pestsSeen||{}).length>=PEST_TYPE_KEYS.length,
   };
   let anyNew = false;
   for(const [id, met] of Object.entries(checks)){
@@ -2072,6 +2086,17 @@ const SPROUT_ROWS = ['.....','..t..','.t.t.','..s..'];
 const POT_ROWS = ['.RRRRRRR.','.BBBBBBB.','..BBBBB..','..BBDBB..','...DDD...'];
 const PEST_ROWS = ['.x.x.','xxxxx','.xxx.','.x.x.'];
 const PEST_COLOR = '#A23B3B';
+const PEST_TYPES = {
+  aphid:   { name:'Aphid',        color:'#7EC85A', rows:['.x.x.','xxxxx','.xxx.','.x.x.'], desc:'Tiny sap-suckers that swarm in numbers.' },
+  beetle:  { name:'Root Beetle',  color:'#8B4A2E', rows:['.xxx.','xxxxx','xxxxx','.x.x.'], desc:'Slow-moving and armored, gnaws at the roots.' },
+  mite:    { name:'Spider Mite',  color:'#9B59B6', rows:['x...x','.x.x.','..x..','.x.x.'], desc:'Barely visible, spins fine webs across the leaves.' },
+  moth:    { name:'Cutworm Moth', color:'#C9A84C', rows:['x...x','xx.xx','.xxx.','..x..'], desc:'Drawn to the garden light after dark.' },
+  slug:    { name:'Garden Slug',  color:'#6B8E4E', rows:['.....','.xxx.','xxxxx','xxxx.'], desc:'Leaves a shimmering trail across the soil.' }
+};
+const PEST_TYPE_KEYS = Object.keys(PEST_TYPES);
+function pickRandomPestType(){
+  return PEST_TYPE_KEYS[Math.floor(Math.random()*PEST_TYPE_KEYS.length)];
+}
 
 const STEM_STYLES = {
   mossputt:   (i) => '...ttt...',
@@ -2211,12 +2236,13 @@ function renderPot(size, locked){
   }
   return '<div class="pix-pot" style="grid-template-columns:repeat(9,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
-function renderPest(size){
+function renderPest(size, type){
   const cell = size==='lg' ? 6 : 3;
+  const cfg = PEST_TYPES[type] || PEST_TYPES.aphid;
   let cellsHtml = '';
-  for(const row of PEST_ROWS){
+  for(const row of cfg.rows){
     for(const ch of row){
-      cellsHtml += '<div style="background:'+(ch==='x' ? PEST_COLOR : 'transparent')+'"></div>';
+      cellsHtml += '<div style="background:'+(ch==='x' ? cfg.color : 'transparent')+'"></div>';
     }
   }
   return '<div class="pix-pest" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
@@ -2380,6 +2406,7 @@ function defaultState(){
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
+    pestsSeen:{},
     lastSavedAt:Date.now() };
 }
 async function loadState(){
@@ -2433,6 +2460,7 @@ async function loadState(){
       if(!merged.merchant || typeof merged.merchant!=='object'){
         merged.merchant = { day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false };
       }
+      if(!merged.pestsSeen || typeof merged.pestsSeen!=='object') merged.pestsSeen = {};
       return merged;
     }
   }catch(e){ /* no saved state yet */ }
@@ -2687,7 +2715,7 @@ function applyPestRisk(plot, nowMs){
   const ladybugFactor = Math.max(0, 1 - ladybugLevel*(UPGRADES.ladybugs.perLevel/100));
   const levelPestFactor = Math.max(0, 1 - getLevelBonus('pestResist'));
   const noInfestProb = Math.pow(1-(basePerSec*ladybugFactor*levelPestFactor), elapsedSec);
-  if(Math.random() > noInfestProb){ plot.pest = { startedAt: periodEnd }; }
+  if(Math.random() > noInfestProb){ plot.pest = { startedAt: periodEnd, type: pickRandomPestType() }; }
 }
 function pestSeverity(plot){
   if(!plot.pest) return 0;
@@ -3063,14 +3091,14 @@ function buildTileInnerHTML(plot, idx){
     const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
     const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
     return '<div class="tile-top-badge">'+fmtTime(remaining)+'</div>'
-      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm')+'</div>' : '')
+      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm', plot.pest.type)+'</div>' : '')
       + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm',computeStage(pct),{neighborHue:neighborHueFor(idx)}), false), sprinklerOn)
       + '<div class="tile-progress"><div class="tile-progress-fill" style="width:'+pct+'%"></div></div>';
   }
   if(ds==='ready'){
     const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
     return '<div class="tile-top-badge is-ready">Ready!</div>'
-      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm')+'</div>' : '')
+      + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm', plot.pest.type)+'</div>' : '')
       + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm','bloom',{neighborHue:neighborHueFor(idx)}), false), sprinklerOn);
   }
   if(ds==='wilted'){
@@ -3248,6 +3276,7 @@ function renderHerbarium(){
   const list = document.getElementById('herbList');
   document.getElementById('herbCount').textContent = state.herbarium.length;
   renderHerbSets();
+  renderPestBestiary();
   updateHerbFilterBtnLabel();
   if(!state.herbarium.length){
     list.innerHTML = '<div class="empty-state">Nothing pressed yet.<br>Harvest something strange.</div>';
@@ -3270,22 +3299,49 @@ function renderHerbarium(){
       + '</div></div>';
   }).join('');
 }
+function renderPestBestiary(){
+  const el = document.getElementById('pestBestiaryList');
+  if(!el) return;
+  const seen = state.pestsSeen || {};
+  el.innerHTML = PEST_TYPE_KEYS.map(key=>{
+    const cfg = PEST_TYPES[key];
+    const count = seen[key]||0;
+    if(count<=0){
+      return '<div class="bestiary-card">'
+        + '<div class="bestiary-icon-wrap is-mystery">?</div>'
+        + '<div class="bestiary-name is-mystery">???</div>'
+        + '</div>';
+    }
+    return '<div class="bestiary-card" title="'+cfg.desc+'">'
+      + '<div class="bestiary-icon-wrap">'+renderPest('sm', key)+'</div>'
+      + '<div class="bestiary-name">'+cfg.name+'</div>'
+      + '<div class="bestiary-count">\u00D7'+count+' squashed</div>'
+      + '</div>';
+  }).join('');
+}
 
 /* ===================== SHEET ===================== */
 function pestAlertHtml(idx){
   const plot = state.plots[idx];
   if(!plot.pest) return '';
-  return '<div class="pest-alert">'+renderPest('lg')+'<div class="pest-alert-text">Pests! Squash them before they ruin the harvest.</div><button class="btn btn-small btn-danger" onclick="squashPest('+idx+')">Squash</button></div>';
+  const cfg = PEST_TYPES[plot.pest.type] || PEST_TYPES.aphid;
+  return '<div class="pest-alert">'+renderPest('lg', plot.pest.type)+'<div class="pest-alert-text">'+cfg.name+'! Squash '+(cfg.name.match(/^[aeiouAEIOU]/)?'it':'them')+' before '+(cfg.name.match(/^[aeiouAEIOU]/)?'it ruins':'they ruin')+' the harvest.</div><button class="btn btn-small btn-danger" onclick="squashPest('+idx+')">Squash</button></div>';
 }
 function squashPest(idx){
   const plot = state.plots[idx];
+  const pestType = plot.pest && plot.pest.type;
   plot.pest = null;
   bumpTaskProgress('squash_pest', 1);
   state.achStats.pestsSquashed = (state.achStats.pestsSquashed||0)+1;
+  if(pestType){
+    if(!state.pestsSeen) state.pestsSeen = {};
+    state.pestsSeen[pestType] = (state.pestsSeen[pestType]||0) + 1;
+  }
   grantXp(3);
   checkAchievements();
   saveState();
   renderSheetFull(idx); updateAllTiles();
+  renderPestBestiary();
 }
 function openLevelTree(){
   currentSheetIdx = null;

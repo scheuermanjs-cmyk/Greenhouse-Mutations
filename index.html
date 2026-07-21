@@ -2285,6 +2285,22 @@ function applyWindowPhase(){
 
 /* ===================== WEATHER ===================== */
 let currentWeather = 'clear';
+const rainAudio = new Audio('assets/rain-loop.wav');
+rainAudio.loop = true;
+rainAudio.volume = 0.45;
+let userInteracted = false;
+function playRainAudio(){
+  if(!userInteracted) return;
+  rainAudio.play().catch(()=>{});
+}
+function stopRainAudio(){
+  rainAudio.pause();
+}
+document.addEventListener('pointerdown', ()=>{
+  if(userInteracted) return;
+  userInteracted = true;
+  if(currentWeather==='rain' || currentWeather==='storm') playRainAudio();
+}, {once:true});
 function applyWeather(weather){
   currentWeather = weather;
   const el = document.getElementById('windowScene');
@@ -2292,6 +2308,8 @@ function applyWeather(weather){
   const cls = Array.from(el.classList).filter(c=>c.indexOf('weather-')!==0);
   cls.push('weather-'+weather);
   el.className = cls.join(' ');
+  if(weather==='rain' || weather==='storm') playRainAudio();
+  else stopRainAudio();
 }
 function rollWeather(){
   const roll = Math.random();

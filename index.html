@@ -468,7 +468,8 @@
   .intro-bg-plant{ position:absolute; opacity:.4; }
   .intro-card{ position:relative; z-index:1; width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; text-align:center; }
   .intro-logo-wrap{ position:relative; margin-bottom:18px; display:flex; align-items:flex-end; justify-content:center; height:70px; }
-  .intro-logo-pot{ position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); z-index:-1; }
+  .intro-logo-pot{ position:absolute; z-index:0; bottom:-10px; left:50%; transform:translateX(-50%); }
+  .intro-logo-plant{ position:relative; z-index:1; }
   .intro-title{ font-size:22px; line-height:1.6; letter-spacing:1px; text-shadow:3px 3px 0 rgba(0,0,0,.35); }
   .intro-title span{ color:var(--accent); }
   .intro-tagline{ font-size:15px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
@@ -3476,7 +3477,7 @@ function renderIntroStep(step){
     }).join('');
     card.innerHTML = '<div class="intro-logo-wrap">'
         + '<div class="intro-logo-pot">'+renderPot('lg', false)+'</div>'
-        + renderSprite({species:'mossputt',hue:128,glow:true},'lg','bloom')
+        + '<div class="intro-logo-plant">'+renderSprite({species:'mossputt',hue:128,glow:true},'lg','bloom')+'</div>'
         + '<span class="sparkle" style="top:-4px;left:6px;animation-delay:.2s;background:var(--warn);"></span>'
         + '<span class="sparkle" style="top:10px;right:2px;animation-delay:.6s;background:var(--violet);"></span>'
       + '</div>'

@@ -248,7 +248,7 @@
   @media (prefers-reduced-motion:no-preference){
     .pix-sprite.is-glow{ animation:glowPulse 2.2s ease-in-out infinite; }
   }
-  .pix-sprite.is-drift{ transition:transform 5s cubic-bezier(.45,.05,.55,.95); }
+  .pix-sprite.is-drift{ transition:transform 3.5s cubic-bezier(.45,.05,.55,.95); }
   @keyframes glowPulse{
     0%,100%{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
     50%{ filter:drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
@@ -3673,18 +3673,15 @@ function openIntro(){
 }
 
 /* ===================== DRIFTPETAL SWAY ===================== */
-function scheduleDriftUpdate(){
+function updateDriftSprites(){
   document.querySelectorAll('.pix-sprite.is-drift').forEach(el=>{
-    const prevAngle = parseFloat(el.dataset.swayAngle||'0');
     const angle = Math.random()*26-13;
-    const delta = Math.abs(angle-prevAngle);
-    const dur = 4.5 + (delta/26)*4 + Math.random()*2;
-    el.style.transitionDuration = dur.toFixed(2)+'s';
     el.style.transform = 'skewX('+angle.toFixed(1)+'deg)';
-    el.dataset.swayAngle = angle.toFixed(1);
   });
-  const nextDelay = 3500 + Math.random()*4500;
-  setTimeout(scheduleDriftUpdate, nextDelay);
+}
+function scheduleDriftUpdate(){
+  updateDriftSprites();
+  setInterval(updateDriftSprites, 4000);
 }
 
 /* ===================== TICK ===================== */

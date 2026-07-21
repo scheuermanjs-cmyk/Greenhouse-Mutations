@@ -179,17 +179,6 @@
   .window.is-dusk .celestial{ top:56%; left:78%; background:#FF7A45; box-shadow:0 0 14px 6px rgba(255,122,69,.55); }
 
   /* ---------- weather ---------- */
-  .sun-rays{
-    position:absolute; width:70px; height:70px; margin:-35px 0 0 -35px; border-radius:50%;
-    opacity:0; pointer-events:none; z-index:1; transition:opacity 2s ease, top 1.5s ease, left 1.5s ease;
-    background:repeating-conic-gradient(rgba(255,241,168,.32) 0deg 6deg, transparent 6deg 24deg);
-  }
-  .window.is-day.weather-clear .sun-rays{ top:13%; left:55%; opacity:1; }
-  .window.is-day.weather-cloudy .sun-rays{ top:13%; left:55%; opacity:.35; }
-  @media (prefers-reduced-motion:no-preference){
-    .sun-rays{ animation:sunRaysSpin 50s linear infinite; }
-  }
-  @keyframes sunRaysSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
   .clouds span{ transition:background 1.5s ease, opacity 1.5s ease; }
   .window.weather-cloudy .clouds, .window.weather-rain .clouds, .window.weather-storm .clouds{ opacity:1; }
   .window.weather-cloudy .cloud span, .window.weather-rain .cloud span, .window.weather-storm .cloud span{ background:rgba(190,196,204,.85); }
@@ -567,7 +556,6 @@
           <span style="top:40%;left:20%;"></span>
         </div>
         <div class="celestial"></div>
-        <div class="sun-rays" id="sunRays"></div>
         <div class="rain-layer" id="rainLayer">
           <span style="left:4%;animation-delay:0s;"></span>
           <span style="left:14%;animation-delay:.1s;"></span>
@@ -2303,11 +2291,13 @@ document.addEventListener('pointerdown', ()=>{
 }, {once:true});
 
 const clickAudio = new Audio('assets/click.wav');
-clickAudio.volume = 0.5;
+clickAudio.volume = 0.6;
+clickAudio.preload = 'auto';
 function playClickSound(){
   if(!userInteracted) return;
-  clickAudio.currentTime = 0;
-  clickAudio.play().catch(()=>{});
+  const node = clickAudio.cloneNode(true);
+  node.volume = clickAudio.volume;
+  node.play().catch(()=>{});
 }
 document.addEventListener('click', (e)=>{
   if(e.target.closest('button, [onclick], .plot-tile')) playClickSound();

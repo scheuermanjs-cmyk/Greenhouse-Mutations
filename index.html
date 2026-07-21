@@ -594,8 +594,9 @@
       <div id="upgList"></div>
       <div class="screen-title-row" style="margin-top:18px;">
         <div class="ach-category" style="margin:0;">Traveling Merchant</div>
-        <div class="upg-desc">New stock in <span id="merchantRefreshTimer">--:--</span></div>
+        <button class="btn btn-small" id="rerollMerchantBtn" onclick="onRerollMerchant()">Reroll</button>
       </div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">New stock in <span id="merchantRefreshTimer">--:--</span></div>
       <div id="merchantList"></div>
       <div class="ach-category" style="margin-top:18px;">Consumables</div>
       <div id="consumablesList"></div>
@@ -1397,7 +1398,9 @@ const POT_THEMES = {
   rosewood:   { name:'Rosewood Clay',  cost:200, colors:{ light:'#E3A5A0', mid:'#C97A73', dark:'#8C4A42' } },
   gilded:     { name:'Gilded Bronze',  cost:380, colors:{ light:'#F0D080', mid:'#D4A544', dark:'#8C6A1E' } },
   moonglow:   { name:'Moonglow Glass', cost:0, merchantOnly:true, glow:true, colors:{ light:'#CFE3FF', mid:'#8FB8F0', dark:'#3E5C99' } },
-  embercast:  { name:'Embercast Iron', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FFC08A', mid:'#E8703E', dark:'#7A2E14' } }
+  embercast:  { name:'Embercast Iron', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FFC08A', mid:'#E8703E', dark:'#7A2E14' } },
+  auroraCeramic: { name:'Aurora Ceramic', cost:0, merchantOnly:true, glow:true, colors:{ light:'#B8F5DA', mid:'#5FCF9E', dark:'#28825C' } },
+  crimsonLantern: { name:'Crimson Lantern', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FF9E9E', mid:'#E14B4B', dark:'#7E1E1E' } }
 };
 const WALLPAPER_THEMES = {
   cedar:     { name:'Cedar Planks',    cost:0,   hill:'#16261A', planks:{ hseam:'rgb(140,98,56)',  vseam:'rgb(58,36,18)', a:'rgb(124,84,48)',  b:'rgb(110,70,36)',  c:'rgb(104,66,34)',  d:'rgb(118,80,46)'  } },
@@ -1405,7 +1408,9 @@ const WALLPAPER_THEMES = {
   driftwood: { name:'Driftwood',       cost:220, hill:'#5C5646', planks:{ hseam:'rgb(150,148,140)',vseam:'rgb(70,68,62)', a:'rgb(126,122,112)',b:'rgb(112,108,98)', c:'rgb(104,100,92)', d:'rgb(120,116,106)'} },
   cherry:    { name:'Cherry Blossom',  cost:320, hill:'#4A2436', planks:{ hseam:'rgb(196,120,140)',vseam:'rgb(90,40,54)', a:'rgb(176,96,118)', b:'rgb(158,80,104)', c:'rgb(148,72,96)',  d:'rgb(168,90,112)' } },
   stardust:  { name:'Stardust Weave',  cost:0, merchantOnly:true, shimmer:true, hill:'#241E42', planks:{ hseam:'rgb(90,70,150)',  vseam:'rgb(40,30,70)', a:'rgb(70,54,120)',  b:'rgb(60,46,104)',  c:'rgb(54,40,96)',   d:'rgb(64,50,112)'  } },
-  opaline:   { name:'Opaline Marble',  cost:0, merchantOnly:true, shimmer:true, hill:'#2E4A46', planks:{ hseam:'rgb(150,190,182)',vseam:'rgb(60,86,80)', a:'rgb(120,164,156)',b:'rgb(108,150,142)',c:'rgb(100,140,132)',d:'rgb(114,156,148)' } }
+  opaline:   { name:'Opaline Marble',  cost:0, merchantOnly:true, shimmer:true, hill:'#2E4A46', planks:{ hseam:'rgb(150,190,182)',vseam:'rgb(60,86,80)', a:'rgb(120,164,156)',b:'rgb(108,150,142)',c:'rgb(100,140,132)',d:'rgb(114,156,148)' } },
+  auroraCurtain: { name:'Aurora Curtain', cost:0, merchantOnly:true, shimmer:true, hill:'#1E3A34', planks:{ hseam:'rgb(80,160,140)', vseam:'rgb(30,60,52)', a:'rgb(60,130,112)', b:'rgb(52,116,98)', c:'rgb(46,104,88)', d:'rgb(56,124,106)' } },
+  goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } }
 };
 function defaultDecorState(){
   return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
@@ -1477,7 +1482,9 @@ function renderDecorGallery(kind){
   const cfg = decorConfig(kind);
   const owned = decorOwned(kind);
   const equipped = kind==='pot' ? state.decor.equippedPot : state.decor.equippedWallpaper;
-  el.innerHTML = Object.entries(cfg).map(([key, theme])=>{
+  el.innerHTML = Object.entries(cfg).filter(([key, theme])=>{
+    return !theme.merchantOnly || owned.includes(key);
+  }).map(([key, theme])=>{
     const isOwned = owned.includes(key);
     const isEquipped = equipped===key;
     const swatchBg = kind==='pot'
@@ -1486,11 +1493,9 @@ function renderDecorGallery(kind){
     let actionHtml;
     if(isEquipped) actionHtml = '<button class="btn btn-small" disabled>Equipped</button>';
     else if(isOwned) actionHtml = '<button class="btn btn-small btn-primary" onclick="equipDecor(\''+kind+'\',\''+key+'\')">Equip</button>';
-    else if(theme.merchantOnly) actionHtml = '<button class="btn btn-small" disabled>Merchant Only</button>';
     else actionHtml = '<button class="btn btn-small '+(state.spores>=theme.cost?'btn-primary':'')+'" '+(state.spores>=theme.cost?'':'disabled')+' onclick="purchaseDecor(\''+kind+'\',\''+key+'\')">'+theme.cost+' ◆</button>';
     let descText = 'Cosmetic only';
-    if(isOwned) descText = 'Owned';
-    else if(theme.merchantOnly) descText = 'Sold by the traveling merchant';
+    if(isOwned) descText = theme.merchantOnly ? 'Found from the traveling merchant' : 'Owned';
     return '<div class="upg-card'+(isEquipped?' is-equipped':'')+'">'
       + '<div class="decor-swatch'+(theme.glow||theme.shimmer?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
       + '<div class="upg-info">'
@@ -1512,9 +1517,14 @@ const MERCHANT_COSMETIC_COST = 12;
 const MERCHANT_COSMETICS = [
   { kind:'pot', key:'moonglow' },
   { kind:'pot', key:'embercast' },
+  { kind:'pot', key:'auroraCeramic' },
+  { kind:'pot', key:'crimsonLantern' },
   { kind:'wallpaper', key:'stardust' },
-  { kind:'wallpaper', key:'opaline' }
+  { kind:'wallpaper', key:'opaline' },
+  { kind:'wallpaper', key:'auroraCurtain' },
+  { kind:'wallpaper', key:'goldleaf' }
 ];
+const MERCHANT_REROLL_COST = 3;
 function pickMerchantSeedOffer(level){
   const keys = getUnlockedSpeciesKeys(level);
   const key = keys[Math.floor(Math.random()*keys.length)];
@@ -1545,6 +1555,20 @@ function ensureMerchantCurrent(){
     return true;
   }
   return false;
+}
+function rerollMerchantStock(){
+  if((state.gems||0) < MERCHANT_REROLL_COST) return false;
+  state.gems -= MERCHANT_REROLL_COST;
+  rollMerchantStock();
+  saveState();
+  return true;
+}
+function onRerollMerchant(){
+  if(rerollMerchantStock()){
+    renderMerchant();
+    renderDecorShop();
+    updateHeader();
+  }
 }
 function buyMerchantSeed(){
   const offer = state.merchant && state.merchant.seedOffer;
@@ -1594,6 +1618,11 @@ function renderMerchant(){
   const el = document.getElementById('merchantList');
   if(!el) return;
   updateMerchantTimer();
+  const rerollBtn = document.getElementById('rerollMerchantBtn');
+  if(rerollBtn){
+    rerollBtn.innerHTML = 'Reroll '+MERCHANT_REROLL_COST+' '+renderGemIcon(2);
+    rerollBtn.disabled = (state.gems||0) < MERCHANT_REROLL_COST;
+  }
   const m = state.merchant;
   let html = '';
   if(m.seedOffer){

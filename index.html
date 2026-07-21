@@ -199,6 +199,12 @@
   .mullion-v{ left:50%; top:0; bottom:0; width:4px; margin-left:-2px; }
   .mullion-h{ left:0; right:0; top:50%; height:4px; margin-top:-2px; }
   .ledge{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:16px; }
+  .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:-8px 0 16px; }
+  .showcase-slot{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; overflow:hidden; padding:2px; }
+  .showcase-slot.is-empty{ opacity:.6; }
+  .showcase-plus{ font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
+  .showcase-sprite{ display:flex; align-items:flex-end; justify-content:center; height:38px; }
+  .showcase-name{ font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
 
   /* ---------- plot grid ---------- */
   .plot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -582,6 +588,7 @@
         <div class="mullion mullion-h"></div>
       </div>
       <div class="ledge"></div>
+      <div class="showcase-shelf" id="showcaseShelf"></div>
       <div class="screen-title-row">
         <div class="screen-title">Place a seed, tend the pot, see what grows</div>
         <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
@@ -1435,7 +1442,7 @@ const WALLPAPER_THEMES = {
   goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } }
 };
 function defaultDecorState(){
-  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
+  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar', showcase:[null,null,null] };
 }
 function buildPlankDataUri(c){
   const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
@@ -2537,6 +2544,7 @@ async function loadState(){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
+        if(!Array.isArray(merged.decor.showcase) || merged.decor.showcase.length!==3) merged.decor.showcase = [null,null,null];
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -3408,6 +3416,63 @@ function renderPestBestiary(){
   }).join('');
 }
 
+/* ===================== SHOWCASE SHELF ===================== */
+function renderShowcaseShelf(){
+  const el = document.getElementById('showcaseShelf');
+  if(!el) return;
+  const slots = (state.decor && state.decor.showcase) || [null,null,null];
+  el.innerHTML = slots.map((key,i)=>{
+    const entry = key ? state.herbarium.find(e=>e.key===key) : null;
+    if(!entry){
+      return '<div class="showcase-slot is-empty" onclick="openShowcasePicker('+i+')"><span class="showcase-plus">+</span></div>';
+    }
+    return '<div class="showcase-slot" onclick="openShowcasePicker('+i+')">'
+      + '<div class="showcase-sprite">'+renderSprite(entry.genome,'sm','bloom',{})+'</div>'
+      + '<div class="showcase-name">'+entry.name+'</div>'
+      + '</div>';
+  }).join('');
+}
+function openShowcasePicker(slot){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderShowcasePickerSheet(slot);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderShowcasePickerSheet(slot){
+  const body = document.getElementById('sheetBody');
+  const current = state.decor.showcase[slot];
+  let html = '<div class="sheet-head"><h3>Showcase Slot '+(slot+1)+'</h3></div>'
+    + '<p class="sheet-blurb">Pick a pressed specimen to display on your shelf.</p>';
+  if(current) html += '<button class="btn btn-danger btn-block" style="margin-bottom:12px;" onclick="clearShowcaseSlot('+slot+')">Remove from Shelf</button>';
+  if(!state.herbarium.length){
+    html += '<div class="empty-state">Nothing pressed yet.<br>Harvest something strange.</div>';
+  } else {
+    html += '<div class="seed-list">' + state.herbarium.map(e=>{
+      const isCurrent = current===e.key;
+      return '<div class="seed-row" style="cursor:pointer;'+(isCurrent?'opacity:.5;':'')+'" onclick="setShowcaseSlot('+slot+',\''+e.key+'\')">'
+        + '<div class="seed-row-glyph">'+renderSprite(e.genome,'sm','bloom',{})+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+e.name+'</div><div class="seed-row-sub">'+SPECIES[e.species].name+'</div></div>'
+        + (isCurrent ? '<span style="color:var(--accent);font-size:12px;">On Shelf</span>' : '')
+        + '</div>';
+    }).join('') + '</div>';
+  }
+  html += '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Close</button>';
+  body.innerHTML = html;
+}
+function setShowcaseSlot(slot, key){
+  state.decor.showcase[slot] = key;
+  saveState();
+  renderShowcaseShelf();
+  closeSheet();
+}
+function clearShowcaseSlot(slot){
+  state.decor.showcase[slot] = null;
+  saveState();
+  renderShowcaseShelf();
+  closeSheet();
+}
+
 /* ===================== SHEET ===================== */
 function pestAlertHtml(idx){
   const plot = state.plots[idx];
@@ -4004,6 +4069,7 @@ async function init(){
   updateAllTiles();
   updateHeader();
   renderHerbarium();
+  renderShowcaseShelf();
   renderUpgrades();
   applyWindowPhase();
   checkAchievements();

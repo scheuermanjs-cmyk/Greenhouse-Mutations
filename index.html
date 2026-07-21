@@ -2328,23 +2328,6 @@ document.addEventListener('pointerdown', ()=>{
   if(currentWeather==='rain' || currentWeather==='storm') playRainAudio();
 }, {once:true});
 
-const CLICK_POOL_SIZE = 4;
-const clickAudioPool = Array.from({length:CLICK_POOL_SIZE}, ()=>{
-  const a = new Audio('assets/click.wav');
-  a.volume = 0.6;
-  a.preload = 'auto';
-  return a;
-});
-let clickPoolIdx = 0;
-function playClickSound(){
-  const node = clickAudioPool[clickPoolIdx];
-  clickPoolIdx = (clickPoolIdx+1) % CLICK_POOL_SIZE;
-  node.currentTime = 0;
-  node.play().catch(()=>{});
-}
-document.addEventListener('pointerdown', (e)=>{
-  if(e.target.closest('button, [onclick], .plot-tile')) playClickSound();
-}, true);
 function applyWeather(weather){
   currentWeather = weather;
   const el = document.getElementById('windowScene');

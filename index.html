@@ -199,7 +199,7 @@
   .mullion-v{ left:50%; top:0; bottom:0; width:4px; margin-left:-2px; }
   .mullion-h{ left:0; right:0; top:50%; height:4px; margin-top:-2px; }
   .ledge{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:16px; }
-  .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin:2px 0 6px; }
+  .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; position:relative; z-index:2; margin:6px 0 -20px; }
   .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; }
   .showcase-name{ font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; margin-top:2px; }
 
@@ -584,7 +584,6 @@
         <div class="mullion mullion-v"></div>
         <div class="mullion mullion-h"></div>
       </div>
-      <div class="ledge"></div>
       <div class="showcase-shelf" id="showcaseShelf"></div>
       <div class="ledge"></div>
       <div class="screen-title-row">

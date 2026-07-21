@@ -452,9 +452,29 @@
   .harvest-all-stat.is-mutation{ color:var(--violet); }
   .sparkle{ position:absolute; width:7px; height:7px; opacity:0; animation:sparklePop 1s steps(3) forwards; }
   @keyframes sparklePop{ 0%{ opacity:0; transform:scale(0); } 40%{ opacity:1; transform:scale(1.3); } 100%{ opacity:0; transform:scale(.6); } }
+
+  /* ---------- intro / start screen / tutorial ---------- */
+  .intro-overlay{ position:fixed; inset:0; z-index:50; background:var(--panel); display:none; align-items:center; justify-content:center; padding:24px; }
+  .intro-overlay.open{ display:flex; }
+  .intro-card{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .intro-logo-wrap{ margin-bottom:22px; display:flex; align-items:flex-end; justify-content:center; height:64px; }
+  .intro-title{ font-size:22px; line-height:1.6; letter-spacing:1px; }
+  .intro-title span{ color:var(--accent); }
+  .intro-tagline{ font-size:15px; color:var(--text-muted); margin-top:14px; line-height:1.5; }
+  .intro-step-title{ font-size:15px; letter-spacing:.5px; margin-bottom:14px; }
+  .intro-step-body{ font-size:15px; color:var(--text-muted); line-height:1.6; }
+  .intro-dots{ display:flex; gap:7px; margin:22px 0; }
+  .intro-dot{ width:9px; height:9px; background:var(--panel-2); border:2px solid var(--outline); }
+  .intro-dot.is-active{ background:var(--accent); }
+  .intro-actions{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:24px; }
+  .intro-actions-row{ display:flex; gap:10px; width:100%; }
+  .intro-actions-row .btn{ flex:1; }
+  .intro-skip{ background:none; color:var(--text-muted); font-size:14px; text-decoration:underline; font-family:'VT323'; margin-top:14px; padding:6px; }
 </style>
 </head>
 <body>
+
+  <div class="intro-overlay" id="introOverlay"><div class="intro-card" id="introCard"></div></div>
 
   <header>
     <div class="xp-bar-wrap" onclick="openLevelTree()"><div class="xp-bar-fill" id="xpBarFill"></div><span class="xp-bar-level" id="farmLevel">LV 1</span><span class="xp-bar-label" id="xpBarLabel"></span></div>
@@ -2070,6 +2090,7 @@ function defaultState(){
     prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
     decor: defaultDecorState(),
     dailyStreak:{ count:0, lastClaimDay:null },
+    tutorialSeen:false,
     lastSavedAt:Date.now() };
 }
 async function loadState(){
@@ -2119,6 +2140,7 @@ async function loadState(){
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
       }
+      if(typeof parsed.tutorialSeen!=='boolean') merged.tutorialSeen = true;
       return merged;
     }
   }catch(e){ /* no saved state yet */ }
@@ -3411,6 +3433,50 @@ function openDailyStreakModal(info){
   document.getElementById('sheetBackdrop').classList.add('open');
 }
 
+/* ===================== INTRO / TUTORIAL ===================== */
+const TUTORIAL_STEPS = [
+  { title:'Plant a Seed', body:'Tap an empty pot to choose a seed. Keep its light and water sliders near the target to keep it healthy.' },
+  { title:'Harvest & Mutate', body:'When a plant is ready, harvest it for spores ○ and a chance at a brand-new mutation for your Herbarium.' },
+  { title:'Tasks & the Lab', body:'Complete Task Board goals and run the Research Machine in the Lab for bonus spores and gems.' },
+  { title:'Level Up & Prestige', body:'Earn XP to level up, unlock new species, and Prestige for permanent bonuses once you’ve mastered the basics.' }
+];
+let introStep = 0;
+function renderIntroStep(step){
+  introStep = step;
+  const card = document.getElementById('introCard');
+  if(step===0){
+    card.innerHTML = '<div class="intro-logo-wrap">'+renderSprite({species:'mossputt',hue:128,glow:true},'lg','bloom')+'</div>'
+      + '<h1 class="intro-title">GREENHOUSE<br><span>MUTATIONS</span></h1>'
+      + '<p class="intro-tagline">Grow, tend, and cross-pollinate strange little plants. See what mutates.</p>'
+      + '<div class="intro-actions"><button class="btn btn-primary btn-block" onclick="renderIntroStep(1)">New Game</button></div>';
+    return;
+  }
+  const idx = step-1;
+  const total = TUTORIAL_STEPS.length;
+  const s = TUTORIAL_STEPS[idx];
+  const dots = TUTORIAL_STEPS.map((_,i)=>'<span class="intro-dot'+(i===idx?' is-active':'')+'"></span>').join('');
+  const isLast = idx===total-1;
+  card.innerHTML = '<h3 class="intro-step-title">'+s.title+'</h3>'
+    + '<p class="intro-step-body">'+s.body+'</p>'
+    + '<div class="intro-dots">'+dots+'</div>'
+    + '<div class="intro-actions">'
+    + '<div class="intro-actions-row">'
+    + (idx>0 ? '<button class="btn" onclick="renderIntroStep('+step+'-1)">Back</button>' : '')
+    + (isLast ? '<button class="btn btn-primary" onclick="finishIntro()">Let’s Grow!</button>' : '<button class="btn btn-primary" onclick="renderIntroStep('+step+'+1)">Next</button>')
+    + '</div>'
+    + (isLast ? '' : '<button class="intro-skip" onclick="finishIntro()">Skip</button>')
+    + '</div>';
+}
+function finishIntro(){
+  state.tutorialSeen = true;
+  scheduleSave();
+  document.getElementById('introOverlay').classList.remove('open');
+}
+function openIntro(){
+  renderIntroStep(0);
+  document.getElementById('introOverlay').classList.add('open');
+}
+
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
@@ -3471,13 +3537,17 @@ async function init(){
   updateLabBadge();
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   if(!state.everPlanted) document.body.classList.add('show-hint');
-  const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn);
-  const streakInfo = pendingDailyStreakInfo();
-  if(streakInfo){
-    if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn };
-    openDailyStreakModal(streakInfo);
-  } else if(showWelcomeBack){
-    openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+  if(!state.tutorialSeen){
+    openIntro();
+  } else {
+    const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn);
+    const streakInfo = pendingDailyStreakInfo();
+    if(streakInfo){
+      if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn };
+      openDailyStreakModal(streakInfo);
+    } else if(showWelcomeBack){
+      openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+    }
   }
   saveState();
   setInterval(tick, 1000);

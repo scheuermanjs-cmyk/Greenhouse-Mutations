@@ -891,28 +891,8 @@ function renderPixIcon(key, unlocked){
       html += '<div style="background:'+(ch==='#'?color:'transparent')+'"></div>';
   return '<div class="ach-pix" style="grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+html+'</div>';
 }
-const SPORE_ICON = {
-  color: '#FFFFFF',
-  rows: [
-    '..#####..',
-    '.#.....#.',
-    '#.......#',
-    '#.......#',
-    '#.......#',
-    '#.......#',
-    '#.......#',
-    '.#.....#.',
-    '..#####..'
-  ]
-};
-function renderSporeIcon(cellSize){
-  const cell = cellSize || 4;
-  const cols = SPORE_ICON.rows[0].length;
-  let html = '';
-  for(const row of SPORE_ICON.rows)
-    for(const ch of row)
-      html += '<div style="background:'+(ch==='#'?SPORE_ICON.color:'transparent')+'"></div>';
-  return '<div class="ach-pix spore-icon-px" style="display:inline-grid;vertical-align:middle;grid-template-columns:repeat('+cols+','+cell+'px);grid-auto-rows:'+cell+'px;">'+html+'</div>';
+function renderSporeIcon(){
+  return '<span style="color:#FFFFFF;">○</span>';
 }
 function renderGemIcon(){
   return '<span style="color:#C77DFF;">◆</span>';

@@ -2069,6 +2069,7 @@ function defaultState(){
     achStats:{ harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0, totalGemsEarned:0, totalSkillPointsEarned:0 },
     prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
     decor: defaultDecorState(),
+    dailyStreak:{ count:0, lastClaimDay:null },
     lastSavedAt:Date.now() };
 }
 async function loadState(){
@@ -2114,6 +2115,9 @@ async function loadState(){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
+      }
+      if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
+        merged.dailyStreak = { count:0, lastClaimDay:null };
       }
       return merged;
     }
@@ -3342,6 +3346,71 @@ function openWelcomeBack(wiltedCount, readyCount, researchDone){
   document.getElementById('sheetBackdrop').classList.add('open');
 }
 
+/* ===================== DAILY STREAK ===================== */
+const DAILY_STREAK_REWARDS = [
+  { spores:20, gems:0 },
+  { spores:30, gems:0 },
+  { spores:45, gems:1 },
+  { spores:60, gems:1 },
+  { spores:80, gems:2 },
+  { spores:100, gems:2 },
+  { spores:150, gems:3 }
+];
+function dailyStreakReward(count){
+  return DAILY_STREAK_REWARDS[(count-1) % DAILY_STREAK_REWARDS.length];
+}
+function todayDateString(){
+  const d = new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+function yesterdayDateString(){
+  const d = new Date();
+  d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+function pendingDailyStreakInfo(){
+  const ds = state.dailyStreak || {count:0, lastClaimDay:null};
+  const today = todayDateString();
+  if(ds.lastClaimDay === today) return null;
+  const newCount = ds.lastClaimDay === yesterdayDateString() ? (ds.count||0)+1 : 1;
+  return { newCount, reward: dailyStreakReward(newCount), today };
+}
+let pendingWelcomeBackArgs = null;
+function claimDailyStreak(){
+  const info = pendingDailyStreakInfo();
+  if(!info){ closeSheet(); return; }
+  if(info.reward.spores) addSpores(info.reward.spores);
+  if(info.reward.gems) addGems(info.reward.gems);
+  state.dailyStreak = { count:info.newCount, lastClaimDay:info.today };
+  updateHeader();
+  scheduleSave();
+  if(pendingWelcomeBackArgs){
+    const args = pendingWelcomeBackArgs;
+    pendingWelcomeBackArgs = null;
+    openWelcomeBack(args.wiltedCount, args.readyCount, args.researchDone);
+  } else {
+    closeSheet();
+  }
+  showToastHtml('Day '+info.newCount+' streak claimed! +'+info.reward.spores+' ○'+(info.reward.gems?' +'+info.reward.gems+' '+renderGemIcon():''));
+}
+function renderDailyStreakSheet(info){
+  const body = document.getElementById('sheetBody');
+  const cycleDay = ((info.newCount-1) % DAILY_STREAK_REWARDS.length) + 1;
+  let html = '<div class="sheet-head"><h3>Daily Streak</h3></div>'
+    + '<p class="sheet-blurb">Day '+info.newCount+' in a row! Come back tomorrow to keep it going.</p>'
+    + '<div class="stat-row"><span>Reward</span><span>+'+info.reward.spores+' ○'+(info.reward.gems?' +'+info.reward.gems+' '+renderGemIcon():'')+'</span></div>'
+    + '<div class="stat-row"><span>Cycle day</span><span>'+cycleDay+' / '+DAILY_STREAK_REWARDS.length+'</span></div>'
+    + '<button class="btn btn-primary btn-block" style="margin-top:16px" onclick="claimDailyStreak()">Claim</button>';
+  body.innerHTML = html;
+}
+function openDailyStreakModal(info){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderDailyStreakSheet(info);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
@@ -3402,7 +3471,14 @@ async function init(){
   updateLabBadge();
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   if(!state.everPlanted) document.body.classList.add('show-hint');
-  if(away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn)) openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+  const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn);
+  const streakInfo = pendingDailyStreakInfo();
+  if(streakInfo){
+    if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn };
+    openDailyStreakModal(streakInfo);
+  } else if(showWelcomeBack){
+    openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+  }
   saveState();
   setInterval(tick, 1000);
 }

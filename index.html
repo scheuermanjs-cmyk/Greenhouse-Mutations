@@ -312,6 +312,7 @@
   .upg-btn{ flex-shrink:0; min-width:84px; text-align:center; }
   .upg-card.is-equipped{ border-color:var(--accent); box-shadow:3px 3px 0 var(--accent-dark); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
+  .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
   .merchant-swatch-glow{ animation:merchantSwatchPulse 2.2s ease-in-out infinite; }
   @keyframes merchantSwatchPulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.35), 0 0 6px 1px rgba(255,255,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.35), 0 0 12px 4px rgba(255,255,255,.55); } }
 
@@ -1482,11 +1483,19 @@ function renderDecorGallery(kind){
   const cfg = decorConfig(kind);
   const owned = decorOwned(kind);
   const equipped = kind==='pot' ? state.decor.equippedPot : state.decor.equippedWallpaper;
-  el.innerHTML = Object.entries(cfg).filter(([key, theme])=>{
-    return !theme.merchantOnly || owned.includes(key);
-  }).map(([key, theme])=>{
+  el.innerHTML = Object.entries(cfg).map(([key, theme])=>{
     const isOwned = owned.includes(key);
     const isEquipped = equipped===key;
+    if(theme.merchantOnly && !isOwned){
+      return '<div class="upg-card">'
+        + '<div class="decor-swatch decor-swatch-mystery">?</div>'
+        + '<div class="upg-info">'
+        + '<div class="upg-name">???</div>'
+        + '<div class="upg-desc">Sold by the traveling merchant</div>'
+        + '</div>'
+        + '<button class="btn btn-small" disabled>???</button>'
+        + '</div>';
+    }
     const swatchBg = kind==='pot'
       ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
       : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';

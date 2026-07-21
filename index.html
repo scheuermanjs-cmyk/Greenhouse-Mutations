@@ -200,8 +200,7 @@
   .mullion-h{ left:0; right:0; top:50%; height:4px; margin-top:-2px; }
   .ledge{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:16px; }
   .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; position:relative; z-index:2; margin:6px 0 0; }
-  .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; position:relative; }
-  .showcase-name{ position:absolute; top:100%; left:0; right:0; margin-top:2px; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; }
 
   /* ---------- plot grid ---------- */
   .plot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -3425,11 +3424,29 @@ function renderShowcaseShelf(){
         + tilePotStack('<span class="tile-plus-mini">+</span>', false)
         + '</div>';
     }
-    return '<div class="showcase-slot" onclick="openShowcasePicker('+i+')">'
+    return '<div class="showcase-slot" onclick="openShowcaseDetail('+i+')">'
       + tilePotStack(renderSprite(entry.genome,'sm','bloom',{}), false)
-      + '<div class="showcase-name">'+entry.name+'</div>'
       + '</div>';
   }).join('');
+}
+function openShowcaseDetail(slot){
+  const key = state.decor.showcase[slot];
+  const entry = key ? state.herbarium.find(e=>e.key===key) : null;
+  if(!entry){ openShowcasePicker(slot); return; }
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderHerbDetailSheet(entry);
+  const body = document.getElementById('sheetBody');
+  const closeBtn = body.querySelector('button');
+  const changeBtn = document.createElement('button');
+  changeBtn.className = 'btn btn-block';
+  changeBtn.style.marginTop = '8px';
+  changeBtn.textContent = 'Change Display';
+  changeBtn.onclick = function(){ openShowcasePicker(slot); };
+  if(closeBtn) body.insertBefore(changeBtn, closeBtn);
+  else body.appendChild(changeBtn);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
 }
 function openShowcasePicker(slot){
   currentSheetIdx = null;

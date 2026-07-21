@@ -591,6 +591,11 @@
 
     <section class="screen" id="screen-tasks">
       <div class="screen-title-row">
+        <div class="ach-category" style="margin:0;">Visitor Request</div>
+        <div class="upg-desc">New visitor in <span id="visitorRefreshTimer">--:--</span></div>
+      </div>
+      <div id="visitorCard" style="margin-bottom:18px;"></div>
+      <div class="screen-title-row">
         <div class="screen-title">Refreshes in <span id="taskRefreshTimer">--:--</span></div>
         <button class="btn btn-small" id="rerollTasksBtn" onclick="onRerollTaskBoard()">Reroll</button>
       </div>
@@ -1282,6 +1287,8 @@ function onRerollTaskBoard(){
 }
 function renderTasks(){
   ensureTaskBoardCurrent();
+  ensureVisitorCurrent();
+  renderVisitorCard();
   pruneImpossibleTasks();
   updateTasksBadge();
   const tasks = getCurrentTasks();
@@ -1681,6 +1688,83 @@ function renderMerchant(){
     html += '<div class="upg-desc" style="margin:4px 2px 10px;">You already own every cosmetic the merchant has today. Check back tomorrow!</div>';
   }
   el.innerHTML = html;
+}
+
+/* ===================== VISITOR REQUESTS ===================== */
+const VISITOR_TRAIT_CHANCE = 0.4;
+function pickVisitorRequest(level){
+  const keys = getUnlockedSpeciesKeys(level);
+  const speciesKey = keys[Math.floor(Math.random()*keys.length)];
+  const sp = SPECIES[speciesKey];
+  const wantsTrait = Math.random() < VISITOR_TRAIT_CHANCE;
+  const trait = wantsTrait ? RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)].id : null;
+  const sporeReward = Math.round(sp.baseSell * (wantsTrait ? 3.2 : 1.8)) + 10;
+  const gemReward = wantsTrait ? 2+Math.floor(Math.random()*3) : 1;
+  const xpReward = Math.round(sporeReward*0.6);
+  return { species:speciesKey, hue:sp.hue, trait, sporeReward, gemReward, xpReward };
+}
+function rollVisitorRequest(){
+  const level = getLevelFromXp(state.xp||0);
+  state.visitor = { day: todayDateString(), request: pickVisitorRequest(level), fulfilled:false };
+}
+function ensureVisitorCurrent(){
+  if(!state.visitor || state.visitor.day !== todayDateString()){
+    rollVisitorRequest();
+    saveState();
+    return true;
+  }
+  return false;
+}
+function findMatchingInventoryStack(species, trait){
+  return state.inventory.find(s => s.species===species && s.qty>0 && (!trait || s.genome.rareTrait===trait || s.genome.rareTrait2===trait));
+}
+function fulfillVisitorRequest(){
+  const v = state.visitor;
+  if(!v || !v.request || v.fulfilled) return false;
+  const stack = findMatchingInventoryStack(v.request.species, v.request.trait);
+  if(!stack) return false;
+  stack.qty -= 1;
+  if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s!==stack);
+  addSpores(v.request.sporeReward);
+  addGems(v.request.gemReward);
+  v.fulfilled = true;
+  saveState();
+  renderVisitorCard();
+  updateHeader();
+  grantXp(v.request.xpReward);
+  showToastHtml('Delivered! +'+v.request.sporeReward+' '+renderSporeIcon()+' +'+v.request.gemReward+' '+renderGemIcon());
+  return true;
+}
+function onFulfillVisitor(){
+  fulfillVisitorRequest();
+}
+function updateVisitorTimer(){
+  const el = document.getElementById('visitorRefreshTimer');
+  if(el) el.textContent = fmtHM(msUntilNextDay());
+}
+function renderVisitorCard(){
+  const el = document.getElementById('visitorCard');
+  if(!el) return;
+  updateVisitorTimer();
+  const v = state.visitor;
+  if(!v || !v.request){ el.innerHTML = ''; return; }
+  const req = v.request;
+  const sp = SPECIES[req.species];
+  const trait = req.trait ? RARE_TRAITS_BY_ID[req.trait] : null;
+  const stack = findMatchingInventoryStack(req.species, req.trait);
+  const canFulfill = !!stack && !v.fulfilled;
+  let btnLabel = 'Need Match';
+  if(v.fulfilled) btnLabel = 'Delivered';
+  else if(canFulfill) btnLabel = 'Fulfill';
+  el.innerHTML = '<div class="upg-card">'
+    + '<div class="seed-row-glyph">'+renderSprite({species:req.species,hue:req.hue,glow:false},'sm','bloom')+'</div>'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">'+sp.name+(trait?' ‘'+trait.name+'’':'')+'</div>'
+    + '<div class="upg-desc">'+(trait? 'Needs the '+trait.name+' trait' : 'Any '+sp.name+' will do')+'</div>'
+    + '<div class="upg-current">Reward: +'+req.sporeReward+' '+renderSporeIcon()+' +'+req.gemReward+' '+renderGemIcon()+'</div>'
+    + '</div>'
+    + '<button class="btn btn-small '+(canFulfill?'btn-primary':'')+'" '+(canFulfill?'':'disabled')+' onclick="onFulfillVisitor()">'+btnLabel+'</button>'
+    + '</div>';
 }
 
 /* ===================== RENDER: PRESTIGE ===================== */
@@ -2407,6 +2491,7 @@ function defaultState(){
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
     pestsSeen:{},
+    visitor:{ day:null, request:null, fulfilled:false },
     lastSavedAt:Date.now() };
 }
 async function loadState(){
@@ -2461,6 +2546,9 @@ async function loadState(){
         merged.merchant = { day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false };
       }
       if(!merged.pestsSeen || typeof merged.pestsSeen!=='object') merged.pestsSeen = {};
+      if(!merged.visitor || typeof merged.visitor!=='object'){
+        merged.visitor = { day:null, request:null, fulfilled:false };
+      }
       return merged;
     }
   }catch(e){ /* no saved state yet */ }
@@ -3897,6 +3985,7 @@ async function init(){
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   ensureTaskBoardCurrent();
   ensureMerchantCurrent();
+  ensureVisitorCurrent();
   const now = Date.now();
   const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
   let wiltedCount = 0, readyCount = 0;

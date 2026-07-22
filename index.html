@@ -1723,7 +1723,7 @@ function pickVisitorRequest(level){
 }
 function rollVisitorRequest(){
   const level = getLevelFromXp(state.xp||0);
-  state.visitor = { periodStart: Date.now(), request: pickVisitorRequest(level), fulfilled:false };
+  state.visitor = { periodStart: Date.now(), type: pickRandomVisitorType(), request: pickVisitorRequest(level), fulfilled:false };
 }
 function ensureVisitorCurrent(){
   if(!state.visitor || typeof state.visitor.periodStart!=='number' || Date.now()-state.visitor.periodStart >= VISITOR_PERIOD_MS){
@@ -1779,7 +1779,7 @@ function renderFarmerRow(){
   if(!v || !v.request){ el.innerHTML = ''; return; }
   el.innerHTML = '<div class="farmer-station'+(v.fulfilled?' is-fulfilled':'')+'" onclick="openVisitorSheet()">'
     + (v.fulfilled ? '<div class="farmer-check">✓</div>' : '')
-    + renderFarmer('lg')
+    + renderFarmer('lg', v.type)
     + '</div>';
 }
 function openVisitorSheet(){
@@ -1801,7 +1801,8 @@ function renderVisitorSheet(){
   let btnLabel = 'Need Match';
   if(v.fulfilled) btnLabel = 'Delivered';
   else if(canFulfill) btnLabel = 'Fulfill';
-  let html = '<div class="sheet-head"><h3>Visitor Request</h3></div>'
+  const visitorCfg = VISITOR_TYPES[v.type] || VISITOR_TYPES.farmer;
+  let html = '<div class="sheet-head"><h3>'+visitorCfg.name+'’s Request</h3></div>'
     + '<div class="seed-row-glyph" style="justify-content:center;display:flex;margin-bottom:8px;">'+renderSprite({species:req.species,hue:req.hue,glow:false},'sm','bloom')+'</div>'
     + '<div class="upg-name" style="text-align:center;">'+sp.name+(trait?' ‘'+trait.name+'’':'')+'</div>'
     + '<div class="upg-desc" style="text-align:center;margin-bottom:10px;">'+(trait? 'Needs the '+trait.name+' trait' : 'Any '+sp.name+' will do')+'</div>'
@@ -2375,14 +2376,23 @@ function renderPest(size, type){
   }
   return '<div class="pix-pest" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
-const FARMER_ROWS = ['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'];
-const FARMER_COLORS = { h:'#D9B65C', f:'#E8B382', e:'#2C2C28', s:'#6E9BD1', o:'#3F5F80', b:'#4A362A' };
-function renderFarmer(size){
+const VISITOR_TYPES = {
+  farmer:    { name:'Farmer',    rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'], colors:{ h:'#D9B65C', f:'#E8B382', e:'#2C2C28', s:'#6E9BD1', o:'#3F5F80', b:'#4A362A' } },
+  baker:     { name:'Baker',     rows:['.ccc.','ccccc','.fff.','.e.e.','.fff.','rrrrr','.aaa.','b...b'], colors:{ c:'#F4F1E0', f:'#E8B382', e:'#2C2C28', r:'#C0453C', a:'#EDE6D6', b:'#4A362A' } },
+  fisher:    { name:'Fisherman', rows:['.yyy.','yyyyy','.fff.','.e.e.','.fff.','yyyyy','.yyy.','b...b'], colors:{ y:'#E8B93C', f:'#E8B382', e:'#2C2C28', b:'#2E4A3A' } },
+  gardener:  { name:'Gardener',  rows:['.ggg.','ggggg','.fff.','.e.e.','.fff.','vvvvv','.ooo.','b...b'], colors:{ g:'#6E9B5C', f:'#E8B382', e:'#2C2C28', v:'#4A6B3F', o:'#5C4A32', b:'#3A2E22' } }
+};
+const VISITOR_TYPE_KEYS = Object.keys(VISITOR_TYPES);
+function pickRandomVisitorType(){
+  return VISITOR_TYPE_KEYS[Math.floor(Math.random()*VISITOR_TYPE_KEYS.length)];
+}
+function renderFarmer(size, type){
+  const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
   let cellsHtml = '';
-  for(const row of FARMER_ROWS){
+  for(const row of cfg.rows){
     for(const ch of row){
-      cellsHtml += '<div style="background:'+(FARMER_COLORS[ch] || 'transparent')+'"></div>';
+      cellsHtml += '<div style="background:'+(cfg.colors[ch] || 'transparent')+'"></div>';
     }
   }
   return '<div class="pix-farmer" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';

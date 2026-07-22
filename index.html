@@ -1709,6 +1709,7 @@ function renderMerchant(){
 
 /* ===================== VISITOR REQUESTS ===================== */
 const VISITOR_TRAIT_CHANCE = 0.4;
+const VISITOR_PERIOD_MS = 30*60*1000;
 function pickVisitorRequest(level){
   const keys = getUnlockedSpeciesKeys(level);
   const speciesKey = keys[Math.floor(Math.random()*keys.length)];
@@ -1722,10 +1723,10 @@ function pickVisitorRequest(level){
 }
 function rollVisitorRequest(){
   const level = getLevelFromXp(state.xp||0);
-  state.visitor = { day: todayDateString(), request: pickVisitorRequest(level), fulfilled:false };
+  state.visitor = { periodStart: Date.now(), request: pickVisitorRequest(level), fulfilled:false };
 }
 function ensureVisitorCurrent(){
-  if(!state.visitor || state.visitor.day !== todayDateString()){
+  if(!state.visitor || typeof state.visitor.periodStart!=='number' || Date.now()-state.visitor.periodStart >= VISITOR_PERIOD_MS){
     rollVisitorRequest();
     saveState();
     return true;
@@ -1755,9 +1756,20 @@ function fulfillVisitorRequest(){
 function onFulfillVisitor(){
   if(fulfillVisitorRequest()) closeSheet();
 }
+function msUntilVisitorRefresh(){
+  if(!state.visitor || typeof state.visitor.periodStart!=='number') return 0;
+  return Math.max(0, VISITOR_PERIOD_MS - (Date.now()-state.visitor.periodStart));
+}
+function fmtMMSS(ms){
+  if(ms<0) ms = 0;
+  const totalSec = Math.ceil(ms/1000);
+  const m = Math.floor(totalSec/60);
+  const s = totalSec%60;
+  return m+':'+String(s).padStart(2,'0');
+}
 function updateVisitorTimer(){
   const el = document.getElementById('visitorRefreshTimer');
-  if(el) el.textContent = fmtHM(msUntilNextDay());
+  if(el) el.textContent = fmtMMSS(msUntilVisitorRefresh());
 }
 function renderFarmerRow(){
   const el = document.getElementById('farmerRow');
@@ -2535,7 +2547,7 @@ function defaultState(){
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
     pestsSeen:{},
-    visitor:{ day:null, request:null, fulfilled:false },
+    visitor:{ periodStart:null, request:null, fulfilled:false },
     lastSavedAt:Date.now() };
 }
 async function loadState(){
@@ -2590,8 +2602,8 @@ async function loadState(){
         merged.merchant = { day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false };
       }
       if(!merged.pestsSeen || typeof merged.pestsSeen!=='object') merged.pestsSeen = {};
-      if(!merged.visitor || typeof merged.visitor!=='object'){
-        merged.visitor = { day:null, request:null, fulfilled:false };
+      if(!merged.visitor || typeof merged.visitor!=='object' || typeof merged.visitor.periodStart!=='number'){
+        merged.visitor = { periodStart:null, request:null, fulfilled:false };
       }
       return merged;
     }

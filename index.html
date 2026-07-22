@@ -225,6 +225,13 @@
   .plot-tile.locked{ background:#162018; }
   .plot-tile-inner{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; }
 
+  /* ---------- wing toggle + desert wing ---------- */
+  .wing-toggle{ display:flex; gap:2px; margin-bottom:10px; }
+  .wing-toggle-btn{ flex:1; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:9px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
+  .wing-toggle-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel); }
+  .wing-toggle-btn.wing-locked{ opacity:.45; }
+  .desert-wing-panel{ background:linear-gradient(to bottom, #C98A4B 0%, #8B5A2B 100%); padding:10px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); }
+
   .tile-top-badge{ position:absolute; top:4px; left:2px; right:2px; text-align:center; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; line-height:1.2; pointer-events:none; }
   .tile-top-badge.is-ready{ color:var(--accent); animation:readyGlow 1.8s ease-in-out infinite; }
   .tile-bottom-text{ position:absolute; bottom:4px; left:2px; right:2px; text-align:center; font-size:11px; color:var(--text-muted); pointer-events:none; }
@@ -608,13 +615,20 @@
         <div class="mullion mullion-h"></div>
       </div>
       <div class="ledge"></div>
+      <div class="wing-toggle" id="wingToggle">
+        <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')">🌿 Verdant Greenhouse</button>
+        <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')">🏜️ Desert Wing</button>
+      </div>
       <div class="screen-title-row">
-        <div class="screen-title">Place a seed, tend the pot, see what grows</div>
+        <div class="screen-title" id="greenhouseScreenTitle">Place a seed, tend the pot, see what grows</div>
         <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;">⚡ Mutation Storm — mutation odds up</div>
       <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;">🐛 Pest Swarm — infestations more likely</div>
       <div class="plot-grid" id="plotGrid"></div>
+      <div class="desert-wing-panel" id="desertWingPanel" style="display:none;">
+        <div class="plot-grid" id="plotGridDesert"></div>
+      </div>
     </section>
 
     <section class="screen" id="screen-tasks">
@@ -745,15 +759,19 @@ const SPECIES = {
   glowbloom:  { name:'Glowbloom',  hue:280, growthSec:120, baseSell:9,  deathResist:0.0,  seedCost:12, glowBias:0.08, lightTarget:70, waterTarget:40, blurb:'Already half in love with bioluminescence.' },
   thornvine:  { name:'Thornvine',  hue:24,  growthSec:150, baseSell:13, deathResist:0.45, seedCost:9,  lightTarget:65, waterTarget:25, blurb:'Tough and slow. Barely notices stress.' },
   duskvelvet: { name:'Duskvelvet', hue:320, growthSec:170, baseSell:16, deathResist:0.2,  seedCost:18, glowBias:0.05, lightTarget:20, waterTarget:55, blurb:'Blooms richest after dusk. Craves shade and a little neglect.', unlockLevel:10 },
-  starforge:  { name:'Starforge',  hue:190, growthSec:200, baseSell:22, deathResist:0.3,  seedCost:28, lightTarget:50, waterTarget:50, blurb:'Grown from crystallized spores. Slow, radiant, richly rewarding.', unlockLevel:20 }
+  starforge:  { name:'Starforge',  hue:190, growthSec:200, baseSell:22, deathResist:0.3,  seedCost:28, lightTarget:50, waterTarget:50, blurb:'Grown from crystallized spores. Slow, radiant, richly rewarding.', unlockLevel:20 },
+  sandthistle:{ name:'Sandthistle', hue:38,  growthSec:60,  baseSell:7,  deathResist:0.35, seedCost:6,  lightTarget:80, waterTarget:15, blurb:'Thrives on neglect and blazing sun. Barely needs a drink.', wing:'desert', unlockLevel:1 },
+  duneglow:   { name:'Duneglow',   hue:18,  growthSec:135, baseSell:19, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal.', wing:'desert', unlockLevel:8 }
 };
+function speciesWing(key){ return (SPECIES[key] && SPECIES[key].wing) || 'verdant'; }
+function verdantSpeciesKeys(){ return Object.keys(SPECIES).filter(k=>speciesWing(k)==='verdant'); }
 function isSpeciesUnlocked(key, level){
   const lvl = level!=null ? level : getLevelFromXp(state.xp||0);
   return lvl >= (SPECIES[key].unlockLevel||1);
 }
-function getUnlockedSpeciesKeys(level){
+function getUnlockedSpeciesKeys(level, wing='verdant'){
   const lvl = level||1;
-  return Object.keys(SPECIES).filter(k => (SPECIES[k].unlockLevel||1) <= lvl);
+  return Object.keys(SPECIES).filter(k => speciesWing(k)===wing && (SPECIES[k].unlockLevel||1) <= lvl);
 }
 
 const RARE_TRAITS = [
@@ -990,6 +1008,7 @@ const ACHIEVEMENTS = [
   { id:'spores_500',      cat:'Milestones',  icon:'\u25C6',       name:'Saving Up',             desc:'Earn 500 total spores',                 reward:{spores:0,   xp:15} },
   { id:'spores_2000',     cat:'Milestones',  icon:'\u25C6\u25C6', name:'Spore Hoarder',         desc:'Earn 2,000 total spores ever',          reward:{spores:50,  xp:40} },
   { id:'unlock_all',      cat:'Milestones',  icon:'\uD83D\uDD13', name:'Full House',            desc:'Unlock all 9 pots',                     reward:{spores:80,  xp:40} },
+  { id:'unlock_all_desert', cat:'Milestones', icon:'\uD83D\uDD13', name:'Sands Uncovered',      desc:'Unlock all 9 desert pots',              reward:{spores:120, xp:60} },
   { id:'first_research',  cat:'Research',    icon:'\uD83D\uDD2C', name:'Lab Rat',               desc:'Complete your first research',          reward:{spores:15,  xp:10} },
   { id:'research_10',     cat:'Research',    icon:'\uD83D\uDD2C', name:'Dedicated Researcher',  desc:'Complete 10 research runs',             reward:{spores:60,  xp:30} },
   { id:'research_rare',   cat:'Research',    icon:'\u2B50',       name:'Rare Discovery',        desc:'Collect a Rare-tier research or better', reward:{spores:40,  xp:20} },
@@ -1033,7 +1052,7 @@ const ACH_ICON_MAP = {
   first_upgrade:'gear', max_upgrade:'gear',
   level_5:'arrow', level_10:'arrow', level_20:'arrow',
   spores_500:'diamond', spores_2000:'diamond',
-  unlock_all:'dotgrid',
+  unlock_all:'dotgrid', unlock_all_desert:'dotgrid',
   first_research:'gear', research_10:'gear', research_rare:'star', research_exceptional:'trophy', research_legendary:'trophy',
   gems_10:'sparkle', gems_50:'star',
   first_prestige:'trophy', prestige_5:'trophy',
@@ -1070,7 +1089,7 @@ function checkAchievements(){
     harvest_50:     s.harvests>=50,
     harvest_100:    s.harvests>=100,
     well_tended_5:  s.wellTended>=5,
-    all_species:    Object.keys(s.speciesSeen||{}).length>=Object.keys(SPECIES).length,
+    all_species:    verdantSpeciesKeys().filter(k=>s.speciesSeen&&s.speciesSeen[k]).length>=verdantSpeciesKeys().length,
     first_mutation: s.mutations>=1,
     first_hybrid:   s.hybrids>=1,
     rare_trait:     s.rareTraits>=1,
@@ -1090,6 +1109,7 @@ function checkAchievements(){
     spores_500:     s.totalSpores>=500,
     spores_2000:    s.totalSpores>=2000,
     unlock_all:     (state.plots||[]).filter(p=>!p.locked).length>=9,
+    unlock_all_desert: (state.desertPlots||[]).filter(p=>!p.locked).length>=9,
     first_research: (s.researchCompleted||0)>=1,
     research_10:    (s.researchCompleted||0)>=10,
     research_rare:  (s.bestResearchTier||-1)>=2,
@@ -1267,7 +1287,7 @@ function bumpTaskProgress(type, amount, matchSpecies){
   if(changed){ saveState(); updateTasksBadge(); }
 }
 function isTaskPossible(task){
-  if(task.type==='unlock_plot') return state.plots.some(p=>p.locked);
+  if(task.type==='unlock_plot') return state.plots.some(p=>p.locked) || (state.desertPlots||[]).some(p=>p.locked);
   if(task.type==='buy_upgrade') return Object.entries(UPGRADES).some(([k,cfg])=>(state.upgrades[k]||0)<cfg.maxLevel);
   return true;
 }
@@ -2296,7 +2316,9 @@ const SPECIES_HALF = {
   glowbloom:  ['..c..','.cbc.','cbbbc','.cbc.','..b..'],
   thornvine:  ['..c..','.a.a.','.bba.','abba.','.ba..'],
   duskvelvet: ['....c','..bbc','.bcba','cbbba','.bbaa','..aaa'],
-  starforge:  ['....c','..bba','.babc','abbbc','.bbcc','..bba']
+  starforge:  ['....c','..bba','.babc','abbbc','.bbcc','..bba'],
+  sandthistle:['..c..','.aba.','abbba','.aba.','..a..'],
+  duneglow:   ['....c','..abc','.bcba','abbba','.bbaa','..aaa']
 };
 const SPECIES_HEAD_FULL = {};
 const SPECIES_HEAD_BUD = {};
@@ -2349,7 +2371,9 @@ const STEM_STYLES = {
   glowbloom:  (i) => i%2===0 ? '..gtttg..' : '...ttt...',
   thornvine:  (i) => i%2===1 ? '..ktttk..' : '...ttt...',
   duskvelvet: (i) => i%2===0 ? '..vtttv..' : '...ttt...',
-  starforge:  (i) => i%2===0 ? '..pttt...' : '...tttp..'
+  starforge:  (i) => i%2===0 ? '..pttt...' : '...tttp..',
+  sandthistle:(i) => i%2===0 ? '...ttt...' : '..ttttt..',
+  duneglow:   (i) => i%2===0 ? '..rtttr..' : '...ttt...'
 };
 function stemRows(height, speciesKey, crossKey){
   const rows = [];
@@ -2384,6 +2408,7 @@ function cellColor(token, hue, wilt){
   if(token==='k') return wilt ? '#4A4038' : '#5C4A32';
   if(token==='v') return wilt ? '#5C4558' : '#8C4A8C';
   if(token==='p') return wilt ? '#5C7A74' : '#7EE8D9';
+  if(token==='r') return wilt ? '#7A5A3D' : 'hsl('+hue+' 70% 60%)';
   if(wilt){
     if(token==='a') return '#6B5A45';
     if(token==='b') return '#8A7558';
@@ -2575,6 +2600,8 @@ function sheetAccessoryRow(potWrapHtml, showSprinkler){
 /* ===================== STATE ===================== */
 let state = null;
 let currentSheetIdx = null;
+let currentSheetWing = 'verdant';
+let currentWing = 'verdant';
 let currentSkyPhase = null;
 function applyWindowPhase(){
   const h = getGameHour();
@@ -2691,8 +2718,11 @@ function buildInitialPlots(){
   }
   return arr;
 }
+function plotsForWing(wing){ return wing==='desert' ? state.desertPlots : state.plots; }
+function refreshTilesForWing(wing){ if(wing==='desert') updateAllDesertTiles(); else updateAllTiles(); }
+function isDesertWingUnlocked(){ return (state.prestige.count||0) > 0; }
 function defaultState(){
-  return { spores:20, gems:0, xp:0, everPlanted:false, plots:buildInitialPlots(), inventory:[], herbarium:[],
+  return { spores:20, gems:0, xp:0, everPlanted:false, plots:buildInitialPlots(), desertPlots:buildInitialPlots(), inventory:[], herbarium:[],
     upgrades:{ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 },
     taskBoard:{ slot:getBoardSlot(), tasks:rollNewTasks(), progress:{}, claimed:{} }, nextMutationBoost:0,
     achievements:{}, herbSets:{}, researchSlots:[null,null,null], labSlotUnlocked:[false,true,false],
@@ -2710,6 +2740,7 @@ function defaultState(){
 function normalizeState(parsed){
       const merged = Object.assign(defaultState(), parsed);
       if(!Array.isArray(merged.plots) || merged.plots.length!==9) merged.plots = buildInitialPlots();
+      if(!Array.isArray(merged.desertPlots) || merged.desertPlots.length!==9) merged.desertPlots = buildInitialPlots();
       merged.upgrades = Object.assign({ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 }, parsed.upgrades||{});
       if(typeof merged.xp!=='number') merged.xp = 0;
       if(typeof merged.gems!=='number') merged.gems = 0;
@@ -2895,8 +2926,8 @@ function instantGrowCost(plot){
   const remainingSec = Math.max(0, (plot.plantedAt+plot.growthDurationMs) - Date.now())/1000;
   return Math.max(1, Math.ceil(remainingSec / 180));
 }
-function instantGrowPlot(idx){
-  const plot = state.plots[idx];
+function instantGrowPlot(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='growing') return false;
   const cost = instantGrowCost(plot);
   if((state.gems||0) < cost) return false;
@@ -2908,9 +2939,9 @@ function instantGrowPlot(idx){
   return true;
 }
 function onInstantGrow(idx){
-  if(instantGrowPlot(idx)){
+  if(instantGrowPlot(idx, currentSheetWing)){
     renderSheetFull(idx);
-    updateAllTiles();
+    refreshTilesForWing(currentSheetWing);
     updateHeader();
   }
 }
@@ -2923,23 +2954,26 @@ function getDisplayStatus(plot){
   }
   return 'empty';
 }
-function neighborHueFor(idx){
+function neighborHueFor(idx, wing='verdant'){
+  const plots = plotsForWing(wing);
   for(const n of (NEIGHBORS[idx]||[])){
-    const np = state.plots[n];
+    const np = plots[n];
     if(np && !np.locked && np.genome){ return np.genome.hue; }
   }
   return null;
 }
-function hasAdjacentDifferentSpecies(idx, speciesKey){
+function hasAdjacentDifferentSpecies(idx, speciesKey, wing='verdant'){
+  const plots = plotsForWing(wing);
   for(const n of (NEIGHBORS[idx]||[])){
-    const np = state.plots[n];
+    const np = plots[n];
     if(np && !np.locked && np.genome && np.status==='growing' && np.genome.species!==speciesKey) return true;
   }
   return false;
 }
-function adjacentDifferentGenome(idx, speciesKey){
+function adjacentDifferentGenome(idx, speciesKey, wing='verdant'){
+  const plots = plotsForWing(wing);
   for(const n of (NEIGHBORS[idx]||[])){
-    const np = state.plots[n];
+    const np = plots[n];
     if(np && !np.locked && np.genome && np.status==='growing' && np.genome.species!==speciesKey){
       return { genome: np.genome, name: SPECIES[np.genome.species].name };
     }
@@ -2959,12 +2993,12 @@ function buildSpecimenName(speciesKey, genome){
 }
 
 /* ===================== GAME LOGIC ===================== */
-function computeMutationChance(plot, idx){
+function computeMutationChance(plot, idx, wing='verdant'){
   const s = computeStress(plot);
   let chance = 0.05;
   if(s.maxStress>30) chance += 0.30;
   else if(s.maxStress>15) chance += 0.12;
-  if(hasAdjacentDifferentSpecies(idx, plot.genome.species)) chance += 0.15;
+  if(hasAdjacentDifferentSpecies(idx, plot.genome.species, wing)) chance += 0.15;
   if(currentWeather==='storm') chance += MUTATION_STORM_BONUS;
   const sp = SPECIES[plot.genome.species];
   if(sp && sp.glowBias) chance += sp.glowBias;
@@ -3017,8 +3051,8 @@ function rollResearchMutation(baseGenome, tier){
   }
   return genome;
 }
-function rollMutation(plot, idx){
-  const chance = computeMutationChance(plot, idx);
+function rollMutation(plot, idx, wing='verdant'){
+  const chance = computeMutationChance(plot, idx, wing);
   const mutated = Math.random() < chance;
   const genome = Object.assign({}, plot.genome);
   let crossInfo = null;
@@ -3036,7 +3070,7 @@ function rollMutation(plot, idx){
       else if(which<0.67) genome.yieldMult = clamp((genome.yieldMult||1)+randRange(-0.1,0.3), 0.4, 4);
       else genome.hue = (genome.hue + randRange(-40,40) + 360)%360;
     }
-    const cross = adjacentDifferentGenome(idx, plot.genome.species);
+    const cross = adjacentDifferentGenome(idx, plot.genome.species, wing);
     if(cross && Math.random()<0.5){
       genome.hue = Math.round((genome.hue + cross.genome.hue)/2);
       genome.yieldMult = clamp(((genome.yieldMult||1)+(cross.genome.yieldMult||1))/2*1.1, 0.4, 4);
@@ -3155,11 +3189,11 @@ function getSortedInventory(){
   return [...state.inventory].sort((a,b)=> getSeedRarityTier(b.genome)-getSeedRarityTier(a.genome));
 }
 function compostAllCommons(){
-  const commons = state.inventory.filter(s=>getSeedRarityTier(s.genome)===0);
+  const commons = state.inventory.filter(s=>getSeedRarityTier(s.genome)===0 && speciesWing(s.species)===currentSheetWing);
   if(!commons.length) return;
   let totalRefund = 0;
   commons.forEach(stack=>{ totalRefund += compostStackValue(stack); });
-  state.inventory = state.inventory.filter(s=>getSeedRarityTier(s.genome)!==0);
+  state.inventory = state.inventory.filter(s=>!(getSeedRarityTier(s.genome)===0 && speciesWing(s.species)===currentSheetWing));
   addSpores(totalRefund);
   saveState();
   if(currentSheetIdx!=null) renderSheetFull(currentSheetIdx);
@@ -3180,7 +3214,7 @@ function logHerbarium(speciesKey, genome){
 /* ===================== HERBARIUM SETS ===================== */
 const HERB_COLOR_NAMES = ['Crimson','Amber','Gold','Verdant','Teal','Azure','Violet','Magenta'];
 function speciesPairs(){
-  const keys = Object.keys(SPECIES);
+  const keys = verdantSpeciesKeys();
   const pairs = [];
   for(let i=0;i<keys.length;i++) for(let j=i+1;j<keys.length;j++) pairs.push([keys[i],keys[j]]);
   return pairs;
@@ -3192,8 +3226,8 @@ function pairSatisfied(a,b){
 const HERB_SETS = [
   { id:'species_set', name:'Species Sampler', desc:'Press one specimen of every species.',
     reward:{spores:40, xp:20},
-    total:()=>Object.keys(SPECIES).length,
-    progress:()=>new Set(state.herbarium.map(e=>e.species)).size },
+    total:()=>verdantSpeciesKeys().length,
+    progress:()=>new Set(state.herbarium.map(e=>e.species).filter(k=>speciesWing(k)==='verdant')).size },
   { id:'color_set', name:'Color Wheel', desc:'Press a specimen in every named color.',
     reward:{spores:80, xp:40},
     total:()=>HERB_COLOR_NAMES.length,
@@ -3412,8 +3446,8 @@ function collectResearch(slot){
   return { name, species, genome, tier, spores:cfg.reward.spores, xp:xpGain, isNew,
     mutant: { genome: mutantGenome, name: mutantLog.name, isNew: mutantLog.isNew }, gemsEarned };
 }
-function plantSeed(idx, source){
-  const plot = state.plots[idx];
+function plantSeed(idx, source, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   if(plot.locked || plot.status!=='empty') return false;
   let genome;
   if(source.type==='base'){
@@ -3444,10 +3478,10 @@ function plantSeed(idx, source){
   saveState();
   return true;
 }
-function harvestPlot(idx){
-  const plot = state.plots[idx];
+function harvestPlot(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='ready') return null;
-  const { genome: finalGenome, mutated, crossInfo } = rollMutation(plot, idx);
+  const { genome: finalGenome, mutated, crossInfo } = rollMutation(plot, idx, wing);
   if(state.nextMutationBoost) state.nextMutationBoost = 0;
   const sp = SPECIES[plot.genome.species];
   const yieldLevel = (state.upgrades && state.upgrades.yield) || 0;
@@ -3499,9 +3533,9 @@ function harvestPlot(idx){
 }
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
-  const results = harvestAllReady();
+  const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
   if(!results.length) return;
-  updateAllTiles(); updateHeader();
+  updateAllTiles(); updateAllDesertTiles(); updateHeader();
   if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
   const totalSpores = results.reduce((sum,r)=>sum+r.sellValue, 0);
   const newFinds = results.filter(r=>r.isNew).length;
@@ -3509,14 +3543,14 @@ function autoHarvestTick(){
   if(newFinds) msg += '  ('+newFinds+' new!)';
   showToast(msg);
 }
-function countReadyPlots(){
-  return state.plots.filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
+function countReadyPlots(wing='verdant'){
+  return plotsForWing(wing).filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
 }
-function harvestAllReady(){
+function harvestAllReady(wing='verdant'){
   const results = [];
-  state.plots.forEach((p, idx)=>{
+  plotsForWing(wing).forEach((p, idx)=>{
     if(!p.locked && getDisplayStatus(p)==='ready'){
-      const r = harvestPlot(idx);
+      const r = harvestPlot(idx, wing);
       if(r) results.push(r);
     }
   });
@@ -3541,7 +3575,7 @@ function buildPlotTiles(){
     tileEls.push(wrap);
   }
 }
-function buildTileInnerHTML(plot, idx){
+function buildTileInnerHTML(plot, idx, wing='verdant'){
   const ds = getDisplayStatus(plot);
   if(ds==='locked'){
     return '<div class="tile-top-badge">Locked</div><div class="tile-bottom-text">'+plot.unlockCost+' \u25C6</div>';
@@ -3556,14 +3590,14 @@ function buildTileInnerHTML(plot, idx){
     const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
     return '<div class="tile-top-badge">'+fmtTime(remaining)+'</div>'
       + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm', plot.pest.type)+'</div>' : '')
-      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm',computeStage(pct),{neighborHue:neighborHueFor(idx)}), false), sprinklerOn)
+      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm',computeStage(pct),{neighborHue:neighborHueFor(idx, wing)}), false), sprinklerOn)
       + '<div class="tile-progress"><div class="tile-progress-fill" style="width:'+pct+'%"></div></div>';
   }
   if(ds==='ready'){
     const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
     return '<div class="tile-top-badge is-ready">Ready!</div>'
       + (plot.pest ? '<div class="tile-pest-badge">'+renderPest('sm', plot.pest.type)+'</div>' : '')
-      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm','bloom',{neighborHue:neighborHueFor(idx)}), false), sprinklerOn);
+      + tileAccessoryRow(tilePotStack(renderSprite(plot.genome,'sm','bloom',{neighborHue:neighborHueFor(idx, wing)}), false), sprinklerOn);
   }
   if(ds==='wilted'){
     return '<div class="tile-top-badge">Wilted</div>'
@@ -3605,13 +3639,55 @@ function updateAllTiles(){
 function updateHarvestAllButton(){
   const btn = document.getElementById('harvestAllBtn');
   if(!btn) return;
-  const count = countReadyPlots();
+  const count = countReadyPlots(currentWing);
   if(count>0){
     btn.style.display = '';
     btn.textContent = 'Harvest All ('+count+')';
   } else {
     btn.style.display = 'none';
   }
+}
+let desertTileEls = [];
+let desertTileDisplayCache = [];
+function buildDesertPlotTiles(){
+  const grid = document.getElementById('plotGridDesert');
+  if(!grid) return;
+  grid.innerHTML = '';
+  desertTileEls = [];
+  desertTileDisplayCache = new Array(9).fill(null);
+  for(let i=0;i<9;i++){
+    const wrap = document.createElement('div');
+    wrap.className = 'plot-tile';
+    wrap.dataset.idx = i;
+    wrap.innerHTML = '<div class="plot-tile-inner"></div>';
+    wrap.addEventListener('click', ()=>openSheet(i, 'desert'));
+    grid.appendChild(wrap);
+    desertTileEls.push(wrap);
+  }
+}
+function updateAllDesertTiles(){
+  if(!desertTileEls.length) return;
+  const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
+  for(let i=0;i<9;i++){
+    const plot = state.desertPlots[i];
+    const ds = getDisplayStatus(plot);
+    const pestFlag = !!(plot.pest && (ds==='growing'||ds==='ready'));
+    let stage = null;
+    if(ds==='growing'){
+      const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+      stage = computeStage(pct);
+    }
+    const prev = desertTileDisplayCache[i];
+    const changed = !prev || prev.ds!==ds || prev.pest!==pestFlag || prev.sprinklerOn!==sprinklerOn || prev.stage!==stage;
+    desertTileEls[i].className = 'plot-tile' + (ds==='locked' ? ' locked' : '') + (pestFlag ? ' has-pest' : '');
+    if(changed){
+      desertTileEls[i].querySelector('.plot-tile-inner').innerHTML = buildTileInnerHTML(plot, i, 'desert');
+    } else if(ds==='growing'){
+      updateTileLiveBits(desertTileEls[i], plot);
+    }
+    desertTileDisplayCache[i] = { ds, pest:pestFlag, sprinklerOn, stage };
+  }
+  updateHarvestAllButton();
 }
 const LAB_UNLOCK_LEVEL = 5;
 function isLabUnlockedByLevel(){
@@ -3624,6 +3700,25 @@ function updateLabNavLock(){
   btn.classList.toggle('nav-btn-locked', locked);
   const textEl = btn.querySelector('.nav-btn-text');
   if(textEl) textEl.textContent = locked ? 'LV.'+LAB_UNLOCK_LEVEL : 'LAB';
+}
+function updateDesertToggleLock(){
+  const btn = document.getElementById('wingBtnDesert');
+  if(!btn) return;
+  btn.classList.toggle('wing-locked', !isDesertWingUnlocked());
+}
+function switchWing(wing){
+  if(wing==='desert' && !isDesertWingUnlocked()){
+    showToast('🏜️ The Desert Wing unlocks after your first Prestige');
+    return;
+  }
+  currentWing = wing;
+  document.getElementById('wingBtnVerdant').classList.toggle('active', wing==='verdant');
+  document.getElementById('wingBtnDesert').classList.toggle('active', wing==='desert');
+  document.getElementById('plotGrid').style.display = wing==='verdant' ? '' : 'none';
+  document.getElementById('desertWingPanel').style.display = wing==='desert' ? '' : 'none';
+  const titleEl = document.getElementById('greenhouseScreenTitle');
+  if(titleEl) titleEl.textContent = wing==='desert' ? 'Coax life from sand and sun' : 'Place a seed, tend the pot, see what grows';
+  updateHarvestAllButton();
 }
 function hasAnyPurchasableSkillNode(){
   const points = state.prestige.skillPoints||0;
@@ -3661,6 +3756,7 @@ function updateHeader(){
   const labelEl = document.getElementById('xpBarLabel');
   if(labelEl) labelEl.textContent = prog.level>=MAX_LEVEL ? 'MAX' : prog.current+' / '+prog.needed+' XP';
   updateLabNavLock();
+  updateDesertToggleLock();
   updatePrestigeBadge();
   updateTasksBadge();
 }
@@ -3798,13 +3894,13 @@ function renderPestBestiary(){
 
 /* ===================== SHEET ===================== */
 function pestAlertHtml(idx){
-  const plot = state.plots[idx];
+  const plot = plotsForWing(currentSheetWing)[idx];
   if(!plot.pest) return '';
   const cfg = PEST_TYPES[plot.pest.type] || PEST_TYPES.aphid;
-  return '<div class="pest-alert">'+renderPest('lg', plot.pest.type)+'<div class="pest-alert-text">'+cfg.name+'! Squash '+(cfg.name.match(/^[aeiouAEIOU]/)?'it':'them')+' before '+(cfg.name.match(/^[aeiouAEIOU]/)?'it ruins':'they ruin')+' the harvest.</div><button class="btn btn-small btn-danger" onclick="squashPest('+idx+')">Squash</button></div>';
+  return '<div class="pest-alert">'+renderPest('lg', plot.pest.type)+'<div class="pest-alert-text">'+cfg.name+'! Squash '+(cfg.name.match(/^[aeiouAEIOU]/)?'it':'them')+' before '+(cfg.name.match(/^[aeiouAEIOU]/)?'it ruins':'they ruin')+' the harvest.</div><button class="btn btn-small btn-danger" onclick="squashPest('+idx+',\''+currentSheetWing+'\')">Squash</button></div>';
 }
-function squashPest(idx){
-  const plot = state.plots[idx];
+function squashPest(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   const pestType = plot.pest && plot.pest.type;
   plot.pest = null;
   bumpTaskProgress('squash_pest', 1);
@@ -3817,7 +3913,7 @@ function squashPest(idx){
   grantXp(3);
   checkAchievements();
   saveState();
-  renderSheetFull(idx); updateAllTiles(); updateHeader();
+  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
   renderPestBestiary();
 }
 function openLevelTree(){
@@ -3893,8 +3989,9 @@ function renderHerbDetailSheet(entry){
     + '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Close</button>';
   body.innerHTML = html;
 }
-function openSheet(idx){
+function openSheet(idx, wing='verdant'){
   currentSheetIdx = idx;
+  currentSheetWing = wing;
   revealShowing = false;
   renderSheetFull(idx);
   document.getElementById('sheet').classList.add('open');
@@ -3908,7 +4005,8 @@ function closeSheet(){
   document.getElementById('sheetBackdrop').classList.remove('open');
 }
 function renderSheetFull(idx){
-  const plot = state.plots[idx];
+  const wing = currentSheetWing;
+  const plot = plotsForWing(wing)[idx];
   const ds = getDisplayStatus(plot);
   lastSheetDisplayStatus = ds;
   const body = document.getElementById('sheetBody');
@@ -3918,14 +4016,14 @@ function renderSheetFull(idx){
     html = '<div class="sheet-head"><h3>Locked pot</h3></div>'
       + '<div class="pot-wrap-lg">'+renderPot('lg', true)+'</div>'
       + '<p class="sheet-blurb">Clear ground for another pot. More room, more chances for cross-pollination.</p>'
-      + '<button class="btn btn-primary btn-block" '+(state.spores<plot.unlockCost?'disabled':'')+' onclick="unlockPlot('+idx+')">Unlock for '+plot.unlockCost+' \u25C6</button>';
+      + '<button class="btn btn-primary btn-block" '+(state.spores<plot.unlockCost?'disabled':'')+' onclick="unlockPlot('+idx+',\''+wing+'\')">Unlock for '+plot.unlockCost+' \u25C6</button>';
 
   } else if(ds==='empty'){
-    const baseRows = Object.entries(SPECIES).map(([key,sp])=>{
+    const baseRows = Object.entries(SPECIES).filter(([key,sp])=>speciesWing(key)===currentSheetWing).map(([key,sp])=>{
       const locked = !isSpeciesUnlocked(key);
       const action = locked
         ? '<button class="btn btn-small" disabled>Lv.'+sp.unlockLevel+'</button>'
-        : '<button class="btn btn-small" '+(state.spores<sp.seedCost?'disabled':'')+' onclick="plantBase('+idx+',\''+key+'\')">'+(sp.seedCost>0 ? sp.seedCost+' \u25C6' : 'Free')+'</button>';
+        : '<button class="btn btn-small" '+(state.spores<sp.seedCost?'disabled':'')+' onclick="plantBase('+idx+',\''+key+'\',\''+wing+'\')">'+(sp.seedCost>0 ? sp.seedCost+' \u25C6' : 'Free')+'</button>';
       return '<div class="seed-row'+(locked?' is-locked':'')+'">'
         + '<div class="seed-row-glyph">'+renderSprite({species:key,hue:sp.hue,glow:false},'sm','bloom')+'</div>'
         + '<div class="seed-row-info"><div class="seed-row-name">'+sp.name+'</div><div class="seed-row-sub">'+(locked ? 'Unlocks at Level '+sp.unlockLevel+'.' : sp.blurb+' Likes light ~'+sp.lightTarget+'%, water ~'+sp.waterTarget+'%.')+'</div></div>'
@@ -3933,19 +4031,20 @@ function renderSheetFull(idx){
         + '</div>';
     }).join('');
     let invHtml = '';
-    if(state.inventory.length){
-      const invRows = getSortedInventory().map(stack=>{
+    const wingInventory = getSortedInventory().filter(stack=>speciesWing(stack.species)===wing);
+    if(wingInventory.length){
+      const invRows = wingInventory.map(stack=>{
         const refund = compostStackValue(stack);
         return '<div class="seed-row">'
           + '<div class="seed-row-glyph">'+renderSprite(stack.genome,'sm','bloom')+'</div>'
           + '<div class="seed-row-info"><div class="seed-row-name">'+buildSpecimenName(stack.species, stack.genome)+'</div><div class="seed-row-sub">\u00D7'+stack.qty+' in stock</div></div>'
           + '<div class="seed-row-actions">'
-          + '<button class="btn btn-small btn-accent" onclick="plantFromInventory('+idx+',\''+stack.id+'\')">Plant</button>'
+          + '<button class="btn btn-small btn-accent" onclick="plantFromInventory('+idx+',\''+stack.id+'\',\''+wing+'\')">Plant</button>'
           + '<button class="btn btn-small btn-danger" onclick="compostStack(\''+stack.id+'\')">Compost +'+refund+'\u25C6</button>'
           + '</div>'
           + '</div>';
       }).join('');
-      const commons = state.inventory.filter(s=>getSeedRarityTier(s.genome)===0);
+      const commons = wingInventory.filter(s=>getSeedRarityTier(s.genome)===0);
       const commonsRefund = commons.reduce((sum,s)=>sum+compostStackValue(s),0);
       const bulkBtn = commons.length>1 ? '<button class="btn btn-small btn-danger btn-block" style="margin-top:8px;" onclick="compostAllCommons()">Compost All Commons ('+commons.length+') +'+commonsRefund+'\u25C6</button>' : '';
       invHtml = '<div class="sheet-subhead">Your seed bank</div><div class="seed-list">'+invRows+'</div>'+bulkBtn;
@@ -3957,7 +4056,7 @@ function renderSheetFull(idx){
   } else if(ds==='growing'){
     const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
     const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
-    const chance = Math.round(computeMutationChance(plot, idx)*100);
+    const chance = Math.round(computeMutationChance(plot, idx, wing)*100);
     const growCost = instantGrowCost(plot);
     const stress = computeStress(plot);
     const sprinklerLevel = (state.upgrades && state.upgrades.sprinkler) || 0;
@@ -3970,7 +4069,7 @@ function renderSheetFull(idx){
     else if(sprinklerLevel>0) autoText = ' Your Sprinkler System is nudging water back toward its ideal on its own \u2014 light is still on you.';
     else if(gardenLightLevel>0) autoText = ' Your Garden Light is nudging light back toward its ideal on its own \u2014 water is still on you.';
     html = '<div class="sheet-head"><h3>'+spName+'</h3></div>'
-      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg',computeStage(pct),{neighborHue:neighborHueFor(idx)})+'</div>'
+      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg',computeStage(pct),{neighborHue:neighborHueFor(idx, wing)})+'</div>'
       + sheetAccessoryRow('<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>', sprinklerLevel>0)
       + pestAlertHtml(idx)
       + '<div class="sheet-timer" id="sheetTimer">'+fmtTime(remaining)+'</div>'
@@ -3985,7 +4084,7 @@ function renderSheetFull(idx){
   } else if(ds==='ready'){
     const sprinklerLevel = (state.upgrades && state.upgrades.sprinkler) || 0;
     html = '<div class="sheet-head"><h3>Ready to harvest</h3></div>'
-      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg','bloom',{neighborHue:neighborHueFor(idx)})+'</div>'
+      + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg','bloom',{neighborHue:neighborHueFor(idx, wing)})+'</div>'
       + sheetAccessoryRow('<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>', sprinklerLevel>0)
       + pestAlertHtml(idx)
       + '<button class="btn btn-primary btn-block" onclick="doHarvest('+idx+')">Harvest</button>';
@@ -4001,10 +4100,10 @@ function renderSheetFull(idx){
   body.innerHTML = html;
 }
 function updateSheetLiveBits(idx){
-  const plot = state.plots[idx];
+  const plot = plotsForWing(currentSheetWing)[idx];
   const remaining = (plot.plantedAt+plot.growthDurationMs) - Date.now();
   const timerEl = document.getElementById('sheetTimer'); if(timerEl) timerEl.textContent = fmtTime(remaining);
-  const chanceEl = document.getElementById('sheetChance'); if(chanceEl) chanceEl.textContent = Math.round(computeMutationChance(plot, idx)*100)+'%';
+  const chanceEl = document.getElementById('sheetChance'); if(chanceEl) chanceEl.textContent = Math.round(computeMutationChance(plot, idx, currentSheetWing)*100)+'%';
   const warnEl = document.getElementById('sheetWarning');
   if(warnEl){ const stress = computeStress(plot); warnEl.classList.toggle('show', stress.maxStress>30); }
   const growBtn = document.getElementById('instantGrowBtn');
@@ -4036,21 +4135,21 @@ function renderReveal(result, opts){
 
 /* ===================== UI ACTIONS ===================== */
 function onSlider(idx, key, val){
-  state.plots[idx][key] = Number(val);
+  plotsForWing(currentSheetWing)[idx][key] = Number(val);
   updateSheetLiveBits(idx);
   scheduleSave();
 }
-function plantBase(idx, key){
+function plantBase(idx, key, wing='verdant'){
   if(!isSpeciesUnlocked(key)) return;
-  plantSeed(idx, {type:'base', speciesKey:key});
-  renderSheetFull(idx); updateAllTiles(); updateHeader();
+  plantSeed(idx, {type:'base', speciesKey:key}, wing);
+  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
-function plantFromInventory(idx, stackId){
-  plantSeed(idx, {type:'inventory', stackId});
-  renderSheetFull(idx); updateAllTiles(); updateHeader();
+function plantFromInventory(idx, stackId, wing='verdant'){
+  plantSeed(idx, {type:'inventory', stackId}, wing);
+  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
-function unlockPlot(idx){
-  const plot = state.plots[idx];
+function unlockPlot(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   if(state.spores < plot.unlockCost) return;
   state.spores -= plot.unlockCost;
   plot.locked = false;
@@ -4058,14 +4157,14 @@ function unlockPlot(idx){
   checkAchievements();
   if(pruneImpossibleTasks()) showToast('A task board slot refreshed since a task became impossible.');
   saveState();
-  renderSheetFull(idx); updateAllTiles(); updateHeader();
+  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
 function doHarvest(idx){
-  const result = harvestPlot(idx);
+  const result = harvestPlot(idx, currentSheetWing);
   if(!result) return;
   revealShowing = true;
   renderReveal(result);
-  updateAllTiles(); updateHeader(); renderHerbarium();
+  refreshTilesForWing(currentSheetWing); updateHeader(); renderHerbarium();
 }
 function renderHarvestAllSummary(results){
   const body = document.getElementById('sheetBody');
@@ -4107,18 +4206,18 @@ function openHarvestAllSummary(results){
   showNextHarvestAllReveal();
 }
 function onHarvestAllClick(){
-  const results = harvestAllReady();
+  const results = harvestAllReady(currentWing);
   if(!results.length) return;
-  updateAllTiles(); updateHeader(); renderHerbarium();
+  refreshTilesForWing(currentWing); updateHeader(); renderHerbarium();
   openHarvestAllSummary(results);
 }
-function clearWilted(idx){
-  const plot = state.plots[idx];
+function clearWilted(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
   plot.status='empty'; plot.genome=null; plot.plantedAt=0; plot.growthDurationMs=0; plot.light=50; plot.water=50; plot.lastDeathCheck=0;
   plot.pest=null; plot.lastPestCheck=0; plot.lastSprinklerCheck=0; plot.lastLightCheck=0;
   addSpores(1);
   saveState();
-  renderSheetFull(idx); updateAllTiles(); updateHeader();
+  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
 function showScreen(name){
   if(name==='lab' && !isLabUnlockedByLevel()){
@@ -4185,8 +4284,8 @@ function showToastHtml(html){
   toastTimer = setTimeout(()=>t.classList.remove('show'), 6000);
 }
 function harvestAllFromWelcome(){
-  const results = harvestAllReady();
-  updateAllTiles(); updateHeader(); renderHerbarium();
+  const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
+  updateAllTiles(); updateAllDesertTiles(); updateHeader(); renderHerbarium();
   if(results.length) openHarvestAllSummary(results);
   else closeSheet();
 }
@@ -4369,7 +4468,9 @@ function updateDriftSprites(){
 function tick(){
   const now = Date.now();
   state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  state.desertPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   updateAllTiles();
+  updateAllDesertTiles();
   updateHeader();
   applyWindowPhase();
   autoHarvestTick();
@@ -4386,7 +4487,7 @@ function tick(){
   updateLabBadge();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
   if(currentSheetIdx!=null && !revealShowing){
-    const p = state.plots[currentSheetIdx];
+    const p = plotsForWing(currentSheetWing)[currentSheetIdx];
     const ds = getDisplayStatus(p);
     if(ds!==lastSheetDisplayStatus) renderSheetFull(currentSheetIdx);
     else if(ds==='growing') updateSheetLiveBits(currentSheetIdx);
@@ -4411,7 +4512,7 @@ async function init(){
   const now = Date.now();
   const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
   let wiltedCount = 0, readyCount = 0;
-  state.plots.forEach(p=>{
+  const tickAwayPlot = (p)=>{
     if(p.status==='growing'){
       const before = p.status;
       applyDeathRisk(p, now);
@@ -4421,9 +4522,13 @@ async function init(){
       if(p.status==='wilted' && before!=='wilted') wiltedCount++;
       else if(getDisplayStatus(p)==='ready') readyCount++;
     }
-  });
+  };
+  state.plots.forEach(tickAwayPlot);
+  state.desertPlots.forEach(tickAwayPlot);
   buildPlotTiles();
+  buildDesertPlotTiles();
   updateAllTiles();
+  updateAllDesertTiles();
   updateHeader();
   renderHerbarium();
   renderUpgrades();

@@ -381,6 +381,8 @@
   .farmer-row{ display:flex; justify-content:center; align-items:flex-end; margin-bottom:2px; min-height:64px; }
   .farmer-station{ display:flex; flex-direction:column; align-items:center; cursor:pointer; position:relative; }
   .farmer-station.is-fulfilled{ opacity:.5; }
+  .farmer-station.is-special-visitor .pix-farmer{ animation:specialVisitorGlow 1.6s ease-in-out infinite; }
+  @keyframes specialVisitorGlow{ 0%,100%{ filter:drop-shadow(0 0 2px rgba(199,125,255,.5)); } 50%{ filter:drop-shadow(0 0 7px rgba(199,125,255,.9)); } }
   .pix-farmer{ display:grid; image-rendering:pixelated; }
   .pix-farmer > div{ width:100%; height:100%; }
   .farmer-check{ position:absolute; top:-4px; right:-10px; background:var(--accent); color:#0F1A12; font-family:'Press Start 2P'; font-size:9px; padding:2px 4px; border:2px solid var(--outline); z-index:3; }
@@ -436,6 +438,14 @@
   .set-card.is-complete .set-progress{ color:var(--accent); }
   .set-reward{ font-size:12px; color:var(--accent); margin-top:2px; }
   .set-check{ flex-shrink:0; font-size:18px; color:var(--accent); }
+
+  /* ---------- mutation storm badge ---------- */
+  .storm-badge{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:3px solid var(--violet); color:var(--violet); font-size:12px; text-transform:uppercase; letter-spacing:.3px; padding:6px 10px; margin:0 0 8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); animation:stormBadgePulse 1.6s ease-in-out infinite; }
+  @keyframes stormBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(199,125,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(199,125,255,.6); } }
+
+  /* ---------- recipe book ---------- */
+  .recipe-card.is-locked{ opacity:.5; }
+  .recipe-card .bestiary-name{ font-size:11px; line-height:1.3; }
 
   /* ---------- pests ---------- */
   .pix-pest{ display:grid; }
@@ -603,6 +613,7 @@
         <div class="screen-title">Place a seed, tend the pot, see what grows</div>
         <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
       </div>
+      <div class="storm-badge" id="mutationStormBadge" style="display:none;">⚡ Mutation Storm — mutation odds up</div>
       <div class="plot-grid" id="plotGrid"></div>
     </section>
 
@@ -646,6 +657,8 @@
         <button class="btn btn-small" id="herbFilterBtn" onclick="openHerbFilterMenu()">Sort/Filter</button>
       </div>
       <div id="herbList"></div>
+      <div class="ach-category" style="margin-top:18px;">Recipe Book</div>
+      <div id="recipeBookList" class="bestiary-grid"></div>
       <div class="ach-category" style="margin-top:18px;">Pest Bestiary</div>
       <div id="pestBestiaryList" class="bestiary-grid"></div>
     </section>
@@ -863,7 +876,10 @@ const SKILL_TREE = {
   goldenSap:    { name:'Golden Sap',       tier:4, branch:'harvest', stat:'harvestSpores', perLevel:0.07, maxLevel:3, baseCost:5, scale:2.0,
     desc:(n)=> '+'+Math.round(n*100)+'% spores per harvest', requires:{key:'compost', level:2} },
   undyingRoots: { name:'Undying Roots',    tier:4, branch:'resist', stat:'wiltResist',    perLevel:0.06, maxLevel:3, baseCost:5, scale:2.0,
-    desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:{key:'precision', level:2} }
+    desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:{key:'precision', level:2} },
+
+  autoHarvest: { name:'Tireless Hands',    tier:5, branch:'harvest', stat:'autoHarvest',   perLevel:1,    maxLevel:1, baseCost:8, scale:1,
+    desc:()=> 'Ready plots are collected automatically, no tapping required', requires:{key:'goldenSap', level:2} }
 };
 function defaultSkillTree(){
   const tree = {};
@@ -926,13 +942,17 @@ function doPrestige(){
   const keepAchStats = state.achStats;
   keepAchStats.totalSkillPointsEarned = (keepAchStats.totalSkillPointsEarned||0) + earned;
   const keepDecor = state.decor;
+  const keepRecipeClaimed = state.recipeClaimed;
+  const keepSpecialVisitorsClaimed = state.specialVisitorsClaimed;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
     herbarium: keepHerbarium,
     herbSets: keepHerbSets,
     achStats: keepAchStats,
-    decor: keepDecor
+    decor: keepDecor,
+    recipeClaimed: keepRecipeClaimed,
+    specialVisitorsClaimed: keepSpecialVisitorsClaimed
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1734,6 +1754,27 @@ function renderMerchant(){
 /* ===================== VISITOR REQUESTS ===================== */
 const VISITOR_TRAIT_CHANCE = 0.4;
 const VISITOR_PERIOD_MS = 30*60*1000;
+const SPECIAL_VISITOR_CHANCE = 0.12;
+const SPECIAL_VISITORS = [
+  { id:'nightWanderer', type:'wanderer', name:'Night Wanderer', flavor:'Something that glows in the dark...',
+    match:(stack)=>!!stack.genome.glow, sporeReward:140, gemReward:10, xpReward:90 },
+  { id:'crossroadsSage', type:'sage', name:'Crossroads Sage', flavor:'A true cross-pollinated hybrid, any species.',
+    match:(stack)=>!!stack.genome.hybridWith, sporeReward:170, gemReward:12, xpReward:110 },
+  { id:'twiceBlessedCollector', type:'collector', name:'Twice-Blessed Collector', flavor:'A specimen touched by two rare traits at once.',
+    match:(stack)=>!!(stack.genome.rareTrait && stack.genome.rareTrait2), sporeReward:240, gemReward:18, xpReward:160 },
+  { id:'starforgeSeeker', type:'seeker', name:'Starforge Seeker', flavor:'A Starforge bloom, any variety.',
+    match:(stack)=>stack.species==='starforge', sporeReward:200, gemReward:15, xpReward:140 },
+  { id:'duskCollector', type:'sage', name:'Dusk Collector', flavor:'A Duskvelvet bloom, any variety.',
+    match:(stack)=>stack.species==='duskvelvet', sporeReward:150, gemReward:11, xpReward:100 }
+];
+function unclaimedSpecialVisitors(){
+  return SPECIAL_VISITORS.filter(sv=>!state.specialVisitorsClaimed[sv.id]);
+}
+function pickSpecialVisitor(){
+  const pool = unclaimedSpecialVisitors();
+  if(!pool.length) return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 function pickVisitorRequest(level){
   const keys = getUnlockedSpeciesKeys(level);
   const speciesKey = keys[Math.floor(Math.random()*keys.length)];
@@ -1747,7 +1788,12 @@ function pickVisitorRequest(level){
 }
 function rollVisitorRequest(){
   const level = getLevelFromXp(state.xp||0);
-  state.visitor = { periodStart: Date.now(), type: pickRandomVisitorType(), request: pickVisitorRequest(level), fulfilled:false };
+  const special = Math.random() < SPECIAL_VISITOR_CHANCE ? pickSpecialVisitor() : null;
+  if(special){
+    state.visitor = { periodStart: Date.now(), type: special.type, special:true, specialId: special.id, request:null, fulfilled:false };
+  } else {
+    state.visitor = { periodStart: Date.now(), type: pickRandomVisitorType(), special:false, specialId:null, request: pickVisitorRequest(level), fulfilled:false };
+  }
 }
 function ensureVisitorCurrent(){
   if(!state.visitor || typeof state.visitor.periodStart!=='number' || Date.now()-state.visitor.periodStart >= VISITOR_PERIOD_MS){
@@ -1762,7 +1808,26 @@ function findMatchingInventoryStack(species, trait){
 }
 function fulfillVisitorRequest(){
   const v = state.visitor;
-  if(!v || !v.request || v.fulfilled) return false;
+  if(!v || v.fulfilled) return false;
+  if(v.special){
+    const special = SPECIAL_VISITORS.find(sv=>sv.id===v.specialId);
+    if(!special) return false;
+    const stack = state.inventory.find(s=>s.qty>0 && special.match(s));
+    if(!stack) return false;
+    stack.qty -= 1;
+    if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s!==stack);
+    addSpores(special.sporeReward);
+    addGems(special.gemReward);
+    v.fulfilled = true;
+    state.specialVisitorsClaimed[special.id] = Date.now();
+    saveState();
+    renderFarmerRow();
+    updateHeader();
+    grantXp(special.xpReward);
+    showToastHtml('Delivered! +'+special.sporeReward+' '+renderSporeIcon()+' +'+special.gemReward+' '+renderGemIcon());
+    return true;
+  }
+  if(!v.request) return false;
   const stack = findMatchingInventoryStack(v.request.species, v.request.trait);
   if(!stack) return false;
   stack.qty -= 1;
@@ -1800,8 +1865,8 @@ function renderFarmerRow(){
   if(!el) return;
   updateVisitorTimer();
   const v = state.visitor;
-  if(!v || !v.request){ el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="farmer-station'+(v.fulfilled?' is-fulfilled':'')+'" onclick="openVisitorSheet()">'
+  if(!v || (!v.request && !v.special)){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="farmer-station'+(v.fulfilled?' is-fulfilled':'')+(v.special?' is-special-visitor':'')+'" onclick="openVisitorSheet()">'
     + (v.fulfilled ? '<div class="farmer-check">✓</div>' : '')
     + renderFarmer('lg', v.type)
     + '</div>';
@@ -1816,7 +1881,25 @@ function openVisitorSheet(){
 function renderVisitorSheet(){
   const body = document.getElementById('sheetBody');
   const v = state.visitor;
-  if(!v || !v.request){ body.innerHTML = '<button class="btn btn-block" onclick="closeSheet()">Close</button>'; return; }
+  if(!v){ body.innerHTML = '<button class="btn btn-block" onclick="closeSheet()">Close</button>'; return; }
+  if(v.special){
+    const special = SPECIAL_VISITORS.find(sv=>sv.id===v.specialId);
+    if(!special){ body.innerHTML = '<button class="btn btn-block" onclick="closeSheet()">Close</button>'; return; }
+    const canFulfill = !v.fulfilled && state.inventory.some(s=>s.qty>0 && special.match(s));
+    let btnLabel = 'Need Match';
+    if(v.fulfilled) btnLabel = 'Delivered';
+    else if(canFulfill) btnLabel = 'Fulfill';
+    const html = '<div class="sheet-head"><h3>'+special.name+'’s Request</h3></div>'
+      + '<div style="display:flex;justify-content:center;margin-bottom:8px;">'+renderFarmer('lg', v.type)+'</div>'
+      + '<div class="upg-name" style="text-align:center;">A rare specimen sought...</div>'
+      + '<div class="upg-desc" style="text-align:center;margin-bottom:10px;">'+special.flavor+'</div>'
+      + '<div class="stat-row"><span>One-time Reward</span><span>+'+special.sporeReward+' '+renderSporeIcon()+' +'+special.gemReward+' '+renderGemIcon()+'</span></div>'
+      + '<button class="btn btn-block '+(canFulfill?'btn-primary':'')+'" style="margin-top:16px" '+(canFulfill?'':'disabled')+' onclick="onFulfillVisitor()">'+btnLabel+'</button>'
+      + '<button class="btn btn-block" style="margin-top:8px" onclick="closeSheet()">Close</button>';
+    body.innerHTML = html;
+    return;
+  }
+  if(!v.request){ body.innerHTML = '<button class="btn btn-block" onclick="closeSheet()">Close</button>'; return; }
   const req = v.request;
   const sp = SPECIES[req.species];
   const trait = req.trait ? RARE_TRAITS_BY_ID[req.trait] : null;
@@ -1873,9 +1956,9 @@ function renderPrestigeTree(){
     el.innerHTML = '<div class="upg-desc" style="margin-top:10px;">Prestige once to unlock your Skill Tree.</div>';
     return;
   }
-  const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III', 4:'Tier IV'};
+  const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III', 4:'Tier IV', 5:'Tier V'};
   let html = '';
-  for(let tier=1; tier<=4; tier++){
+  for(let tier=1; tier<=5; tier++){
     html += '<div class="ach-category" style="margin-top:18px;">'+tierNames[tier]+'</div>';
     for(const key in SKILL_TREE){
       const cfg = SKILL_TREE[key];
@@ -2420,6 +2503,12 @@ const VISITOR_TYPES = {
   gardener:  { name:'Gardener',  rows:['.ggg.','ggggg','.fff.','.e.e.','.fff.','vvvvv','.ooo.','b...b'], colors:{ g:'#6E9B5C', f:'#E8B382', e:'#2C2C28', v:'#4A6B3F', o:'#5C4A32', b:'#3A2E22' } }
 };
 const VISITOR_TYPE_KEYS = Object.keys(VISITOR_TYPES);
+Object.assign(VISITOR_TYPES, {
+  wanderer:  { name:'Night Wanderer',      rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'], colors:{ h:'#2C3E50', f:'#E8B382', e:'#2C2C28', s:'#4A6FA5', o:'#1F2E3D', b:'#151F29' } },
+  sage:      { name:'Crossroads Sage',     rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'], colors:{ h:'#5B3A8C', f:'#E8B382', e:'#2C2C28', s:'#8B5FBF', o:'#3D2A5C', b:'#241934' } },
+  collector: { name:'Gem Collector',       rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'], colors:{ h:'#D9A441', f:'#E8B382', e:'#2C2C28', s:'#C4841F', o:'#6B4A12', b:'#4A3009' } },
+  seeker:    { name:'Starforge Seeker',    rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'], colors:{ h:'#3FA7C7', f:'#E8B382', e:'#2C2C28', s:'#5FC9E8', o:'#1F5C6E', b:'#123742' } }
+});
 function pickRandomVisitorType(){
   return VISITOR_TYPE_KEYS[Math.floor(Math.random()*VISITOR_TYPE_KEYS.length)];
 }
@@ -2551,7 +2640,9 @@ function applyWeather(weather){
   if(weather==='rain' || weather==='storm') playRainAudio();
   else stopRainAudio();
 }
+const MUTATION_STORM_BONUS = 0.12;
 function rollWeather(){
+  const prevWeather = currentWeather;
   const roll = Math.random();
   let weather;
   if(roll<0.45) weather = 'clear';
@@ -2559,6 +2650,14 @@ function rollWeather(){
   else if(roll<0.93) weather = 'rain';
   else weather = 'storm';
   applyWeather(weather);
+  if(weather==='storm' && prevWeather!=='storm'){
+    showToast('⚡ A mutation storm rolls in — mutation odds are up while it lasts!');
+  }
+  updateStormBadge();
+}
+function updateStormBadge(){
+  const badge = document.getElementById('mutationStormBadge');
+  if(badge) badge.style.display = currentWeather==='storm' ? '' : 'none';
 }
 function strikeLightning(){
   if(currentWeather!=='storm') return;
@@ -2595,6 +2694,8 @@ function defaultState(){
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
     pestsSeen:{},
     visitor:{ periodStart:null, request:null, fulfilled:false },
+    recipeClaimed:{},
+    specialVisitorsClaimed:{},
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -2648,6 +2749,8 @@ function normalizeState(parsed){
       if(!merged.visitor || typeof merged.visitor!=='object' || typeof merged.visitor.periodStart!=='number'){
         merged.visitor = { periodStart:null, request:null, fulfilled:false };
       }
+      if(!merged.recipeClaimed || typeof merged.recipeClaimed!=='object') merged.recipeClaimed = {};
+      if(!merged.specialVisitorsClaimed || typeof merged.specialVisitorsClaimed!=='object') merged.specialVisitorsClaimed = {};
       return merged;
 }
 async function loadState(){
@@ -2854,6 +2957,7 @@ function computeMutationChance(plot, idx){
   if(s.maxStress>30) chance += 0.30;
   else if(s.maxStress>15) chance += 0.12;
   if(hasAdjacentDifferentSpecies(idx, plot.genome.species)) chance += 0.15;
+  if(currentWeather==='storm') chance += MUTATION_STORM_BONUS;
   const sp = SPECIES[plot.genome.species];
   if(sp && sp.glowBias) chance += sp.glowBias;
   const luckLevel = (state.upgrades && state.upgrades.luck) || 0;
@@ -3117,6 +3221,50 @@ function checkHerbSets(){
   if(anyNew) scheduleSave();
 }
 
+/* ===================== RECIPE BOOK ===================== */
+const RECIPE_REWARD = { spores:15, xp:8 };
+function recipePairKey(a,b){ return a<b ? a+'|'+b : b+'|'+a; }
+function checkRecipeBook(){
+  let anyNew = false;
+  for(const [a,b] of speciesPairs()){
+    const key = recipePairKey(a,b);
+    if(state.recipeClaimed[key]) continue;
+    if(pairSatisfied(a,b)){
+      state.recipeClaimed[key] = Date.now();
+      addSpores(RECIPE_REWARD.spores);
+      grantXp(RECIPE_REWARD.xp);
+      showToast('📖 New recipe recorded: '+SPECIES[a].name+' × '+SPECIES[b].name+'  +'+RECIPE_REWARD.spores+'◆');
+      anyNew = true;
+    }
+  }
+  if(anyNew) scheduleSave();
+}
+function renderRecipeBook(){
+  const el = document.getElementById('recipeBookList');
+  if(!el) return;
+  const level = getLevelFromXp(state.xp||0);
+  el.innerHTML = speciesPairs().map(([a,b])=>{
+    const unlocked = isSpeciesUnlocked(a, level) && isSpeciesUnlocked(b, level);
+    const found = pairSatisfied(a,b);
+    if(!unlocked){
+      return '<div class="bestiary-card recipe-card is-locked">'
+        + '<div class="bestiary-icon-wrap is-mystery">?</div>'
+        + '<div class="bestiary-name is-mystery">???</div>'
+        + '</div>';
+    }
+    if(!found){
+      return '<div class="bestiary-card recipe-card">'
+        + '<div class="bestiary-icon-wrap is-mystery">?</div>'
+        + '<div class="bestiary-name">'+SPECIES[a].name+' × '+SPECIES[b].name+'</div>'
+        + '</div>';
+    }
+    return '<div class="bestiary-card recipe-card">'
+      + '<div class="bestiary-icon-wrap">'+renderSprite({species:a,hue:(SPECIES[a].hue+SPECIES[b].hue)/2,glow:false},'sm','bloom')+'</div>'
+      + '<div class="bestiary-name">'+SPECIES[a].name+' × '+SPECIES[b].name+'</div>'
+      + '</div>';
+  }).join('');
+}
+
 /* ===================== RESEARCH MACHINE ===================== */
 const RESEARCH_TIERS = [
   { id:0, name:'Common',      durationMs:30*60*1000,      fee:10,  reward:{spores:20,  xp:10} },
@@ -3296,6 +3444,7 @@ function collectResearch(slot){
   state.researchSlots[slot] = null;
   checkAchievements();
   checkHerbSets();
+  checkRecipeBook();
   saveState();
   return { name, species, genome, tier, spores:cfg.reward.spores, xp:xpGain, isNew,
     mutant: { genome: mutantGenome, name: mutantLog.name, isNew: mutantLog.isNew }, gemsEarned };
@@ -3382,8 +3531,21 @@ function harvestPlot(idx){
   if(gemsEarned) addGems(gemsEarned);
   checkAchievements();
   checkHerbSets();
+  checkRecipeBook();
   saveState();
   return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned };
+}
+function autoHarvestTick(){
+  if(getPrestigeBonus('autoHarvest') <= 0) return;
+  const results = harvestAllReady();
+  if(!results.length) return;
+  updateAllTiles(); updateHeader();
+  if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
+  const totalSpores = results.reduce((sum,r)=>sum+r.sellValue, 0);
+  const newFinds = results.filter(r=>r.isNew).length;
+  let msg = '🌿 Auto-harvested '+results.length+(results.length===1?' plot':' plots')+'  +'+totalSpores+'◆';
+  if(newFinds) msg += '  ('+newFinds+' new!)';
+  showToast(msg);
 }
 function countReadyPlots(){
   return state.plots.filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
@@ -3616,6 +3778,7 @@ function renderHerbarium(){
   const list = document.getElementById('herbList');
   document.getElementById('herbCount').textContent = state.herbarium.length;
   renderHerbSets();
+  renderRecipeBook();
   renderPestBestiary();
   updateHerbFilterBtnLabel();
   if(!state.herbarium.length){
@@ -4235,6 +4398,7 @@ function tick(){
   updateAllTiles();
   updateHeader();
   applyWindowPhase();
+  autoHarvestTick();
   if(document.getElementById('screen-tasks').classList.contains('active')){
     const refreshed = ensureTaskBoardCurrent();
     if(refreshed){ renderTasks(); showToast('The task board refreshed with new tasks!'); }

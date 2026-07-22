@@ -4098,7 +4098,7 @@ function renderSheetFull(idx){
       + '<div class="sprite-wrap-lg">'+renderSprite(plot.genome,'lg','bloom',{wilt:true})+'</div>'
       + '<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>'
       + '<p class="sheet-blurb">'+line+'</p>'
-      + '<button class="btn btn-block" onclick="clearWilted('+idx+')">Clear pot (+1 \u25C6)</button>';
+      + '<button class="btn btn-block" onclick="clearWilted('+idx+',\''+wing+'\')">Clear pot (+1 \u25C6)</button>';
   }
   body.innerHTML = html;
 }

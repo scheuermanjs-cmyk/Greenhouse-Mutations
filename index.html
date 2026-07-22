@@ -692,6 +692,9 @@
       <div id="potDecorList"></div>
       <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
       <div id="wallpaperDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Greenhouse Monument</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">A statue grown from packed soil and old roots. Feed it spores forever — it never stops growing, and never resets, even after Prestige.</div>
+      <div id="monumentCard"></div>
     </section>
 
     <section class="screen" id="screen-herbarium">
@@ -884,7 +887,23 @@ function getLevelBonus(stat){
   for(const [reqLvl, reward] of Object.entries(LEVEL_REWARDS)){
     if(lvl >= Number(reqLvl) && reward.stat===stat) val = reward.value;
   }
-  return val + getPrestigeBonus(stat);
+  return val + getPrestigeBonus(stat) + getMonumentBonus(stat);
+}
+const MONUMENT_BASE_COST = 500;
+const MONUMENT_SCALE = 1.15;
+const MONUMENT_PER_LEVEL = 0.005;
+function monumentLevel(){ return (state.monument && state.monument.level) || 0; }
+function monumentCost(level){ return Math.round(MONUMENT_BASE_COST * Math.pow(MONUMENT_SCALE, level)); }
+function getMonumentBonus(stat){ return stat==='harvestSpores' ? monumentLevel()*MONUMENT_PER_LEVEL : 0; }
+function contributeToMonument(){
+  const cost = monumentCost(monumentLevel());
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  state.monument.level = monumentLevel()+1;
+  saveState();
+  renderMonument();
+  updateHeader();
+  return true;
 }
 function levelUpGemReward(level){
   return 1 + Math.floor(level/10);
@@ -1001,6 +1020,7 @@ function doPrestige(){
   keepAchStats.totalSkillPointsEarned = (keepAchStats.totalSkillPointsEarned||0) + earned;
   const keepDecor = state.decor;
   const keepSpecialVisitorsClaimed = state.specialVisitorsClaimed;
+  const keepMonument = state.monument;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1008,7 +1028,8 @@ function doPrestige(){
     herbSets: keepHerbSets,
     achStats: keepAchStats,
     decor: keepDecor,
-    specialVisitorsClaimed: keepSpecialVisitorsClaimed
+    specialVisitorsClaimed: keepSpecialVisitorsClaimed,
+    monument: keepMonument
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1500,6 +1521,28 @@ function renderUpgrades(){
   renderConsumables();
   renderDecorShop();
   renderMerchant();
+  renderMonument();
+}
+function renderMonument(){
+  const el = document.getElementById('monumentCard');
+  if(!el) return;
+  const level = monumentLevel();
+  const cost = monumentCost(level);
+  const bonusPct = Math.round(level*MONUMENT_PER_LEVEL*1000)/10;
+  const affordable = state.spores >= cost;
+  el.innerHTML = '<div class="upg-card">'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">Monument — Level '+level+'</div>'
+    + '<div class="upg-desc">Each contribution permanently adds +0.5% spores from every harvest.</div>'
+    + (level>0 ? '<div class="upg-current">Current: +'+bonusPct+'% spores per harvest</div>' : '')
+    + '</div>'
+    + '<button class="btn btn-small btn-primary" '+(affordable?'':'disabled')+' onclick="onContributeToMonument()">'+cost+' ◆</button>'
+    + '</div>';
+}
+function onContributeToMonument(){
+  if(contributeToMonument()){
+    showToast('🗿 The monument grows a little taller. +0.5% harvest spores, permanently.');
+  }
 }
 
 /* ===================== CONSUMABLES ===================== */
@@ -2789,6 +2832,7 @@ function defaultState(){
     pestsSeen:{},
     visitor:{ periodStart:null, request:null, fulfilled:false },
     specialVisitorsClaimed:{},
+    monument:{ level:0 },
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -2844,6 +2888,7 @@ function normalizeState(parsed){
         merged.visitor = { periodStart:null, request:null, fulfilled:false };
       }
       if(!merged.specialVisitorsClaimed || typeof merged.specialVisitorsClaimed!=='object') merged.specialVisitorsClaimed = {};
+      if(!merged.monument || typeof merged.monument!=='object' || typeof merged.monument.level!=='number') merged.monument = { level:0 };
       return merged;
 }
 async function loadState(){

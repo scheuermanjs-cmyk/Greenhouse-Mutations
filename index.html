@@ -97,7 +97,7 @@
   #toast.show{ opacity:1; transform:translate(-50%,0); }
 
   /* ---------- screens ---------- */
-  main{ padding:14px 16px 100px; }
+  main{ padding:14px 16px 100px; touch-action:pan-y; }
   .screen{ display:none; }
   .screen.active{ display:block; animation:fadeIn .3s ease; }
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
@@ -317,6 +317,7 @@
   .upg-pips{ display:flex; gap:4px; margin-top:7px; }
   .upg-pip{ width:11px; height:11px; border:2px solid var(--outline); background:transparent; }
   .upg-pip.filled{ background:var(--accent); }
+  .skill-branch-tag{ display:inline-block; font-size:9px; color:#0F1A12; padding:1px 4px; margin-right:6px; border:2px solid var(--outline); text-transform:uppercase; letter-spacing:.3px; vertical-align:middle; }
   .upg-btn{ flex-shrink:0; min-width:84px; text-align:center; }
   .upg-card.is-equipped{ border-color:var(--accent); box-shadow:3px 3px 0 var(--accent-dark); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
@@ -845,7 +846,14 @@ const SKILL_TREE = {
   compost:    { name:'Master Composter+',  tier:3, branch:'harvest', stat:'compostBonus',  perLevel:0.08, maxLevel:3, baseCost:3, scale:1.8,
     desc:(n)=> '+'+Math.round(n*100)+'% compost refund', requires:{key:'labSpeed', level:1} },
   precision:  { name:'Precision Tending+', tier:3, branch:'resist', stat:'wellTended',    perLevel:0.05, maxLevel:4, baseCost:3, scale:1.8,
-    desc:(n)=> '+'+Math.round(n*100)+' pt well-tended bonus', requires:{key:'pestResist', level:1} }
+    desc:(n)=> '+'+Math.round(n*100)+' pt well-tended bonus', requires:{key:'pestResist', level:1} },
+
+  verdantSurge: { name:'Verdant Surge',    tier:4, branch:'growth', stat:'growthSpeed',   perLevel:0.05, maxLevel:3, baseCost:5, scale:2.0,
+    desc:(n)=> '+'+Math.round(n*100)+'% growth speed', requires:{key:'nestEgg', level:2} },
+  goldenSap:    { name:'Golden Sap',       tier:4, branch:'harvest', stat:'harvestSpores', perLevel:0.07, maxLevel:3, baseCost:5, scale:2.0,
+    desc:(n)=> '+'+Math.round(n*100)+'% spores per harvest', requires:{key:'compost', level:2} },
+  undyingRoots: { name:'Undying Roots',    tier:4, branch:'resist', stat:'wiltResist',    perLevel:0.06, maxLevel:3, baseCost:5, scale:2.0,
+    desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:{key:'precision', level:2} }
 };
 function defaultSkillTree(){
   const tree = {};
@@ -864,8 +872,14 @@ function isSkillNodeLocked(key){
   if(!cfg.requires) return false;
   return skillNodeLevel(cfg.requires.key) < cfg.requires.level;
 }
+const PRESTIGE_POWER_RATES = { harvestSpores:0.015, mutationBonus:0.005 };
+function getPrestigePowerBonus(stat){
+  const rate = PRESTIGE_POWER_RATES[stat];
+  if(!rate) return 0;
+  return (state.prestige.count||0) * rate;
+}
 function getPrestigeBonus(stat){
-  let total = 0;
+  let total = getPrestigePowerBonus(stat);
   for(const key in SKILL_TREE){
     const cfg = SKILL_TREE[key];
     if(cfg.stat===stat) total += skillNodeLevel(key)*cfg.perLevel;
@@ -1819,9 +1833,15 @@ function renderPrestigeSummary(){
   const lvl = getLevelFromXp(state.xp||0);
   const unlocked = lvl >= MIN_PRESTIGE_LEVEL;
   const preview = prestigeSkillPointsAvailable();
+  const count = state.prestige.count||0;
   let html = '<div class="upg-card" style="flex-direction:column;align-items:stretch;">'
-    + '<div class="upg-name">Prestige '+(state.prestige.count||0)+'</div>'
+    + '<div class="upg-name">Prestige '+count+'</div>'
     + '<div class="upg-desc">Unspent Skill Points: <strong>'+(state.prestige.skillPoints||0)+' \u2605</strong></div>';
+  if(count>0){
+    const spBonus = Math.round(getPrestigePowerBonus('harvestSpores')*100);
+    const mutBonus = Math.round(getPrestigePowerBonus('mutationBonus')*1000)/10;
+    html += '<div class="upg-desc">Prestige Power (from '+count+' prestige'+(count===1?'':'s')+'): <strong>+'+spBonus+'% spores, +'+mutBonus+'% mutation chance</strong></div>';
+  }
   if(unlocked){
     html += '<div class="upg-current">Prestige now to earn <strong>'+preview+' \u2605</strong>. Resets spores, plots, upgrades, level and research \u2014 achievements, herbarium and Skill Points stay.</div>'
       + '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="openPrestigeConfirm()">Prestige Now</button>';
@@ -1831,6 +1851,11 @@ function renderPrestigeSummary(){
   html += '</div>';
   el.innerHTML = html;
 }
+const BRANCH_META = {
+  growth:  { label:'Growth',  color:'#7ED957' },
+  harvest: { label:'Harvest', color:'#E8B93C' },
+  resist:  { label:'Resist',  color:'#6E9BD1' }
+};
 function renderPrestigeTree(){
   const el = document.getElementById('prestigeTreeList');
   if(!el) return;
@@ -1838,9 +1863,9 @@ function renderPrestigeTree(){
     el.innerHTML = '<div class="upg-desc" style="margin-top:10px;">Prestige once to unlock your Skill Tree.</div>';
     return;
   }
-  const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III'};
+  const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III', 4:'Tier IV'};
   let html = '';
-  for(let tier=1; tier<=3; tier++){
+  for(let tier=1; tier<=4; tier++){
     html += '<div class="ach-category" style="margin-top:18px;">'+tierNames[tier]+'</div>';
     for(const key in SKILL_TREE){
       const cfg = SKILL_TREE[key];
@@ -1859,9 +1884,10 @@ function renderPrestigeTree(){
       } else {
         actionHtml = '<button class="btn btn-small '+(canAfford?'btn-primary':'')+'" '+(canAfford?'':'disabled')+' onclick="purchaseSkillNode(\''+key+'\')">'+cost+' \u2605</button>';
       }
+      const branch = BRANCH_META[cfg.branch] || BRANCH_META.growth;
       html += '<div class="upg-card'+(locked?' is-locked':'')+'">'
         + '<div class="upg-info">'
-        + '<div class="upg-name">'+cfg.name+'</div>'
+        + '<div class="upg-name"><span class="skill-branch-tag" style="background:'+branch.color+'">'+branch.label+'</span>'+cfg.name+'</div>'
         + '<div class="upg-desc">'+cfg.desc(cfg.perLevel)+' per level</div>'
         + (level>0 ? '<div class="upg-current">Current: '+cfg.desc(level*cfg.perLevel)+'</div>' : '')
         + '<div class="upg-pips">'+pips+'</div>'
@@ -3815,6 +3841,38 @@ function showScreen(name){
   if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); }
   if(name==='lab'){ renderLab(); renderLabShelf(); }
 }
+const SCREEN_SWIPE_ORDER = ['greenhouse','tasks','achievements','upgrades','herbarium','lab'];
+function currentScreenName(){
+  const el = document.querySelector('.screen.active');
+  return el ? el.id.replace('screen-','') : null;
+}
+function navigateSwipe(dir){
+  const idx = SCREEN_SWIPE_ORDER.indexOf(currentScreenName());
+  if(idx===-1) return;
+  const nextIdx = idx + dir;
+  if(nextIdx<0 || nextIdx>=SCREEN_SWIPE_ORDER.length) return;
+  showScreen(SCREEN_SWIPE_ORDER[nextIdx]);
+}
+function initSwipeNav(){
+  const main = document.querySelector('main');
+  if(!main) return;
+  let startX=0, startY=0, tracking=false;
+  const SWIPE_THRESHOLD = 60;
+  main.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    startX = e.clientX; startY = e.clientY; tracking = true;
+  });
+  main.addEventListener('pointerup', (e)=>{
+    if(!tracking) return;
+    tracking = false;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if(Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)*1.5){
+      navigateSwipe(dx<0 ? 1 : -1);
+    }
+  });
+  main.addEventListener('pointercancel', ()=>{ tracking=false; });
+}
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -4090,6 +4148,7 @@ async function init(){
     }
   }
   saveState();
+  initSwipeNav();
   setInterval(tick, 1000);
   if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     updateDriftSprites();

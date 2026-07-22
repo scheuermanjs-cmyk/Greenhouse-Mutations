@@ -379,7 +379,7 @@
   @keyframes labGlowPulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.7); } }
 
   /* ---------- farmer's table (visitor requests) ---------- */
-  .farmer-row{ display:flex; justify-content:center; align-items:flex-end; gap:16px; margin-bottom:2px; min-height:64px; }
+  .farmer-row{ display:flex; justify-content:center; align-items:flex-end; gap:16px; margin-bottom:2px; min-height:84px; }
   .farmer-station{ display:flex; flex-direction:column; align-items:center; cursor:pointer; position:relative; }
   .farmer-station.is-fulfilled{ opacity:.5; }
   .pix-farmer{ display:grid; image-rendering:pixelated; }
@@ -2367,17 +2367,32 @@ function renderPest(size, type){
   }
   return '<div class="pix-pest" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
-const FARMER_ROWS = ['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'];
-const FARMER_COLORS = { h:'#D9B65C', f:'#E8B382', e:'#2C2C28', s:'#6E9BD1', o:'#3F5F80', b:'#4A362A' };
+const FARMER_ROWS = [
+  '.hhhhhhh.',
+  'hhhhhhhhh',
+  'mmmmmmmmm',
+  '.fffffff.',
+  '.ffefeff.',
+  '.fffffff.',
+  '..fuuuf..',
+  '.sssssss.',
+  'asssssssa',
+  'aspppppsa',
+  '.ooooooo.',
+  '.o.w.w.o.',
+  '.ooooooo.',
+  'bb.....bb'
+];
+const FARMER_COLORS = { h:'#D9B65C', m:'#C29A3E', f:'#E8B382', e:'#2C2C28', u:'#6E4B32', s:'#6E9BD1', a:'#E8B382', p:'#33506B', o:'#3F5F80', w:'#D9B65C', b:'#4A362A' };
 function renderFarmer(size){
-  const cell = size==='lg' ? 8 : 5;
+  const cell = size==='lg' ? 5.5 : 3;
   let cellsHtml = '';
   for(const row of FARMER_ROWS){
     for(const ch of row){
       cellsHtml += '<div style="background:'+(FARMER_COLORS[ch] || 'transparent')+'"></div>';
     }
   }
-  return '<div class="pix-farmer" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+  return '<div class="pix-farmer" style="grid-template-columns:repeat(9,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
 const SPRINKLER_ROWS = ['..H..','.HHH.','..P..','..P..','..P..','.GGG.'];
 function gardenGearColor(token){

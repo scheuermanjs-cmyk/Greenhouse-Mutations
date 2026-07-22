@@ -764,7 +764,11 @@ const SPECIES = {
   duskvelvet: { name:'Duskvelvet', hue:320, growthSec:170, baseSell:16, deathResist:0.2,  seedCost:18, glowBias:0.05, lightTarget:20, waterTarget:55, blurb:'Blooms richest after dusk. Craves shade and a little neglect.', unlockLevel:10 },
   starforge:  { name:'Starforge',  hue:190, growthSec:200, baseSell:22, deathResist:0.3,  seedCost:28, lightTarget:50, waterTarget:50, blurb:'Grown from crystallized spores. Slow, radiant, richly rewarding.', unlockLevel:20 },
   sandthistle:{ name:'Sandthistle', hue:38,  growthSec:220, baseSell:30, deathResist:0.35, seedCost:6,  lightTarget:80, waterTarget:15, blurb:'Thrives on neglect and blazing sun, but takes its time about it — and pays for the wait.', wing:'desert', unlockLevel:1 },
-  duneglow:   { name:'Duneglow',   hue:18,  growthSec:450, baseSell:65, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal. Slow to bloom, richly rewarding when it does.', wing:'desert', unlockLevel:8 }
+  cactusbell: { name:'Cactusbell', hue:55,  growthSec:260, baseSell:34, deathResist:0.4,  seedCost:8,  lightTarget:75, waterTarget:20, blurb:'A squat, bell-shaped succulent. Sturdy, unhurried, and worth the wait.', wing:'desert', unlockLevel:1 },
+  needlebrush:{ name:'Needlebrush', hue:45, growthSec:300, baseSell:42, deathResist:0.25, seedCost:14, lightTarget:82, waterTarget:12, blurb:'Thin needled fronds that catch the wind and thrive on almost nothing.', wing:'desert', unlockLevel:5 },
+  duneglow:   { name:'Duneglow',   hue:18,  growthSec:450, baseSell:65, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal. Slow to bloom, richly rewarding when it does.', wing:'desert', unlockLevel:8 },
+  sunflare:   { name:'Sunflare',   hue:28,  growthSec:520, baseSell:80, deathResist:0.1,  seedCost:26, glowBias:0.05, lightTarget:90, waterTarget:8,  blurb:'Opens wide to catch every last ray of heat. A slow, radiant bloom.', wing:'desert', unlockLevel:13 },
+  mirageroot: { name:'Mirageroot', hue:8,   growthSec:620, baseSell:100,deathResist:0.05, seedCost:34, glowBias:0.08, lightTarget:88, waterTarget:6,  blurb:'Said to bloom only once the mind starts seeing water where there is none. Worth every minute.', wing:'desert', unlockLevel:22 }
 };
 function speciesWing(key){ return (SPECIES[key] && SPECIES[key].wing) || 'verdant'; }
 function verdantSpeciesKeys(){ return Object.keys(SPECIES).filter(k=>speciesWing(k)==='verdant'); }
@@ -2321,7 +2325,11 @@ const SPECIES_HALF = {
   duskvelvet: ['....c','..bbc','.bcba','cbbba','.bbaa','..aaa'],
   starforge:  ['....c','..bba','.babc','abbbc','.bbcc','..bba'],
   sandthistle:['..c..','.aba.','abbba','.aba.','..a..'],
-  duneglow:   ['....c','..abc','.bcba','abbba','.bbaa','..aaa']
+  cactusbell: ['.ccc.','bbbbb','bbbbb','bbbbb','.aaa.'],
+  needlebrush:['.c.c.','.b.b.','.a.a.','.b.b.','.a.a.'],
+  duneglow:   ['....c','..abc','.bcba','abbba','.bbaa','..aaa'],
+  sunflare:   ['c...c','.b.b.','..a..','.bbb.','aaaaa'],
+  mirageroot: ['...c.','..cb.','.bab.','baab.','.aa..']
 };
 const SPECIES_HEAD_FULL = {};
 const SPECIES_HEAD_BUD = {};
@@ -2376,7 +2384,11 @@ const STEM_STYLES = {
   duskvelvet: (i) => i%2===0 ? '..vtttv..' : '...ttt...',
   starforge:  (i) => i%2===0 ? '..pttt...' : '...tttp..',
   sandthistle:(i) => i%2===0 ? '...ttt...' : '..ttttt..',
-  duneglow:   (i) => i%2===0 ? '..rtttr..' : '...ttt...'
+  cactusbell: (i) => '...ttt...',
+  needlebrush:(i) => i%2===0 ? '..wtttw..' : '...ttt...',
+  duneglow:   (i) => i%2===0 ? '..rtttr..' : '...ttt...',
+  sunflare:   (i) => i%2===0 ? '..qtttq..' : '...ttt...',
+  mirageroot: (i) => i%2===0 ? '..mtttm..' : '...ttt...'
 };
 function stemRows(height, speciesKey, crossKey){
   const rows = [];
@@ -2412,6 +2424,9 @@ function cellColor(token, hue, wilt){
   if(token==='v') return wilt ? '#5C4558' : '#8C4A8C';
   if(token==='p') return wilt ? '#5C7A74' : '#7EE8D9';
   if(token==='r') return wilt ? '#7A5A3D' : 'hsl('+hue+' 70% 60%)';
+  if(token==='w') return wilt ? '#8A8070' : 'hsl('+hue+' 55% 78%)';
+  if(token==='q') return wilt ? '#7A6A3D' : 'hsl('+hue+' 85% 55%)';
+  if(token==='m') return wilt ? '#5C6B6B' : '#BFE8E0';
   if(wilt){
     if(token==='a') return '#6B5A45';
     if(token==='b') return '#8A7558';

@@ -763,8 +763,8 @@ const SPECIES = {
   thornvine:  { name:'Thornvine',  hue:24,  growthSec:150, baseSell:13, deathResist:0.45, seedCost:9,  lightTarget:65, waterTarget:25, blurb:'Tough and slow. Barely notices stress.' },
   duskvelvet: { name:'Duskvelvet', hue:320, growthSec:170, baseSell:16, deathResist:0.2,  seedCost:18, glowBias:0.05, lightTarget:20, waterTarget:55, blurb:'Blooms richest after dusk. Craves shade and a little neglect.', unlockLevel:10 },
   starforge:  { name:'Starforge',  hue:190, growthSec:200, baseSell:22, deathResist:0.3,  seedCost:28, lightTarget:50, waterTarget:50, blurb:'Grown from crystallized spores. Slow, radiant, richly rewarding.', unlockLevel:20 },
-  sandthistle:{ name:'Sandthistle', hue:38,  growthSec:60,  baseSell:7,  deathResist:0.35, seedCost:6,  lightTarget:80, waterTarget:15, blurb:'Thrives on neglect and blazing sun. Barely needs a drink.', wing:'desert', unlockLevel:1 },
-  duneglow:   { name:'Duneglow',   hue:18,  growthSec:135, baseSell:19, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal.', wing:'desert', unlockLevel:8 }
+  sandthistle:{ name:'Sandthistle', hue:38,  growthSec:220, baseSell:30, deathResist:0.35, seedCost:6,  lightTarget:80, waterTarget:15, blurb:'Thrives on neglect and blazing sun, but takes its time about it — and pays for the wait.', wing:'desert', unlockLevel:1 },
+  duneglow:   { name:'Duneglow',   hue:18,  growthSec:450, baseSell:65, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal. Slow to bloom, richly rewarding when it does.', wing:'desert', unlockLevel:8 }
 };
 function speciesWing(key){ return (SPECIES[key] && SPECIES[key].wing) || 'verdant'; }
 function verdantSpeciesKeys(){ return Object.keys(SPECIES).filter(k=>speciesWing(k)==='verdant'); }

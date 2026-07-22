@@ -671,13 +671,7 @@
 
     <section class="screen" id="screen-lab">
       <div class="screen-title">Research a seed to press it and earn a payout</div>
-      <div id="notifyPrompt" class="upg-card" style="display:none;flex-direction:column;align-items:stretch;margin-bottom:14px;">
-        <div class="upg-desc">Get notified when research finishes, even if you're not looking at the screen.</div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn btn-primary btn-block" onclick="requestResearchNotifyPermission()">Enable Notifications</button>
-          <button class="btn btn-block" onclick="dismissNotifyPrompt()">Not Now</button>
-        </div>
-      </div>
+      <div id="notifyPrompt" class="upg-card" style="display:none;flex-direction:column;align-items:stretch;margin-bottom:14px;"></div>
       <div id="labRow" class="lab-row"></div>
       <div class="lab-bench"></div>
       <div id="labShelf"></div>
@@ -3167,49 +3161,84 @@ function getResearchStatus(slot){
   return Date.now() >= finishAt ? 'done' : 'researching';
 }
 
-/* ===================== RESEARCH NOTIFICATIONS ===================== */
+/* ===================== RESEARCH NOTIFICATIONS (real Web Push) ===================== */
 const NOTIFY_DISMISSED_KEY = 'gh_notify_dismissed';
-let lastNotifiedResearch = [null, null, null];
+// Public VAPID key — safe to embed client-side (this is the point of VAPID).
+const VAPID_PUBLIC_KEY = 'BNaBI-4T-_bpRktAtUWfsJf9lZztqFTtYdx2yQJEtB6ycx4SSf-I0rn6smdIUpk0t1aBEjR_wcY8Aq0R20SVrLs';
+// Fill this in once the Cloudflare Worker is deployed (see cloudflare-worker.js).
+const PUSH_WORKER_URL = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const output = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) output[i] = raw.charCodeAt(i);
+  return output;
+}
+function isStandalonePwa(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+}
+function isIosDevice(){
+  return /iP(hone|od|ad)/.test(navigator.userAgent);
+}
 function updateNotifyPromptVisibility(){
   const el = document.getElementById('notifyPrompt');
   if(!el) return;
   const dismissed = localStorage.getItem(NOTIFY_DISMISSED_KEY)==='1';
-  const show = ('Notification' in window) && Notification.permission==='default' && !dismissed;
-  el.style.display = show ? 'flex' : 'none';
+  const supported = ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+  if(!supported || dismissed || Notification.permission!=='default'){
+    el.style.display = 'none';
+    return;
+  }
+  if(isIosDevice() && !isStandalonePwa()){
+    el.style.display = 'flex';
+    el.innerHTML = '<div class="upg-desc">To get notified when research finishes, first add Greenhouse to your Home Screen (Share → Add to Home Screen), then open it from there.</div>'
+      + '<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn btn-block" onclick="dismissNotifyPrompt()">Got it</button></div>';
+    return;
+  }
+  el.style.display = 'flex';
+  el.innerHTML = '<div class="upg-desc">Get notified when research finishes, even if you\'re not looking at the screen.</div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn btn-primary btn-block" onclick="requestResearchNotifyPermission()">Enable Notifications</button><button class="btn btn-block" onclick="dismissNotifyPrompt()">Not Now</button></div>';
+}
+async function ensurePushSubscription(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  if(existing) return existing;
+  try{
+    return await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+  }catch(e){
+    return null;
+  }
 }
 function requestResearchNotifyPermission(){
   if(!('Notification' in window)) return;
-  Notification.requestPermission().then(()=>{
+  Notification.requestPermission().then(async (perm)=>{
     updateNotifyPromptVisibility();
-    if(Notification.permission==='granted') showToast('Notifications enabled!');
+    if(perm==='granted'){
+      await ensurePushSubscription();
+      showToast('Notifications enabled!');
+    }
   });
 }
 function dismissNotifyPrompt(){
   localStorage.setItem(NOTIFY_DISMISSED_KEY, '1');
   updateNotifyPromptVisibility();
 }
-function sendResearchDoneNotification(slot){
+async function schedulePushForResearch(fireAt){
   if(!('Notification' in window) || Notification.permission!=='granted') return;
+  const subscription = await ensurePushSubscription();
+  if(!subscription) return;
   try{
-    const n = new Notification('Research complete!', {
-      body: 'Lab station '+(slot+1)+' finished — come collect it.',
-      icon: 'assets/icon-192.png',
-      tag: 'research-done-'+slot
+    await fetch(PUSH_WORKER_URL + '/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: subscription.toJSON(), fireAt })
     });
-    n.onclick = function(){ window.focus(); n.close(); };
-  }catch(e){ /* notifications unsupported in this context */ }
-}
-function checkResearchNotifications(){
-  if(!('Notification' in window) || Notification.permission!=='granted') return;
-  for(let slot=0; slot<3; slot++){
-    if(!isLabSlotUnlocked(slot)){ lastNotifiedResearch[slot] = null; continue; }
-    const r = state.researchSlots[slot];
-    if(!r){ lastNotifiedResearch[slot] = null; continue; }
-    if(getResearchStatus(slot)==='done' && lastNotifiedResearch[slot]!==r.startedAt){
-      lastNotifiedResearch[slot] = r.startedAt;
-      if(document.hidden) sendResearchDoneNotification(slot);
-    }
-  }
+  }catch(e){ /* scheduling failed silently — collection still works normally in-app */ }
 }
 function getEffectiveResearchDuration(tier){
   const cfg = RESEARCH_TIERS[tier];
@@ -3229,14 +3258,17 @@ function startResearch(stackId, slot){
   state.spores -= cfg.fee;
   stack.qty -= 1;
   if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s.qty>0);
+  const startedAt = Date.now();
+  const durationMs = getEffectiveResearchDuration(tier);
   state.researchSlots[slot] = {
     species: stack.species,
     genome: Object.assign({}, stack.genome),
     tier,
-    startedAt: Date.now(),
-    durationMs: getEffectiveResearchDuration(tier)
+    startedAt,
+    durationMs
   };
   saveState();
+  schedulePushForResearch(startedAt + durationMs);
   return true;
 }
 function collectResearch(slot){
@@ -4214,7 +4246,6 @@ function tick(){
     else updateMerchantTimer();
   }
   updateLabBadge();
-  checkResearchNotifications();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
   if(currentSheetIdx!=null && !revealShowing){
     const p = state.plots[currentSheetIdx];

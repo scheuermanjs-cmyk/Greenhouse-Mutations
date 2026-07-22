@@ -1,4 +1,4 @@
-const CACHE_NAME = 'greenhouse-v7';
+const CACHE_NAME = 'greenhouse-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -34,5 +34,28 @@ self.addEventListener('fetch', (e) => {
         return networkResponse;
       })
       .catch(() => caches.match(e.request))
+  );
+});
+
+self.addEventListener('push', (e) => {
+  e.waitUntil(
+    self.registration.showNotification('Research complete!', {
+      body: 'Come check your greenhouse — a Lab station finished.',
+      icon: './assets/icon-192.png',
+      badge: './assets/icon-192.png',
+      tag: 'research-done'
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('./');
+    })
   );
 });

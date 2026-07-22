@@ -97,7 +97,7 @@
   #toast.show{ opacity:1; transform:translate(-50%,0); }
 
   /* ---------- screens ---------- */
-  main{ padding:14px 16px 100px; touch-action:pan-y; }
+  main{ padding:14px 16px 145px; touch-action:pan-y; }
   .screen{ display:none; }
   .screen.active{ display:block; animation:fadeIn .3s ease; }
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
@@ -226,7 +226,7 @@
   .plot-tile-inner{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; }
 
   /* ---------- wing toggle + desert wing ---------- */
-  .wing-toggle{ display:flex; gap:2px; margin-bottom:10px; }
+  .wing-toggle{ display:flex; gap:2px; padding:6px 6px 0; background:var(--panel); }
   .wing-toggle-btn{ flex:1; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:9px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
   .wing-toggle-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel); }
   .wing-toggle-btn.wing-locked{ opacity:.45; }
@@ -288,7 +288,8 @@
   }
 
   /* ---------- bottom nav ---------- */
-  nav{ position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; z-index:10; }
+  .bottom-bar{ position:fixed; left:0; right:0; bottom:0; z-index:10; }
+  nav{ display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; }
   .nav-btn{ position:relative; flex:1; background:transparent; color:var(--text-muted); padding:13px 2px; font-family:'Press Start 2P'; font-size:9px; }
   .nav-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel-2); }
   .nav-badge{ display:none; position:absolute; top:5px; right:10px; width:7px; height:7px; border-radius:50%; background:var(--violet); box-shadow:0 0 4px var(--violet); }
@@ -615,10 +616,6 @@
         <div class="mullion mullion-h"></div>
       </div>
       <div class="ledge"></div>
-      <div class="wing-toggle" id="wingToggle">
-        <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')">🌿 Verdant Greenhouse</button>
-        <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')">🏜️ Desert Wing</button>
-      </div>
       <div class="screen-title-row">
         <div class="screen-title" id="greenhouseScreenTitle">Place a seed, tend the pot, see what grows</div>
         <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
@@ -736,14 +733,20 @@
     </section>
   </main>
 
-  <nav>
-    <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
-    <button class="nav-btn" data-screen="tasks" onclick="showScreen('tasks')">TASKS<span class="nav-badge" id="tasksBadge"></span></button>
-    <button class="nav-btn" data-screen="achievements" onclick="showScreen('achievements')">TROPHIES<span class="nav-badge" id="prestigeBadge"></span></button>
-    <button class="nav-btn" data-screen="upgrades" onclick="showScreen('upgrades')">UPGRADES</button>
-    <button class="nav-btn" data-screen="herbarium" onclick="showScreen('herbarium')">HERBS</button>
-    <button class="nav-btn" data-screen="lab" onclick="showScreen('lab')" id="labNavBtn"><span class="nav-btn-text">LAB</span><span class="nav-badge" id="labBadge"></span></button>
-  </nav>
+  <div class="bottom-bar">
+    <div class="wing-toggle" id="wingToggle">
+      <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')">🌿 Verdant Greenhouse</button>
+      <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')">🏜️ Desert Wing</button>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
+      <button class="nav-btn" data-screen="tasks" onclick="showScreen('tasks')">TASKS<span class="nav-badge" id="tasksBadge"></span></button>
+      <button class="nav-btn" data-screen="achievements" onclick="showScreen('achievements')">TROPHIES<span class="nav-badge" id="prestigeBadge"></span></button>
+      <button class="nav-btn" data-screen="upgrades" onclick="showScreen('upgrades')">UPGRADES</button>
+      <button class="nav-btn" data-screen="herbarium" onclick="showScreen('herbarium')">HERBS</button>
+      <button class="nav-btn" data-screen="lab" onclick="showScreen('lab')" id="labNavBtn"><span class="nav-btn-text">LAB</span><span class="nav-badge" id="labBadge"></span></button>
+    </nav>
+  </div>
 
   <div id="sheetBackdrop" onclick="closeSheet()"></div>
   <div id="sheet">
@@ -4231,6 +4234,7 @@ function showScreen(name){
   document.getElementById('screen-herbarium').classList.toggle('active', name==='herbarium');
   document.getElementById('screen-lab').classList.toggle('active', name==='lab');
   document.querySelectorAll('.nav-btn').forEach(b=> b.classList.toggle('active', b.dataset.screen===name));
+  document.getElementById('wingToggle').style.display = name==='greenhouse' ? '' : 'none';
   if(name==='herbarium') renderHerbarium();
   if(name==='upgrades') renderUpgrades();
   if(name==='tasks') renderTasks();

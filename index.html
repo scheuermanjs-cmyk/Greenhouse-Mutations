@@ -3166,7 +3166,7 @@ const NOTIFY_DISMISSED_KEY = 'gh_notify_dismissed';
 // Public VAPID key — safe to embed client-side (this is the point of VAPID).
 const VAPID_PUBLIC_KEY = 'BNaBI-4T-_bpRktAtUWfsJf9lZztqFTtYdx2yQJEtB6ycx4SSf-I0rn6smdIUpk0t1aBEjR_wcY8Aq0R20SVrLs';
 // Fill this in once the Cloudflare Worker is deployed (see cloudflare-worker.js).
-const PUSH_WORKER_URL = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev';
+const PUSH_WORKER_URL = 'https://greenhouse.scheuerman-js.workers.dev';
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');

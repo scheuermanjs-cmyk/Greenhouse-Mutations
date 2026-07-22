@@ -442,6 +442,8 @@
   /* ---------- mutation storm badge ---------- */
   .storm-badge{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:3px solid var(--violet); color:var(--violet); font-size:12px; text-transform:uppercase; letter-spacing:.3px; padding:6px 10px; margin:0 0 8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); animation:stormBadgePulse 1.6s ease-in-out infinite; }
   @keyframes stormBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(199,125,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(199,125,255,.6); } }
+  .storm-badge.pest-swarm-badge{ border-color:var(--danger); color:var(--danger); animation-name:pestSwarmBadgePulse; }
+  @keyframes pestSwarmBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(255,92,92,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(255,92,92,.6); } }
 
 
   /* ---------- pests ---------- */
@@ -611,6 +613,7 @@
         <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;">⚡ Mutation Storm — mutation odds up</div>
+      <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;">🐛 Pest Swarm — infestations more likely</div>
       <div class="plot-grid" id="plotGrid"></div>
     </section>
 
@@ -2634,6 +2637,9 @@ function applyWeather(weather){
   else stopRainAudio();
 }
 const MUTATION_STORM_BONUS = 0.12;
+const PEST_SWARM_CHANCE = 0.10;
+const PEST_SWARM_FACTOR = 2.5;
+let pestSwarmActive = false;
 function rollWeather(){
   const prevWeather = currentWeather;
   const roll = Math.random();
@@ -2647,10 +2653,21 @@ function rollWeather(){
     showToast('⚡ A mutation storm rolls in — mutation odds are up while it lasts!');
   }
   updateStormBadge();
+
+  const wasPestSwarm = pestSwarmActive;
+  pestSwarmActive = Math.random() < PEST_SWARM_CHANCE;
+  if(pestSwarmActive && !wasPestSwarm){
+    showToast('🐛 A pest swarm is moving through — infestations are more likely!');
+  }
+  updatePestSwarmBadge();
 }
 function updateStormBadge(){
   const badge = document.getElementById('mutationStormBadge');
   if(badge) badge.style.display = currentWeather==='storm' ? '' : 'none';
+}
+function updatePestSwarmBadge(){
+  const badge = document.getElementById('pestSwarmBadge');
+  if(badge) badge.style.display = pestSwarmActive ? '' : 'none';
 }
 function strikeLightning(){
   if(currentWeather!=='storm') return;
@@ -3062,7 +3079,7 @@ function applyPestRisk(plot, nowMs){
   const elapsedSec = (periodEnd-last)/1000;
   plot.lastPestCheck = periodEnd;
   const stress = computeStress(plot);
-  const basePerSec = 0.0022 * (stress.maxStress>30 ? 1.6 : 1);
+  const basePerSec = 0.0022 * (stress.maxStress>30 ? 1.6 : 1) * (pestSwarmActive ? PEST_SWARM_FACTOR : 1);
   const ladybugLevel = (state.upgrades && state.upgrades.ladybugs) || 0;
   const ladybugFactor = Math.max(0, 1 - ladybugLevel*(UPGRADES.ladybugs.perLevel/100));
   const levelPestFactor = Math.max(0, 1 - getLevelBonus('pestResist'));
@@ -3796,10 +3813,11 @@ function squashPest(idx){
     if(!state.pestsSeen) state.pestsSeen = {};
     state.pestsSeen[pestType] = (state.pestsSeen[pestType]||0) + 1;
   }
+  addGems(1);
   grantXp(3);
   checkAchievements();
   saveState();
-  renderSheetFull(idx); updateAllTiles();
+  renderSheetFull(idx); updateAllTiles(); updateHeader();
   renderPestBestiary();
 }
 function openLevelTree(){

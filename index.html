@@ -3608,9 +3608,21 @@ function updateLabNavLock(){
   const textEl = btn.querySelector('.nav-btn-text');
   if(textEl) textEl.textContent = locked ? 'LV.'+LAB_UNLOCK_LEVEL : 'LAB';
 }
+function hasAnyPurchasableSkillNode(){
+  const points = state.prestige.skillPoints||0;
+  if(points<=0) return false;
+  for(const key in SKILL_TREE){
+    if(isSkillNodeLocked(key)) continue;
+    const level = skillNodeLevel(key);
+    const cfg = SKILL_TREE[key];
+    if(level>=cfg.maxLevel) continue;
+    if(points >= skillNodeCost(key, level)) return true;
+  }
+  return false;
+}
 function updatePrestigeBadge(){
   const badge = document.getElementById('prestigeBadge');
-  if(badge) badge.classList.toggle('show', (state.prestige.skillPoints||0) > 0);
+  if(badge) badge.classList.toggle('show', hasAnyPurchasableSkillNode());
 }
 function updateTasksBadge(){
   const badge = document.getElementById('tasksBadge');

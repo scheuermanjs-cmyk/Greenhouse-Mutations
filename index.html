@@ -208,9 +208,9 @@
     margin-bottom:16px;
   }
   .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; position:absolute; left:0; right:0; bottom:0; z-index:3; }
-  .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; }
-  .showcase-pot-stack{ display:flex; flex-direction:column; align-items:center; }
-  .showcase-plant-slot{ display:flex; align-items:flex-end; justify-content:center; height:16px; margin-bottom:-3px; }
+  .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; padding-bottom:2px; }
+  .showcase-empty{ width:16px; height:16px; border:2px dashed var(--outline); opacity:.5; display:flex; align-items:center; justify-content:center; }
+  .showcase-empty .tile-plus-mini{ font-size:9px; }
 
   /* ---------- plot grid ---------- */
   .plot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -2360,7 +2360,7 @@ function renderSprite(genome, size, stage, opts){
   return '<div class="'+classes.join(' ')+'" style="--hue:'+Math.round(hue)+';grid-template-columns:repeat('+width+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
 function renderPot(size, locked){
-  const cell = size==='lg' ? 8 : (size==='xs' ? 2.2 : 3.5);
+  const cell = size==='lg' ? 8 : 3.5;
   let cellsHtml = '';
   for(const row of POT_ROWS){
     for(const ch of row){
@@ -2447,9 +2447,6 @@ function renderSprinkler(size){
 }
 function tilePotStack(plantSlotHtml, locked){
   return '<div class="tile-pot-stack"><div class="tile-plant-slot">'+plantSlotHtml+'</div>'+renderPot('sm', locked)+'</div>';
-}
-function showcasePotStack(plantSlotHtml, locked){
-  return '<div class="showcase-pot-stack"><div class="showcase-plant-slot">'+plantSlotHtml+'</div>'+renderPot('xs', locked)+'</div>';
 }
 function gearAccessoryRow(rowClass, slotClass, potHtml, showSprinkler, size){
   return '<div class="'+rowClass+'">'
@@ -3498,11 +3495,11 @@ function renderShowcaseShelf(){
     const entry = key ? state.herbarium.find(e=>e.key===key) : null;
     if(!entry){
       return '<div class="showcase-slot" onclick="openShowcasePicker('+i+')">'
-        + showcasePotStack('<span class="tile-plus-mini">+</span>', false)
+        + '<div class="showcase-empty"><span class="tile-plus-mini">+</span></div>'
         + '</div>';
     }
     return '<div class="showcase-slot" onclick="openShowcaseDetail('+i+')">'
-      + showcasePotStack(renderSprite(entry.genome,'xs','bloom',{}), false)
+      + renderSprite(entry.genome,'xs','bloom',{})
       + '</div>';
   }).join('');
 }

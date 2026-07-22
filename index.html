@@ -378,6 +378,15 @@
   }
   @keyframes labGlowPulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.7); } }
 
+  /* ---------- farmer's table (visitor requests) ---------- */
+  .farmer-row{ display:flex; justify-content:center; align-items:flex-end; gap:16px; margin-bottom:2px; min-height:64px; }
+  .farmer-station{ display:flex; flex-direction:column; align-items:center; cursor:pointer; position:relative; }
+  .farmer-station.is-fulfilled{ opacity:.5; }
+  .pix-farmer{ display:grid; image-rendering:pixelated; }
+  .pix-farmer > div{ width:100%; height:100%; }
+  .farmer-check{ position:absolute; top:-4px; right:-6px; background:var(--accent); color:#0F1A12; font-family:'Press Start 2P'; font-size:9px; padding:2px 4px; border:2px solid var(--outline); }
+  .farmer-table{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:16px; }
+
   /* ---------- lab bench, shelf, clutter ---------- */
   .lab-bench{ height:14px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:4px solid var(--outline); border-top:none; box-shadow:3px 3px 0 rgba(0,0,0,.4); margin-bottom:14px; }
   .lab-shelf-board{ height:10px; background:linear-gradient(to bottom, var(--pot-light) 0% 35%, var(--pot) 35% 70%, var(--pot-dark) 70% 100%); border:3px solid var(--outline); border-top:none; box-shadow:2px 2px 0 rgba(0,0,0,.35); margin:0 auto 16px; width:96%; }
@@ -602,10 +611,11 @@
 
     <section class="screen" id="screen-tasks">
       <div class="screen-title-row">
-        <div class="ach-category" style="margin:0;">Visitor Request</div>
+        <div class="ach-category" style="margin:0;">Farmer's Table</div>
         <div class="upg-desc">New visitor in <span id="visitorRefreshTimer">--:--</span></div>
       </div>
-      <div id="visitorCard" style="margin-bottom:18px;"></div>
+      <div class="farmer-row" id="farmerRow"></div>
+      <div class="farmer-table"></div>
       <div class="screen-title-row">
         <div class="screen-title">Refreshes in <span id="taskRefreshTimer">--:--</span></div>
         <button class="btn btn-small" id="rerollTasksBtn" onclick="onRerollTaskBoard()">Reroll</button>
@@ -1299,7 +1309,7 @@ function onRerollTaskBoard(){
 function renderTasks(){
   ensureTaskBoardCurrent();
   ensureVisitorCurrent();
-  renderVisitorCard();
+  renderFarmerRow();
   pruneImpossibleTasks();
   updateTasksBadge();
   const tasks = getCurrentTasks();
@@ -1740,25 +1750,41 @@ function fulfillVisitorRequest(){
   addGems(v.request.gemReward);
   v.fulfilled = true;
   saveState();
-  renderVisitorCard();
+  renderFarmerRow();
   updateHeader();
   grantXp(v.request.xpReward);
   showToastHtml('Delivered! +'+v.request.sporeReward+' '+renderSporeIcon()+' +'+v.request.gemReward+' '+renderGemIcon());
   return true;
 }
 function onFulfillVisitor(){
-  fulfillVisitorRequest();
+  if(fulfillVisitorRequest()) closeSheet();
 }
 function updateVisitorTimer(){
   const el = document.getElementById('visitorRefreshTimer');
   if(el) el.textContent = fmtHM(msUntilNextDay());
 }
-function renderVisitorCard(){
-  const el = document.getElementById('visitorCard');
+function renderFarmerRow(){
+  const el = document.getElementById('farmerRow');
   if(!el) return;
   updateVisitorTimer();
   const v = state.visitor;
   if(!v || !v.request){ el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="farmer-station'+(v.fulfilled?' is-fulfilled':'')+'" onclick="openVisitorSheet()">'
+    + (v.fulfilled ? '<div class="farmer-check">✓</div>' : '')
+    + renderFarmer('lg')
+    + '</div>';
+}
+function openVisitorSheet(){
+  currentSheetIdx = null;
+  revealShowing = false;
+  renderVisitorSheet();
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderVisitorSheet(){
+  const body = document.getElementById('sheetBody');
+  const v = state.visitor;
+  if(!v || !v.request){ body.innerHTML = '<button class="btn btn-block" onclick="closeSheet()">Close</button>'; return; }
   const req = v.request;
   const sp = SPECIES[req.species];
   const trait = req.trait ? RARE_TRAITS_BY_ID[req.trait] : null;
@@ -1767,15 +1793,14 @@ function renderVisitorCard(){
   let btnLabel = 'Need Match';
   if(v.fulfilled) btnLabel = 'Delivered';
   else if(canFulfill) btnLabel = 'Fulfill';
-  el.innerHTML = '<div class="upg-card">'
-    + '<div class="seed-row-glyph">'+renderSprite({species:req.species,hue:req.hue,glow:false},'sm','bloom')+'</div>'
-    + '<div class="upg-info">'
-    + '<div class="upg-name">'+sp.name+(trait?' ‘'+trait.name+'’':'')+'</div>'
-    + '<div class="upg-desc">'+(trait? 'Needs the '+trait.name+' trait' : 'Any '+sp.name+' will do')+'</div>'
-    + '<div class="upg-current">Reward: +'+req.sporeReward+' '+renderSporeIcon()+' +'+req.gemReward+' '+renderGemIcon()+'</div>'
-    + '</div>'
-    + '<button class="btn btn-small '+(canFulfill?'btn-primary':'')+'" '+(canFulfill?'':'disabled')+' onclick="onFulfillVisitor()">'+btnLabel+'</button>'
-    + '</div>';
+  let html = '<div class="sheet-head"><h3>Visitor Request</h3></div>'
+    + '<div class="seed-row-glyph" style="justify-content:center;display:flex;margin-bottom:8px;">'+renderSprite({species:req.species,hue:req.hue,glow:false},'sm','bloom')+'</div>'
+    + '<div class="upg-name" style="text-align:center;">'+sp.name+(trait?' ‘'+trait.name+'’':'')+'</div>'
+    + '<div class="upg-desc" style="text-align:center;margin-bottom:10px;">'+(trait? 'Needs the '+trait.name+' trait' : 'Any '+sp.name+' will do')+'</div>'
+    + '<div class="stat-row"><span>Reward</span><span>+'+req.sporeReward+' '+renderSporeIcon()+' +'+req.gemReward+' '+renderGemIcon()+'</span></div>'
+    + '<button class="btn btn-block '+(canFulfill?'btn-primary':'')+'" style="margin-top:16px" '+(canFulfill?'':'disabled')+' onclick="onFulfillVisitor()">'+btnLabel+'</button>'
+    + '<button class="btn btn-block" style="margin-top:8px" onclick="closeSheet()">Close</button>';
+  body.innerHTML = html;
 }
 
 /* ===================== RENDER: PRESTIGE ===================== */
@@ -2341,6 +2366,18 @@ function renderPest(size, type){
     }
   }
   return '<div class="pix-pest" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+const FARMER_ROWS = ['.hhh.','hhhhh','.fff.','.e.e.','.fff.','sssss','.ooo.','b...b'];
+const FARMER_COLORS = { h:'#D9B65C', f:'#E8B382', e:'#2C2C28', s:'#6E9BD1', o:'#3F5F80', b:'#4A362A' };
+function renderFarmer(size){
+  const cell = size==='lg' ? 8 : 5;
+  let cellsHtml = '';
+  for(const row of FARMER_ROWS){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(FARMER_COLORS[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-farmer" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
 const SPRINKLER_ROWS = ['..H..','.HHH.','..P..','..P..','..P..','.GGG.'];
 function gardenGearColor(token){

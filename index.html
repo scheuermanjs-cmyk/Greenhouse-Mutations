@@ -658,6 +658,15 @@
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
       <div class="ach-category" style="margin-top:18px;">Trophies</div>
       <div id="achList"></div>
+      <div class="ach-category" style="margin-top:18px;">Save Backup</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div class="upg-desc">Export your save to a file, or import one to restore progress. Handy before clearing browser data or switching phones.</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-block" onclick="exportSave()">Export Save</button>
+          <button class="btn btn-block" onclick="triggerImportSave()">Import Save</button>
+        </div>
+      </div>
+      <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none;" onchange="onImportSaveFile(this)">
     </section>
 
     <section class="screen" id="screen-lab">
@@ -2586,11 +2595,7 @@ function defaultState(){
     visitor:{ periodStart:null, request:null, fulfilled:false },
     lastSavedAt:Date.now() };
 }
-async function loadState(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
+function normalizeState(parsed){
       const merged = Object.assign(defaultState(), parsed);
       if(!Array.isArray(merged.plots) || merged.plots.length!==9) merged.plots = buildInitialPlots();
       merged.upgrades = Object.assign({ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 }, parsed.upgrades||{});
@@ -2642,7 +2647,11 @@ async function loadState(){
         merged.visitor = { periodStart:null, request:null, fulfilled:false };
       }
       return merged;
-    }
+}
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return normalizeState(JSON.parse(raw));
   }catch(e){ /* no saved state yet */ }
   return defaultState();
 }
@@ -2653,6 +2662,72 @@ async function saveState(){
   }catch(e){ console.warn('save failed', e); }
 }
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
+
+/* ===================== SAVE BACKUP ===================== */
+let pendingImportData = null;
+function exportSave(){
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'greenhouse-mutations-save-'+stamp+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Save exported!');
+}
+function triggerImportSave(){
+  document.getElementById('importSaveInput').click();
+}
+function onImportSaveFile(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let parsed;
+    try{
+      parsed = JSON.parse(e.target.result);
+    }catch(err){
+      showToast('That file isn’t a valid save.');
+      input.value = '';
+      return;
+    }
+    if(typeof parsed!=='object' || parsed===null || typeof parsed.xp==='undefined' || !Array.isArray(parsed.plots)){
+      showToast('That file isn’t a valid Greenhouse save.');
+      input.value = '';
+      return;
+    }
+    openImportConfirm(parsed);
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+function openImportConfirm(parsed){
+  pendingImportData = parsed;
+  currentSheetIdx = null;
+  revealShowing = false;
+  const body = document.getElementById('sheetBody');
+  body.innerHTML = '<div class="sheet-head"><h3>Import Save?</h3></div>'
+    + '<p class="sheet-blurb">This replaces your current progress with the imported save. This cannot be undone — export your current save first if you want to keep it.</p>'
+    + '<button class="btn btn-danger btn-block" onclick="confirmImportSave()">Replace My Save</button>'
+    + '<button class="btn btn-block" style="margin-top:8px;" onclick="cancelImportSave()">Cancel</button>';
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function cancelImportSave(){
+  pendingImportData = null;
+  closeSheet();
+}
+function confirmImportSave(){
+  if(!pendingImportData) return;
+  state = normalizeState(pendingImportData);
+  pendingImportData = null;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  location.reload();
+}
 
 /* ===================== HELPERS ===================== */
 function addSpores(amount){

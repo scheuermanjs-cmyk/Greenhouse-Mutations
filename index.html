@@ -106,7 +106,7 @@
   .screen-title-row .screen-title{ margin:0; }
 
   /* ---------- window scene ---------- */
-  .window{ position:relative; height:168px; border:4px solid var(--outline); overflow:hidden; box-shadow:3px 3px 0 rgba(0,0,0,.4); }
+  .window{ position:relative; height:118px; border:4px solid var(--outline); overflow:hidden; box-shadow:3px 3px 0 rgba(0,0,0,.4); }
   .sky-layer{ position:absolute; inset:0; }
   .sky-layer.is-night{ background:linear-gradient(to bottom, #0A0E1A 0% 40%, #141A30 40% 75%, #1F2A44 75% 100%); }
   .sky-layer.is-dawn{ background:linear-gradient(to bottom, #2B1F45 0% 30%, #C9577A 30% 65%, #FFB072 65% 100%); }
@@ -207,10 +207,6 @@
     box-shadow:3px 3px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.25), inset 0 -2px 0 rgba(0,0,0,.2);
     margin-bottom:16px;
   }
-  .showcase-shelf{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; position:absolute; left:0; right:0; bottom:0; z-index:3; }
-  .showcase-slot{ display:flex; flex-direction:column; align-items:center; justify-content:flex-end; cursor:pointer; padding-bottom:2px; }
-  .showcase-empty{ width:16px; height:16px; border:2px dashed var(--outline); opacity:.5; display:flex; align-items:center; justify-content:center; }
-  .showcase-empty .tile-plus-mini{ font-size:9px; }
 
   /* ---------- plot grid ---------- */
   .plot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -607,7 +603,6 @@
         <div class="lightning-flash" id="lightningFlash"></div>
         <div class="mullion mullion-v"></div>
         <div class="mullion mullion-h"></div>
-        <div class="showcase-shelf" id="showcaseShelf"></div>
       </div>
       <div class="ledge"></div>
       <div class="screen-title-row">
@@ -1463,7 +1458,7 @@ const WALLPAPER_THEMES = {
   goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } }
 };
 function defaultDecorState(){
-  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar', showcase:[null,null,null] };
+  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
 }
 function buildPlankDataUri(c){
   const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
@@ -2331,7 +2326,7 @@ function renderSprite(genome, size, stage, opts){
   }
   const useStage = wilt ? 'bloom' : stage;
   const { rows, width } = spriteRows(genome, useStage);
-  const cell = size==='lg' ? 8 : (size==='xs' ? 2.5 : 4);
+  const cell = size==='lg' ? 8 : 4;
   const accents = (!wilt && useStage==='bloom')
     ? [genome.rareTrait, genome.rareTrait2].filter(Boolean).flatMap(id => TRAIT_ACCENTS[id] || [])
     : [];
@@ -2614,7 +2609,6 @@ async function loadState(){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
-        if(!Array.isArray(merged.decor.showcase) || merged.decor.showcase.length!==3) merged.decor.showcase = [null,null,null];
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -3486,83 +3480,6 @@ function renderPestBestiary(){
   }).join('');
 }
 
-/* ===================== SHOWCASE SHELF ===================== */
-function renderShowcaseShelf(){
-  const el = document.getElementById('showcaseShelf');
-  if(!el) return;
-  const slots = (state.decor && state.decor.showcase) || [null,null,null];
-  el.innerHTML = slots.map((key,i)=>{
-    const entry = key ? state.herbarium.find(e=>e.key===key) : null;
-    if(!entry){
-      return '<div class="showcase-slot" onclick="openShowcasePicker('+i+')">'
-        + '<div class="showcase-empty"><span class="tile-plus-mini">+</span></div>'
-        + '</div>';
-    }
-    return '<div class="showcase-slot" onclick="openShowcaseDetail('+i+')">'
-      + renderSprite(entry.genome,'xs','bloom',{})
-      + '</div>';
-  }).join('');
-}
-function openShowcaseDetail(slot){
-  const key = state.decor.showcase[slot];
-  const entry = key ? state.herbarium.find(e=>e.key===key) : null;
-  if(!entry){ openShowcasePicker(slot); return; }
-  currentSheetIdx = null;
-  revealShowing = false;
-  renderHerbDetailSheet(entry);
-  const body = document.getElementById('sheetBody');
-  const closeBtn = body.querySelector('button');
-  const changeBtn = document.createElement('button');
-  changeBtn.className = 'btn btn-block';
-  changeBtn.style.marginTop = '8px';
-  changeBtn.textContent = 'Change Display';
-  changeBtn.onclick = function(){ openShowcasePicker(slot); };
-  if(closeBtn) body.insertBefore(changeBtn, closeBtn);
-  else body.appendChild(changeBtn);
-  document.getElementById('sheet').classList.add('open');
-  document.getElementById('sheetBackdrop').classList.add('open');
-}
-function openShowcasePicker(slot){
-  currentSheetIdx = null;
-  revealShowing = false;
-  renderShowcasePickerSheet(slot);
-  document.getElementById('sheet').classList.add('open');
-  document.getElementById('sheetBackdrop').classList.add('open');
-}
-function renderShowcasePickerSheet(slot){
-  const body = document.getElementById('sheetBody');
-  const current = state.decor.showcase[slot];
-  let html = '<div class="sheet-head"><h3>Showcase Slot '+(slot+1)+'</h3></div>'
-    + '<p class="sheet-blurb">Pick a pressed specimen to display on your shelf.</p>';
-  if(current) html += '<button class="btn btn-danger btn-block" style="margin-bottom:12px;" onclick="clearShowcaseSlot('+slot+')">Remove from Shelf</button>';
-  if(!state.herbarium.length){
-    html += '<div class="empty-state">Nothing pressed yet.<br>Harvest something strange.</div>';
-  } else {
-    html += '<div class="seed-list">' + state.herbarium.map(e=>{
-      const isCurrent = current===e.key;
-      return '<div class="seed-row" style="cursor:pointer;'+(isCurrent?'opacity:.5;':'')+'" onclick="setShowcaseSlot('+slot+',\''+e.key+'\')">'
-        + '<div class="seed-row-glyph">'+renderSprite(e.genome,'sm','bloom',{})+'</div>'
-        + '<div class="seed-row-info"><div class="seed-row-name">'+e.name+'</div><div class="seed-row-sub">'+SPECIES[e.species].name+'</div></div>'
-        + (isCurrent ? '<span style="color:var(--accent);font-size:12px;">On Shelf</span>' : '')
-        + '</div>';
-    }).join('') + '</div>';
-  }
-  html += '<button class="btn btn-block" style="margin-top:16px" onclick="closeSheet()">Close</button>';
-  body.innerHTML = html;
-}
-function setShowcaseSlot(slot, key){
-  state.decor.showcase[slot] = key;
-  saveState();
-  renderShowcaseShelf();
-  closeSheet();
-}
-function clearShowcaseSlot(slot){
-  state.decor.showcase[slot] = null;
-  saveState();
-  renderShowcaseShelf();
-  closeSheet();
-}
-
 /* ===================== SHEET ===================== */
 function pestAlertHtml(idx){
   const plot = state.plots[idx];
@@ -4159,7 +4076,6 @@ async function init(){
   updateAllTiles();
   updateHeader();
   renderHerbarium();
-  renderShowcaseShelf();
   renderUpgrades();
   applyWindowPhase();
   checkAchievements();

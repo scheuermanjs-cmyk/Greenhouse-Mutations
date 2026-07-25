@@ -979,8 +979,12 @@ const SKILL_TREE = {
   undyingRoots: { name:'Undying Roots',    tier:4, branch:'resist', stat:'wiltResist',    perLevel:0.06, maxLevel:3, baseCost:5, scale:2.0,
     desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:{key:'precision', level:2} },
 
+  farmers:      { name:'Hired Farmers',    tier:5, branch:'growth', stat:'autoPlant',    perLevel:1,    maxLevel:1, baseCost:8, scale:1,
+    desc:()=> 'Empty pots are automatically replanted from your seed bank', requires:{key:'verdantSurge', level:2} },
   autoHarvest: { name:'Tireless Hands',    tier:5, branch:'harvest', stat:'autoHarvest',   perLevel:1,    maxLevel:1, baseCost:8, scale:1,
-    desc:()=> 'Ready plots are collected automatically, no tapping required', requires:{key:'goldenSap', level:2} }
+    desc:()=> 'Ready plots are collected automatically, no tapping required', requires:{key:'goldenSap', level:2} },
+  pestExterminator: { name:'Pest Exterminator', tier:5, branch:'resist', stat:'autoPest', perLevel:1, maxLevel:1, baseCost:8, scale:1,
+    desc:()=> 'Pests are squashed automatically the moment they appear', requires:{key:'undyingRoots', level:2} }
 };
 function defaultSkillTree(){
   const tree = {};
@@ -3677,6 +3681,36 @@ function autoHarvestTick(){
   if(newFinds) msg += '  ('+newFinds+' new!)';
   showToast(msg);
 }
+function autoPlantWing(wing){
+  const planted = [];
+  plotsForWing(wing).forEach((p, idx)=>{
+    if(p.locked || p.status!=='empty') return;
+    const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
+    if(!stack) return;
+    if(plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) planted.push(idx);
+  });
+  return planted;
+}
+function autoPlantTick(){
+  if(getPrestigeBonus('autoPlant') <= 0) return;
+  const planted = autoPlantWing('verdant').concat(autoPlantWing('desert'));
+  if(!planted.length) return;
+  updateAllTiles(); updateAllDesertTiles(); updateHeader();
+  showToast('🌾 Farmers planted '+planted.length+' seed'+(planted.length===1?'':'s')+' from your seed bank');
+}
+function autoPestWing(wing){
+  const squashed = [];
+  plotsForWing(wing).forEach((p, idx)=>{
+    if(!p.locked && p.pest) { squashPest(idx, wing); squashed.push(idx); }
+  });
+  return squashed;
+}
+function autoPestTick(){
+  if(getPrestigeBonus('autoPest') <= 0) return;
+  const squashed = autoPestWing('verdant').concat(autoPestWing('desert'));
+  if(!squashed.length) return;
+  showToast('🧹 Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s'));
+}
 function countReadyPlots(wing='verdant'){
   return plotsForWing(wing).filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
 }
@@ -4087,7 +4121,8 @@ function squashPest(idx, wing='verdant'){
   grantXp(3);
   checkAchievements();
   saveState();
-  renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
+  if(currentSheetIdx===idx && currentSheetWing===wing) renderSheetFull(idx);
+  refreshTilesForWing(wing); updateHeader();
   renderPestBestiary();
 }
 function openLevelTree(){
@@ -4648,7 +4683,9 @@ function tick(){
   updateAllDesertTiles();
   updateHeader();
   applyWindowPhase();
+  autoPestTick();
   autoHarvestTick();
+  autoPlantTick();
   if(document.getElementById('screen-tasks').classList.contains('active')){
     const refreshed = ensureTaskBoardCurrent();
     if(refreshed){ renderTasks(); showToast('The task board refreshed with new tasks!'); }

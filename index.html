@@ -324,8 +324,15 @@
   nav{ display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; }
   .nav-btn{ position:relative; flex:1; background:transparent; color:var(--text-muted); padding:13px 2px; font-family:'Press Start 2P'; font-size:9px; }
   .nav-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel-2); }
-  .nav-badge{ display:none; position:absolute; top:5px; right:10px; width:7px; height:7px; border-radius:50%; background:var(--violet); box-shadow:0 0 4px var(--violet); }
+  .nav-badge{ display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:1; }
   .nav-badge.show{ display:block; }
+  .nav-badge.show::after{
+    content:'!'; display:block; color:#FFD24C; font-family:'Press Start 2P'; font-size:13px; line-height:1;
+    text-shadow:0 0 6px rgba(255,210,76,.9), 1px 1px 0 rgba(0,0,0,.75);
+    animation:navBadgePulse 1.4s ease-in-out infinite;
+  }
+  @keyframes navBadgePulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.3); } }
+  .nav-btn:has(.nav-badge.show){ color:#FFD24C; background:rgba(255,210,76,.1); }
   .nav-btn-locked{ opacity:.4; }
 
   /* ---------- herbarium ---------- */

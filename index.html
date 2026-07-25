@@ -103,6 +103,7 @@
   @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
   .screen-title{ font-size:14px; color:var(--text-muted); margin:2px 2px 12px; text-transform:uppercase; letter-spacing:.5px; }
   .screen-title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 2px 12px; }
+  .grow-action-btns{ display:flex; gap:6px; flex-shrink:0; }
   .screen-title-row .screen-title{ margin:0; }
 
   /* ---------- window scene ---------- */
@@ -653,7 +654,10 @@
       <div class="ledge"></div>
       <div class="screen-title-row">
         <div class="screen-title" id="greenhouseScreenTitle">Place a seed, tend the pot, see what grows</div>
-        <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
+        <div class="grow-action-btns">
+          <button class="btn btn-small" id="quickReplantBtn" style="display:none;" onclick="onQuickReplantClick()">Replant</button>
+          <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
+        </div>
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;">⚡ Mutation Storm — mutation odds up</div>
       <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;">🐛 Pest Swarm — infestations more likely</div>
@@ -3735,9 +3739,48 @@ function updateAllTiles(){
   }
   updateHarvestAllButton();
 }
+function countEmptyPlots(wing='verdant'){
+  return plotsForWing(wing).filter(p=>!p.locked && p.status==='empty').length;
+}
+function bestBaseSpeciesKey(wing){
+  const level = getLevelFromXp(state.xp||0);
+  const keys = getUnlockedSpeciesKeys(level, wing).filter(k=>state.spores>=SPECIES[k].seedCost);
+  if(!keys.length) return null;
+  keys.sort((a,b)=> SPECIES[b].baseSell-SPECIES[a].baseSell);
+  return keys[0];
+}
+function quickReplant(wing='verdant'){
+  const plots = plotsForWing(wing);
+  let planted = 0;
+  for(let idx=0; idx<plots.length; idx++){
+    const plot = plots[idx];
+    if(plot.locked || plot.status!=='empty') continue;
+    const bestStack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
+    if(bestStack){
+      if(plantSeed(idx, {type:'inventory', stackId:bestStack.id}, wing)) planted++;
+      continue;
+    }
+    const speciesKey = bestBaseSpeciesKey(wing);
+    if(speciesKey && plantSeed(idx, {type:'base', speciesKey}, wing)) planted++;
+  }
+  return planted;
+}
+function onQuickReplantClick(){
+  const planted = quickReplant(currentWing);
+  if(!planted) return;
+  refreshTilesForWing(currentWing); updateHeader();
+  showToast('🌱 Replanted '+planted+' pot'+(planted===1?'':'s')+' with your best available seeds.');
+}
+function updateQuickReplantButton(){
+  const btn = document.getElementById('quickReplantBtn');
+  if(!btn) return;
+  const count = countEmptyPlots(currentWing);
+  btn.style.display = count>0 ? '' : 'none';
+}
 function updateHarvestAllButton(){
   const btn = document.getElementById('harvestAllBtn');
   if(!btn) return;
+  updateQuickReplantButton();
   const count = countReadyPlots(currentWing);
   if(count>0){
     btn.style.display = '';

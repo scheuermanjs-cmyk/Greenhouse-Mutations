@@ -391,6 +391,25 @@
     mix-blend-mode:overlay;
   }
   @keyframes wallpaperShimmerSweep{ 0%{ background-position:180% 180%; } 100%{ background-position:-60% -60%; } }
+  body.pot-sparkle-active .pix-pot{ position:relative; }
+  body.pot-sparkle-active .pix-pot::before, body.pot-sparkle-active .pix-pot::after{
+    content:''; position:absolute; width:3px; height:3px; background:#fff; border-radius:50%;
+    box-shadow:0 0 4px 1px rgba(255,255,255,.9); opacity:0; pointer-events:none;
+  }
+  body.pot-sparkle-active .pix-pot::before{ top:8%; left:18%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; }
+  body.pot-sparkle-active .pix-pot::after{ top:34%; right:12%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; animation-delay:.95s; }
+  @keyframes potSparkleTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.4); } }
+  body.wallpaper-drift-active::after{
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.85) 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,.6) 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,.7) 1px, transparent 1.6px);
+    background-size:60px 60px, 90px 90px, 75px 75px;
+    background-position:10px 20px, 40px 70px, 70px 10px;
+    animation:wallpaperDriftMotes 14s linear infinite;
+  }
+  @keyframes wallpaperDriftMotes{ from{ background-position:10px 20px, 40px 70px, 70px 10px; } to{ background-position:10px -580px, 40px -530px, 70px -590px; } }
 
   /* ---------- task board ---------- */
   .task-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
@@ -1596,7 +1615,9 @@ const POT_THEMES = {
   moonglow:   { name:'Moonglow Glass', cost:0, merchantOnly:true, glow:true, colors:{ light:'#CFE3FF', mid:'#8FB8F0', dark:'#3E5C99' } },
   embercast:  { name:'Embercast Iron', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FFC08A', mid:'#E8703E', dark:'#7A2E14' } },
   auroraCeramic: { name:'Aurora Ceramic', cost:0, merchantOnly:true, glow:true, colors:{ light:'#B8F5DA', mid:'#5FCF9E', dark:'#28825C' } },
-  crimsonLantern: { name:'Crimson Lantern', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FF9E9E', mid:'#E14B4B', dark:'#7E1E1E' } }
+  crimsonLantern: { name:'Crimson Lantern', cost:0, merchantOnly:true, glow:true, colors:{ light:'#FF9E9E', mid:'#E14B4B', dark:'#7E1E1E' } },
+  starlitFrost: { name:'Starlit Frost', cost:0, merchantOnly:true, sparkle:true, colors:{ light:'#E8F4FF', mid:'#A8CFEA', dark:'#4A6E8C' } },
+  twilightBloom: { name:'Twilight Bloom', cost:0, merchantOnly:true, sparkle:true, colors:{ light:'#E8B8E8', mid:'#A855C4', dark:'#5C2E70' } }
 };
 const WALLPAPER_THEMES = {
   cedar:     { name:'Cedar Planks',    cost:0,   hill:'#16261A', planks:{ hseam:'rgb(140,98,56)',  vseam:'rgb(58,36,18)', a:'rgb(124,84,48)',  b:'rgb(110,70,36)',  c:'rgb(104,66,34)',  d:'rgb(118,80,46)'  } },
@@ -1606,7 +1627,9 @@ const WALLPAPER_THEMES = {
   stardust:  { name:'Stardust Weave',  cost:0, merchantOnly:true, shimmer:true, hill:'#241E42', planks:{ hseam:'rgb(90,70,150)',  vseam:'rgb(40,30,70)', a:'rgb(70,54,120)',  b:'rgb(60,46,104)',  c:'rgb(54,40,96)',   d:'rgb(64,50,112)'  } },
   opaline:   { name:'Opaline Marble',  cost:0, merchantOnly:true, shimmer:true, hill:'#2E4A46', planks:{ hseam:'rgb(150,190,182)',vseam:'rgb(60,86,80)', a:'rgb(120,164,156)',b:'rgb(108,150,142)',c:'rgb(100,140,132)',d:'rgb(114,156,148)' } },
   auroraCurtain: { name:'Aurora Curtain', cost:0, merchantOnly:true, shimmer:true, hill:'#1E3A34', planks:{ hseam:'rgb(80,160,140)', vseam:'rgb(30,60,52)', a:'rgb(60,130,112)', b:'rgb(52,116,98)', c:'rgb(46,104,88)', d:'rgb(56,124,106)' } },
-  goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } }
+  goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } },
+  nebulaDrift: { name:'Nebula Drift', cost:0, merchantOnly:true, drift:true, hill:'#1A1E3A', planks:{ hseam:'rgb(60,50,120)', vseam:'rgb(20,18,50)', a:'rgb(45,38,95)', b:'rgb(38,32,82)', c:'rgb(34,28,74)', d:'rgb(40,34,88)' } },
+  emberfall: { name:'Emberfall', cost:0, merchantOnly:true, drift:true, hill:'#3A1E14', planks:{ hseam:'rgb(150,60,30)', vseam:'rgb(60,20,10)', a:'rgb(120,48,24)', b:'rgb(105,42,20)', c:'rgb(95,38,18)', d:'rgb(110,44,22)' } }
 };
 function defaultDecorState(){
   return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
@@ -1635,6 +1658,7 @@ function applyPotTheme(key){
   root.setProperty('--pot', cfg.colors.mid);
   root.setProperty('--pot-dark', cfg.colors.dark);
   document.body.classList.toggle('pot-glow-active', !!cfg.glow);
+  document.body.classList.toggle('pot-sparkle-active', !!cfg.sparkle);
 }
 function applyWallpaperTheme(key){
   const cfg = WALLPAPER_THEMES[key];
@@ -1644,6 +1668,7 @@ function applyWallpaperTheme(key){
   document.body.style.backgroundImage = bg;
   document.documentElement.style.backgroundImage = bg;
   document.body.classList.toggle('wallpaper-shimmer-active', !!cfg.shimmer);
+  document.body.classList.toggle('wallpaper-drift-active', !!cfg.drift);
 }
 function applyEquippedDecor(){
   applyPotTheme(state.decor.equippedPot);
@@ -1701,7 +1726,7 @@ function renderDecorGallery(kind){
     let descText = 'Cosmetic only';
     if(isOwned) descText = theme.merchantOnly ? 'Found from the traveling merchant' : 'Owned';
     return '<div class="upg-card'+(isEquipped?' is-equipped':'')+'">'
-      + '<div class="decor-swatch'+(theme.glow||theme.shimmer?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
+      + '<div class="decor-swatch'+(theme.glow||theme.shimmer||theme.sparkle||theme.drift?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
       + '<div class="upg-info">'
       + '<div class="upg-name">'+theme.name+'</div>'
       + '<div class="upg-desc">'+descText+'</div>'
@@ -1723,10 +1748,14 @@ const MERCHANT_COSMETICS = [
   { kind:'pot', key:'embercast' },
   { kind:'pot', key:'auroraCeramic' },
   { kind:'pot', key:'crimsonLantern' },
+  { kind:'pot', key:'starlitFrost' },
+  { kind:'pot', key:'twilightBloom' },
   { kind:'wallpaper', key:'stardust' },
   { kind:'wallpaper', key:'opaline' },
   { kind:'wallpaper', key:'auroraCurtain' },
-  { kind:'wallpaper', key:'goldleaf' }
+  { kind:'wallpaper', key:'goldleaf' },
+  { kind:'wallpaper', key:'nebulaDrift' },
+  { kind:'wallpaper', key:'emberfall' }
 ];
 const MERCHANT_REROLL_COST = 3;
 function pickMerchantSeedOffer(level){

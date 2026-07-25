@@ -399,14 +399,10 @@
   body.pot-sparkle-active .pix-pot::before{ top:8%; left:18%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; }
   body.pot-sparkle-active .pix-pot::after{ top:34%; right:12%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; animation-delay:.95s; }
   @keyframes potSparkleTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.4); } }
-  body.wallpaper-drift-active{
-    background-position:0 0, 0 0, 6px 8px, 20px 30px, 34px 6px;
-    animation:wallpaperDriftSparkle 10s linear infinite;
-  }
-  @keyframes wallpaperDriftSparkle{
-    from{ background-position:0 0, 0 0, 6px 8px, 20px 30px, 34px 6px; }
-    to{ background-position:0 0, 0 0, 6px -232px, 20px -226px, 34px -234px; }
-  }
+  body.wallpaper-scroll-x-active{ animation:wallpaperScrollX 18s linear infinite; }
+  @keyframes wallpaperScrollX{ from{ background-position:0 0, 0 0; } to{ background-position:-192px 0, -192px 0; } }
+  body.wallpaper-scroll-y-active{ animation:wallpaperScrollY 14s linear infinite; }
+  @keyframes wallpaperScrollY{ from{ background-position:0 0, 0 0; } to{ background-position:0 -96px, 0 -96px; } }
 
   /* ---------- task board ---------- */
   .task-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
@@ -1625,8 +1621,8 @@ const WALLPAPER_THEMES = {
   opaline:   { name:'Opaline Marble',  cost:0, merchantOnly:true, shimmer:true, hill:'#2E4A46', planks:{ hseam:'rgb(150,190,182)',vseam:'rgb(60,86,80)', a:'rgb(120,164,156)',b:'rgb(108,150,142)',c:'rgb(100,140,132)',d:'rgb(114,156,148)' } },
   auroraCurtain: { name:'Aurora Curtain', cost:0, merchantOnly:true, shimmer:true, hill:'#1E3A34', planks:{ hseam:'rgb(80,160,140)', vseam:'rgb(30,60,52)', a:'rgb(60,130,112)', b:'rgb(52,116,98)', c:'rgb(46,104,88)', d:'rgb(56,124,106)' } },
   goldleaf:  { name:'Goldleaf Weave', cost:0, merchantOnly:true, shimmer:true, hill:'#3A2E12', planks:{ hseam:'rgb(198,160,80)', vseam:'rgb(84,64,24)', a:'rgb(168,132,58)', b:'rgb(150,116,48)', c:'rgb(138,106,42)', d:'rgb(160,124,52)' } },
-  nebulaDrift: { name:'Nebula Drift', cost:0, merchantOnly:true, drift:true, hill:'#1A1E3A', planks:{ hseam:'rgb(60,50,120)', vseam:'rgb(20,18,50)', a:'rgb(45,38,95)', b:'rgb(38,32,82)', c:'rgb(34,28,74)', d:'rgb(40,34,88)' } },
-  emberfall: { name:'Emberfall', cost:0, merchantOnly:true, drift:true, hill:'#3A1E14', planks:{ hseam:'rgb(150,60,30)', vseam:'rgb(60,20,10)', a:'rgb(120,48,24)', b:'rgb(105,42,20)', c:'rgb(95,38,18)', d:'rgb(110,44,22)' } }
+  tidalCurrent: { name:'Tidal Current', cost:0, merchantOnly:true, scrollX:true, hill:'#1E3A42', planks:{ hseam:'rgb(70,140,150)', vseam:'rgb(24,50,54)', a:'rgb(54,110,120)', b:'rgb(46,98,106)', c:'rgb(42,90,98)', d:'rgb(50,104,112)' } },
+  cinderdrift: { name:'Cinderdrift', cost:0, merchantOnly:true, scrollY:true, hill:'#3A1E14', planks:{ hseam:'rgb(150,60,30)', vseam:'rgb(60,20,10)', a:'rgb(120,48,24)', b:'rgb(105,42,20)', c:'rgb(95,38,18)', d:'rgb(110,44,22)' } }
 };
 function defaultDecorState(){
   return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
@@ -1657,20 +1653,16 @@ function applyPotTheme(key){
   document.body.classList.toggle('pot-glow-active', !!cfg.glow);
   document.body.classList.toggle('pot-sparkle-active', !!cfg.sparkle);
 }
-const DRIFT_SPARKLE_BG_IMAGE = 'radial-gradient(circle, rgba(255,255,255,.65) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,255,255,.5) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,255,255,.55) 1px, transparent 1.6px)';
-const DRIFT_SPARKLE_BG_SIZE = '40px 40px, 56px 56px, 48px 48px';
 function applyWallpaperTheme(key){
   const cfg = WALLPAPER_THEMES[key];
   if(!cfg) return;
   document.documentElement.style.setProperty('--hill', cfg.hill);
-  const plankLayer = 'repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px), ' + buildPlankDataUri(cfg.planks);
-  const bg = cfg.drift ? (plankLayer + ', ' + DRIFT_SPARKLE_BG_IMAGE) : plankLayer;
+  const bg = 'repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px), ' + buildPlankDataUri(cfg.planks);
   document.body.style.backgroundImage = bg;
   document.documentElement.style.backgroundImage = bg;
-  document.body.style.backgroundSize = cfg.drift ? ('auto, auto, '+DRIFT_SPARKLE_BG_SIZE) : '';
-  document.documentElement.style.backgroundSize = cfg.drift ? ('auto, auto, '+DRIFT_SPARKLE_BG_SIZE) : '';
   document.body.classList.toggle('wallpaper-shimmer-active', !!cfg.shimmer);
-  document.body.classList.toggle('wallpaper-drift-active', !!cfg.drift);
+  document.body.classList.toggle('wallpaper-scroll-x-active', !!cfg.scrollX);
+  document.body.classList.toggle('wallpaper-scroll-y-active', !!cfg.scrollY);
 }
 function applyEquippedDecor(){
   applyPotTheme(state.decor.equippedPot);
@@ -1728,7 +1720,7 @@ function renderDecorGallery(kind){
     let descText = 'Cosmetic only';
     if(isOwned) descText = theme.merchantOnly ? 'Found from the traveling merchant' : 'Owned';
     return '<div class="upg-card'+(isEquipped?' is-equipped':'')+'">'
-      + '<div class="decor-swatch'+(theme.glow||theme.shimmer||theme.sparkle||theme.drift?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
+      + '<div class="decor-swatch'+(theme.glow||theme.shimmer||theme.sparkle||theme.scrollX||theme.scrollY?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
       + '<div class="upg-info">'
       + '<div class="upg-name">'+theme.name+'</div>'
       + '<div class="upg-desc">'+descText+'</div>'
@@ -1756,8 +1748,8 @@ const MERCHANT_COSMETICS = [
   { kind:'wallpaper', key:'opaline' },
   { kind:'wallpaper', key:'auroraCurtain' },
   { kind:'wallpaper', key:'goldleaf' },
-  { kind:'wallpaper', key:'nebulaDrift' },
-  { kind:'wallpaper', key:'emberfall' }
+  { kind:'wallpaper', key:'tidalCurrent' },
+  { kind:'wallpaper', key:'cinderdrift' }
 ];
 const MERCHANT_REROLL_COST = 3;
 function pickMerchantSeedOffer(level){

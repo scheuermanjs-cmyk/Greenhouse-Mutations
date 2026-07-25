@@ -400,14 +400,15 @@
   body.pot-sparkle-active .pix-pot::after{ top:34%; right:12%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; animation-delay:.95s; }
   @keyframes potSparkleTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.4); } }
   body.wallpaper-drift-active::after{
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:-1;
+    content:''; position:fixed; inset:0; pointer-events:none;
     background-image:
-      radial-gradient(circle, rgba(255,255,255,.85) 1px, transparent 1.6px),
-      radial-gradient(circle, rgba(255,255,255,.6) 1px, transparent 1.6px),
-      radial-gradient(circle, rgba(255,255,255,.7) 1px, transparent 1.6px);
+      radial-gradient(circle, rgba(255,255,255,.55) 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,.4) 1px, transparent 1.6px),
+      radial-gradient(circle, rgba(255,255,255,.45) 1px, transparent 1.6px);
     background-size:60px 60px, 90px 90px, 75px 75px;
     background-position:10px 20px, 40px 70px, 70px 10px;
     animation:wallpaperDriftMotes 14s linear infinite;
+    mix-blend-mode:screen;
   }
   @keyframes wallpaperDriftMotes{ from{ background-position:10px 20px, 40px 70px, 70px 10px; } to{ background-position:10px -580px, 40px -530px, 70px -590px; } }
 

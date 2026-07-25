@@ -332,7 +332,8 @@
     animation:navBadgePulse 1.4s ease-in-out infinite;
   }
   @keyframes navBadgePulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.3); } }
-  .nav-btn:has(.nav-badge.show){ color:#FFD24C; background:rgba(255,210,76,.1); }
+  .nav-btn:has(.nav-badge.show){ color:#FFD24C; background:rgba(255,210,76,.1); box-shadow:inset 0 0 0 2px #FFD24C; }
+  .nav-btn.active:has(.nav-badge.show){ box-shadow:inset 0 0 0 2px #FFD24C, inset 0 4px 0 var(--accent); }
   .nav-btn-locked{ opacity:.4; }
 
   /* ---------- herbarium ---------- */

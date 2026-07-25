@@ -400,7 +400,7 @@
   body.pot-sparkle-active .pix-pot::after{ top:34%; right:12%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; animation-delay:.95s; }
   @keyframes potSparkleTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.4); } }
   body.wallpaper-drift-active::after{
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:-1;
     background-image:
       radial-gradient(circle, rgba(255,255,255,.85) 1px, transparent 1.6px),
       radial-gradient(circle, rgba(255,255,255,.6) 1px, transparent 1.6px),

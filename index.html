@@ -399,14 +399,6 @@
   body.pot-sparkle-active .pix-pot::before{ top:8%; left:18%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; }
   body.pot-sparkle-active .pix-pot::after{ top:34%; right:12%; animation:potSparkleTwinkle 1.9s ease-in-out infinite; animation-delay:.95s; }
   @keyframes potSparkleTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.4); } }
-  body.wallpaper-drift-active{
-    background-position:0 0, 0 0, 10px 20px, 40px 70px, 70px 10px;
-    animation:wallpaperDriftMotesBg 14s linear infinite;
-  }
-  @keyframes wallpaperDriftMotesBg{
-    from{ background-position:0 0, 0 0, 10px 20px, 40px 70px, 70px 10px; }
-    to{ background-position:0 0, 0 0, 10px -580px, 40px -530px, 70px -590px; }
-  }
 
   /* ---------- task board ---------- */
   .task-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
@@ -1631,8 +1623,12 @@ const WALLPAPER_THEMES = {
 function defaultDecorState(){
   return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
 }
-function buildPlankDataUri(c){
-  const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
+const PLANK_FLECKS = [
+  [14,10,1.4],[36,30,1],[70,18,1.2],[110,8,1],[130,34,1.5],[168,14,1],
+  [8,60,1.2],[30,80,1],[58,66,1.4],[86,86,1],[118,58,1],[150,74,1.5],[178,60,1]
+];
+function buildPlankDataUri(c, flecked){
+  let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
     + "<rect x='0' y='0' width='192' height='2' fill='"+c.hseam+"'/>"
     + "<rect x='0' y='2' width='92' height='46' fill='"+c.a+"'/>"
     + "<rect x='92' y='2' width='4' height='46' fill='"+c.vseam+"'/>"
@@ -1643,8 +1639,11 @@ function buildPlankDataUri(c){
     + "<rect x='44' y='50' width='4' height='46' fill='"+c.vseam+"'/>"
     + "<rect x='48' y='50' width='92' height='46' fill='"+c.d+"'/>"
     + "<rect x='140' y='50' width='4' height='46' fill='"+c.vseam+"'/>"
-    + "<rect x='144' y='50' width='48' height='46' fill='"+c.c+"'/>"
-    + "</svg>";
+    + "<rect x='144' y='50' width='48' height='46' fill='"+c.c+"'/>";
+  if(flecked){
+    svg += PLANK_FLECKS.map(([fx,fy,r])=>"<circle cx='"+fx+"' cy='"+fy+"' r='"+r+"' fill='#FFFFFF' fill-opacity='.65'/>").join('');
+  }
+  svg += "</svg>";
   return 'url("data:image/svg+xml,'+encodeURIComponent(svg)+'")';
 }
 function applyPotTheme(key){
@@ -1657,20 +1656,14 @@ function applyPotTheme(key){
   document.body.classList.toggle('pot-glow-active', !!cfg.glow);
   document.body.classList.toggle('pot-sparkle-active', !!cfg.sparkle);
 }
-const DRIFT_MOTES_BG_IMAGE = 'radial-gradient(circle, rgba(255,255,255,.6) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,255,255,.45) 1px, transparent 1.6px), radial-gradient(circle, rgba(255,255,255,.5) 1px, transparent 1.6px)';
-const DRIFT_MOTES_BG_SIZE = '60px 60px, 90px 90px, 75px 75px';
 function applyWallpaperTheme(key){
   const cfg = WALLPAPER_THEMES[key];
   if(!cfg) return;
   document.documentElement.style.setProperty('--hill', cfg.hill);
-  let bg = 'repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px), ' + buildPlankDataUri(cfg.planks);
-  if(cfg.drift) bg += ', ' + DRIFT_MOTES_BG_IMAGE;
+  const bg = 'repeating-linear-gradient(to bottom, rgba(0,0,0,.08) 0px 1px, transparent 1px 6px), ' + buildPlankDataUri(cfg.planks, cfg.drift);
   document.body.style.backgroundImage = bg;
   document.documentElement.style.backgroundImage = bg;
-  document.body.style.backgroundSize = cfg.drift ? ('auto, auto, '+DRIFT_MOTES_BG_SIZE) : '';
-  document.documentElement.style.backgroundSize = cfg.drift ? ('auto, auto, '+DRIFT_MOTES_BG_SIZE) : '';
   document.body.classList.toggle('wallpaper-shimmer-active', !!cfg.shimmer);
-  document.body.classList.toggle('wallpaper-drift-active', !!cfg.drift);
 }
 function applyEquippedDecor(){
   applyPotTheme(state.decor.equippedPot);

@@ -2345,11 +2345,13 @@ function renderLabSlotSheet(slot){
     const remaining = (r.startedAt+r.durationMs) - Date.now();
     const pct = clamp(((Date.now()-r.startedAt)/r.durationMs)*100, 0, 100);
     const machineHtml = renderLabMachine(phase, r.genome, 6);
+    const finishCost = instantResearchCost(slot);
     body.innerHTML = '<div class="sheet-head"><h3>'+cfg.label+'</h3></div>' + machineHtml + '<div class="lab-card">'
       + '<div class="lab-name">'+buildSpecimenName(r.species, r.genome)+'</div>'
       + '<div class="lab-tier">'+tcfg.name+' specimen \u00B7 researching</div>'
       + '<div class="lab-timer" id="labTimer">'+fmtTime(remaining)+'</div>'
       + '<div class="lab-progress"><div class="lab-progress-fill" id="labProgressFill" style="width:'+pct+'%"></div></div>'
+      + '<button class="btn btn-small btn-block" id="labFinishBtn" style="margin-top:10px;" '+((state.gems||0)<finishCost?'disabled':'')+' onclick="onInstantFinishResearch('+slot+')">Finish Research Now ('+finishCost+' '+renderGemIcon(2)+')</button>'
       + '</div>';
   } else {
     const r = state.researchSlots[slot];
@@ -2371,6 +2373,15 @@ function updateLabSlotLiveBits(slot){
   const pct = clamp(((Date.now()-r.startedAt)/r.durationMs)*100, 0, 100);
   const fillEl = document.getElementById('labProgressFill');
   if(fillEl) fillEl.style.width = pct+'%';
+  const finishBtn = document.getElementById('labFinishBtn');
+  if(finishBtn){ const cost = instantResearchCost(slot); finishBtn.innerHTML = 'Finish Research Now ('+cost+' '+renderGemIcon(2)+')'; finishBtn.disabled = (state.gems||0)<cost; }
+}
+function onInstantFinishResearch(slot){
+  if(instantFinishResearch(slot)){
+    renderLabSlotSheet(slot);
+    renderLab();
+    updateHeader();
+  }
 }
 function onStartResearch(stackId, slot){
   if(!startResearch(stackId, slot)) return;
@@ -3530,6 +3541,22 @@ function getEffectiveResearchDuration(tier){
   const speedFactor = Math.max(0.3, 1 - labSpeedLevel*(UPGRADES.labSpeed.perLevel/100));
   const prestigeSpeedFactor = Math.max(0.4, 1 - getPrestigeBonus('labSpeedBonus'));
   return Math.round(cfg.durationMs * speedFactor * prestigeSpeedFactor);
+}
+function instantResearchCost(slot){
+  const r = state.researchSlots[slot];
+  if(!r) return 0;
+  const remainingSec = Math.max(0, (r.startedAt+r.durationMs) - Date.now())/1000;
+  return Math.max(1, Math.ceil(remainingSec / 40));
+}
+function instantFinishResearch(slot){
+  const r = state.researchSlots[slot];
+  if(!r || getResearchStatus(slot)!=='researching') return false;
+  const cost = instantResearchCost(slot);
+  if((state.gems||0) < cost) return false;
+  state.gems -= cost;
+  r.startedAt = Date.now() - r.durationMs;
+  saveState();
+  return true;
 }
 function startResearch(stackId, slot){
   if(!isLabSlotUnlocked(slot)) return false;

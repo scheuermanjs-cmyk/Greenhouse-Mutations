@@ -3711,6 +3711,58 @@ function autoPestTick(){
   if(!squashed.length) return;
   showToast('🧹 Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s'));
 }
+function squashPestOffline(plot, summary){
+  const pestType = plot.pest && plot.pest.type;
+  plot.pest = null;
+  bumpTaskProgress('squash_pest', 1);
+  state.achStats.pestsSquashed = (state.achStats.pestsSquashed||0)+1;
+  if(pestType){
+    if(!state.pestsSeen) state.pestsSeen = {};
+    state.pestsSeen[pestType] = (state.pestsSeen[pestType]||0)+1;
+  }
+  addGems(1);
+  grantXp(3);
+  summary.pestsSquashed++;
+}
+function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant, hasPest){
+  const summary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0 };
+  const plot = plotsForWing(wing)[idx];
+  let cursor = awayStart;
+  let guard = 0;
+  while(guard++ < 200){
+    if(plot.locked) break;
+    if(plot.status==='empty'){
+      if(!hasPlant) break;
+      const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
+      if(!stack) break;
+      if(!plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) break;
+      plot.plantedAt = cursor; plot.lastDeathCheck = cursor; plot.lastPestCheck = cursor; plot.lastSprinklerCheck = cursor; plot.lastLightCheck = cursor;
+      summary.planted++;
+      continue;
+    }
+    if(plot.status!=='growing') break;
+    const finishAt = plot.plantedAt + plot.growthDurationMs;
+    const evalAt = Math.min(finishAt, awayEnd);
+    applyDeathRisk(plot, evalAt);
+    if(plot.status==='wilted') break;
+    applyPestRisk(plot, evalAt);
+    if(plot.pest && hasPest) squashPestOffline(plot, summary);
+    applySprinkler(plot, evalAt);
+    applyGardenLight(plot, evalAt);
+    if(finishAt > awayEnd) break;
+    if(!hasHarvest) break;
+    const result = harvestPlot(idx, wing);
+    if(!result) break;
+    summary.harvests++;
+    summary.spores += result.sellValue;
+    if(result.isNew) summary.newFinds++;
+    cursor = finishAt;
+  }
+  return summary;
+}
+function mergeOfflineSummary(a, b){
+  return { harvests:a.harvests+b.harvests, spores:a.spores+b.spores, newFinds:a.newFinds+b.newFinds, planted:a.planted+b.planted, pestsSquashed:a.pestsSquashed+b.pestsSquashed };
+}
 function countReadyPlots(wing='verdant'){
   return plotsForWing(wing).filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
 }
@@ -4512,10 +4564,17 @@ function collectResearchFromWelcome(){
     closeSheet();
   }
 }
-function renderWelcomeBackSheet(wiltedCount, readyCount, researchDone){
+function renderWelcomeBackSheet(wiltedCount, readyCount, researchDone, offlineSummary){
   const body = document.getElementById('sheetBody');
   let html = '<div class="sheet-head"><h3>Welcome back!</h3></div>'
     + '<p class="sheet-blurb">Here’s what happened while you were away.</p>';
+  if(offlineSummary && (offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0)){
+    html += '<div class="sheet-subhead">While you were away</div>';
+    if(offlineSummary.harvests>0) html += '<div class="stat-row"><span>🌿 Auto-harvested</span><span>'+offlineSummary.harvests+' &nbsp;+'+offlineSummary.spores+'◆</span></div>';
+    if(offlineSummary.newFinds>0) html += '<div class="stat-row"><span>New discoveries</span><span>'+offlineSummary.newFinds+'</span></div>';
+    if(offlineSummary.planted>0) html += '<div class="stat-row"><span>🌾 Auto-planted</span><span>'+offlineSummary.planted+'</span></div>';
+    if(offlineSummary.pestsSquashed>0) html += '<div class="stat-row"><span>🧹 Pests exterminated</span><span>'+offlineSummary.pestsSquashed+'</span></div>';
+  }
   if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
   if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
   if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
@@ -4526,10 +4585,10 @@ function renderWelcomeBackSheet(wiltedCount, readyCount, researchDone){
   html += '</div>';
   body.innerHTML = html;
 }
-function openWelcomeBack(wiltedCount, readyCount, researchDone){
+function openWelcomeBack(wiltedCount, readyCount, researchDone, offlineSummary){
   currentSheetIdx = null;
   revealShowing = false;
-  renderWelcomeBackSheet(wiltedCount, readyCount, researchDone);
+  renderWelcomeBackSheet(wiltedCount, readyCount, researchDone, offlineSummary);
   document.getElementById('sheet').classList.add('open');
   document.getElementById('sheetBackdrop').classList.add('open');
 }
@@ -4575,7 +4634,7 @@ function claimDailyStreak(){
   if(pendingWelcomeBackArgs){
     const args = pendingWelcomeBackArgs;
     pendingWelcomeBackArgs = null;
-    openWelcomeBack(args.wiltedCount, args.readyCount, args.researchDone);
+    openWelcomeBack(args.wiltedCount, args.readyCount, args.researchDone, args.offlineSummary);
   } else {
     closeSheet();
   }
@@ -4715,28 +4774,32 @@ function tick(){
 /* ===================== INIT ===================== */
 async function init(){
   state = await loadState();
+  const now = Date.now();
+  const awayStart = state.lastSavedAt || now;
+  const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
   applyEquippedDecor();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   ensureTaskBoardCurrent();
   ensureMerchantCurrent();
   ensureVisitorCurrent();
-  const now = Date.now();
-  const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
+  const hasAutoHarvest = getPrestigeBonus('autoHarvest') > 0;
+  const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
+  const hasAutoPest = getPrestigeBonus('autoPest') > 0;
   let wiltedCount = 0, readyCount = 0;
-  const tickAwayPlot = (p)=>{
-    if(p.status==='growing'){
+  let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0 };
+  const tickAwayWing = (wing)=>{
+    plotsForWing(wing).forEach((p, idx)=>{
+      if(p.locked || (p.status!=='growing' && p.status!=='empty')) return;
       const before = p.status;
-      applyDeathRisk(p, now);
-      applyPestRisk(p, now);
-      applySprinkler(p, now);
-      applyGardenLight(p, now);
+      const result = simulateOfflinePlot(idx, wing, awayStart, now, hasAutoHarvest, hasAutoPlant, hasAutoPest);
+      offlineSummary = mergeOfflineSummary(offlineSummary, result);
       if(p.status==='wilted' && before!=='wilted') wiltedCount++;
       else if(getDisplayStatus(p)==='ready') readyCount++;
-    }
+    });
   };
-  state.plots.forEach(tickAwayPlot);
-  state.desertPlots.forEach(tickAwayPlot);
+  tickAwayWing('verdant');
+  tickAwayWing('desert');
   buildPlotTiles();
   buildDesertPlotTiles();
   updateAllTiles();
@@ -4753,13 +4816,14 @@ async function init(){
   if(!state.tutorialSeen){
     openIntro();
   } else {
-    const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn);
+    const hasOfflineEarnings = offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0;
+    const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn || hasOfflineEarnings);
     const streakInfo = pendingDailyStreakInfo();
     if(streakInfo){
-      if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn };
+      if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn, offlineSummary };
       openDailyStreakModal(streakInfo);
     } else if(showWelcomeBack){
-      openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn);
+      openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn, offlineSummary);
     }
   }
   saveState();

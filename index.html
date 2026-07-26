@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -252,7 +252,7 @@
 
   /* ---------- wing toggle + desert wing ---------- */
   .wing-toggle{ display:flex; gap:2px; padding:6px 6px 0; background:var(--panel); }
-  .wing-toggle-btn{ flex:1; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:9px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
+  .wing-toggle-btn{ flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:9px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
   .wing-toggle-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel); }
   .wing-toggle-btn.wing-locked{ opacity:.45; }
   .desert-wing-panel{ position:relative; background:linear-gradient(to bottom, #C98A4B 0%, #8B5A2B 100%); padding:14px 10px 10px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); overflow:hidden; }
@@ -261,7 +261,9 @@
     clip-path:polygon(0% 100%, 6% 30%, 16% 70%, 26% 10%, 38% 55%, 50% 20%, 62% 60%, 74% 15%, 86% 50%, 100% 25%, 100% 100%);
   }
   .desert-wing-panel::after{
-    content:'🌵'; position:absolute; top:2px; right:8px; font-size:11px; opacity:.8; filter:grayscale(.3);
+    content:''; position:absolute; top:2px; right:8px; width:14px; height:14px; opacity:.85;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Crect x='2' y='0' width='1' height='2' fill='%237ED957'/%3E%3Crect x='4' y='0' width='1' height='2' fill='%237ED957'/%3E%3Crect x='0' y='2' width='3' height='1' fill='%237ED957'/%3E%3Crect x='4' y='2' width='3' height='1' fill='%237ED957'/%3E%3Crect x='2' y='3' width='1' height='2' fill='%237ED957'/%3E%3Crect x='4' y='3' width='1' height='2' fill='%237ED957'/%3E%3Crect x='2' y='5' width='3' height='1' fill='%237ED957'/%3E%3Crect x='3' y='6' width='1' height='1' fill='%237ED957'/%3E%3C/svg%3E");
+    background-size:contain; background-repeat:no-repeat; image-rendering:pixelated;
   }
 
   .tile-top-badge{ position:absolute; top:4px; left:2px; right:2px; text-align:center; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; line-height:1.2; pointer-events:none; }
@@ -704,8 +706,8 @@
           <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
         </div>
       </div>
-      <div class="storm-badge" id="mutationStormBadge" style="display:none;">⚡ Mutation Storm — mutation odds up</div>
-      <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;">🐛 Pest Swarm — infestations more likely</div>
+      <div class="storm-badge" id="mutationStormBadge" style="display:none;"><span id="stormBadgeIcon"></span> Mutation Storm — mutation odds up</div>
+      <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;"><span id="pestSwarmBadgeIcon"></span> Pest Swarm — infestations more likely</div>
       <div class="plot-grid" id="plotGrid"></div>
       <div class="desert-wing-panel" id="desertWingPanel" style="display:none;">
         <div class="plot-grid" id="plotGridDesert"></div>
@@ -824,8 +826,8 @@
 
   <div class="bottom-bar">
     <div class="wing-toggle" id="wingToggle">
-      <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')">🌿 Verdant Greenhouse</button>
-      <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')">🏜️ Desert Wing</button>
+      <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')"><span id="wingVerdantIcon"></span> Verdant Greenhouse</button>
+      <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')"><span id="wingDesertIcon"></span> Desert Wing</button>
     </div>
     <nav>
       <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
@@ -1098,52 +1100,52 @@ function doPrestige(){
   renderUpgrades();
   renderHerbarium();
   renderPrestige();
-  showToast('✨ Prestige '+state.prestige.count+'! Earned '+earned+' skill point'+(earned===1?'':'s')+'.');
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('sparkle', true)+'<span>Prestige '+state.prestige.count+'! Earned '+earned+' skill point'+(earned===1?'':'s')+'.</span></span>');
   return true;
 }
 /* ===================== TASK BOARD ===================== */
 /* ===================== ACHIEVEMENTS ===================== */
 const ACHIEVEMENTS = [
-  { id:'first_harvest',   cat:'Harvesting',  icon:'\uD83C\uDF31', name:'First Harvest',       desc:'Harvest your first plant',              reward:{spores:10,  xp:5 } },
-  { id:'harvest_10',      cat:'Harvesting',  icon:'\uD83C\uDF3F', name:'Green Thumb',          desc:'Harvest 10 plants',                     reward:{spores:25,  xp:15} },
-  { id:'harvest_50',      cat:'Harvesting',  icon:'\uD83C\uDF3E', name:'Prolific Grower',       desc:'Harvest 50 plants',                     reward:{spores:75,  xp:40} },
-  { id:'harvest_100',     cat:'Harvesting',  icon:'\uD83C\uDFC6', name:'Century Harvest',       desc:'Harvest 100 plants',                    reward:{spores:150, xp:80} },
-  { id:'well_tended_5',   cat:'Harvesting',  icon:'\u2728',       name:'Careful Hands',        desc:'Land 5 well-tended harvests',           reward:{spores:40,  xp:20} },
-  { id:'all_species',     cat:'Harvesting',  icon:'\uD83C\uDF1F', name:'Full Garden',           desc:'Harvest all 6 species at least once',   reward:{spores:50,  xp:30} },
-  { id:'first_mutation',  cat:'Mutations',   icon:'\u2728',       name:'Something Changed',     desc:'Discover your first mutation',          reward:{spores:15,  xp:10} },
-  { id:'first_hybrid',    cat:'Mutations',   icon:'\uD83D\uDD00', name:'Cross-Pollinated',      desc:'Discover your first hybrid',            reward:{spores:20,  xp:15} },
-  { id:'rare_trait',      cat:'Mutations',   icon:'\u2B50',       name:'Rare Find',             desc:'Discover a plant with a rare trait',    reward:{spores:30,  xp:20} },
-  { id:'double_mutation', cat:'Mutations',   icon:'\uD83C\uDF1F', name:'Double Trouble',        desc:'Discover a plant with two rare traits', reward:{spores:120, xp:70} },
-  { id:'herbarium_5',     cat:'Mutations',   icon:'\uD83D\uDCD6', name:'Budding Botanist',      desc:'Press 5 unique strains',                reward:{spores:20,  xp:10} },
-  { id:'herbarium_15',    cat:'Mutations',   icon:'\uD83D\uDCDA', name:'Field Guide',           desc:'Press 15 unique strains',               reward:{spores:60,  xp:35} },
-  { id:'herbarium_25',    cat:'Mutations',   icon:'\uD83C\uDF38', name:'Master Botanist',       desc:'Press 25 unique strains',               reward:{spores:120, xp:60} },
-  { id:'first_pest',      cat:'Pests',       icon:'\uD83D\uDC1B', name:'Pest Control',          desc:'Squash your first pest',                reward:{spores:10,  xp:5 } },
-  { id:'pest_10',         cat:'Pests',       icon:'\uD83E\uDEB2', name:'Exterminator',          desc:'Squash 10 pests',                       reward:{spores:35,  xp:20} },
-  { id:'pest_free',       cat:'Pests',       icon:'\uD83D\uDEE1', name:'Spotless',              desc:'Harvest 5 plants with no pests ever',   reward:{spores:40,  xp:20} },
-  { id:'first_task',      cat:'Tasks',       icon:'\uD83D\uDCCB', name:'Board Member',          desc:'Complete your first task',              reward:{spores:15,  xp:10} },
-  { id:'tasks_10',        cat:'Tasks',       icon:'\u2705',       name:'Task Master',           desc:'Complete 10 tasks total',               reward:{spores:50,  xp:30} },
-  { id:'first_upgrade',   cat:'Upgrades',    icon:'\uD83D\uDD27', name:'Investor',              desc:'Buy your first upgrade',                reward:{spores:10,  xp:5 } },
-  { id:'max_upgrade',     cat:'Upgrades',    icon:'\uD83D\uDD31', name:'Maxed Out',             desc:'Max out any single upgrade',            reward:{spores:60,  xp:30} },
-  { id:'level_5',         cat:'Levelling',   icon:'\u2B06',       name:'Apprentice',            desc:'Reach level 5',                         reward:{spores:30,  xp:0 } },
-  { id:'level_10',        cat:'Levelling',   icon:'\u2B06',       name:'Journeyman',            desc:'Reach level 10',                        reward:{spores:75,  xp:0 } },
-  { id:'level_20',        cat:'Levelling',   icon:'\u2B06',       name:'Expert',                desc:'Reach level 20',                        reward:{spores:150, xp:0 } },
-  { id:'spores_500',      cat:'Milestones',  icon:'\u25C6',       name:'Saving Up',             desc:'Earn 500 total spores',                 reward:{spores:0,   xp:15} },
-  { id:'spores_2000',     cat:'Milestones',  icon:'\u25C6\u25C6', name:'Spore Hoarder',         desc:'Earn 2,000 total spores ever',          reward:{spores:50,  xp:40} },
-  { id:'unlock_all',      cat:'Milestones',  icon:'\uD83D\uDD13', name:'Full House',            desc:'Unlock all 9 pots',                     reward:{spores:80,  xp:40} },
-  { id:'unlock_all_desert', cat:'Milestones', icon:'\uD83D\uDD13', name:'Sands Uncovered',      desc:'Unlock all 9 desert pots',              reward:{spores:120, xp:60} },
-  { id:'first_research',  cat:'Research',    icon:'\uD83D\uDD2C', name:'Lab Rat',               desc:'Complete your first research',          reward:{spores:15,  xp:10} },
-  { id:'research_10',     cat:'Research',    icon:'\uD83D\uDD2C', name:'Dedicated Researcher',  desc:'Complete 10 research runs',             reward:{spores:60,  xp:30} },
-  { id:'research_rare',   cat:'Research',    icon:'\u2B50',       name:'Rare Discovery',        desc:'Collect a Rare-tier research or better', reward:{spores:40,  xp:20} },
-  { id:'research_exceptional', cat:'Research', icon:'\uD83C\uDFC6', name:'Breakthrough',        desc:'Collect an Exceptional-tier research',  reward:{spores:80,  xp:40} },
-  { id:'research_legendary', cat:'Research', icon:'\uD83C\uDFC6', name:'Legendary Breakthrough', desc:'Collect a Legendary-tier research',  reward:{spores:200, xp:100} },
-  { id:'gems_10',         cat:'Milestones',  icon:'\u2728',           name:'Gem Collector',        desc:'Earn 10 gems (lifetime)',               reward:{spores:40,  xp:20} },
-  { id:'gems_50',         cat:'Milestones',  icon:'\u2B50',           name:'Gem Hoarder',          desc:'Earn 50 gems (lifetime)',               reward:{spores:100, xp:50} },
-  { id:'first_prestige',  cat:'Prestige',    icon:'\uD83C\uDFC6',           name:'Fresh Start',          desc:'Prestige for the first time',           reward:{spores:100, xp:50} },
-  { id:'prestige_5',      cat:'Prestige',    icon:'\uD83C\uDFC6',           name:'Reborn Again',         desc:'Prestige 5 times',                      reward:{spores:300, xp:150} },
-  { id:'first_decor',     cat:'Collection',  icon:'\uD83D\uDD33',           name:'Decorator',            desc:'Unlock your first decoration',          reward:{spores:30,  xp:15} },
-  { id:'all_decor',       cat:'Collection',  icon:'\uD83D\uDD33',           name:'Interior Designer',    desc:'Unlock every pot finish and wallpaper', reward:{spores:180, xp:90} },
-  { id:'first_pest_id',   cat:'Pests',       icon:'\uD83D\uDC1B',           name:'Know Your Enemy',      desc:'Identify your first pest species',      reward:{spores:20,  xp:10} },
-  { id:'pest_bestiary',   cat:'Pests',       icon:'\uD83D\uDCD6',           name:'Pest Bestiary',        desc:'Identify every pest species',           reward:{spores:120, xp:60} },
+  { id:'first_harvest',   cat:'Harvesting',  name:'First Harvest',       desc:'Harvest your first plant',              reward:{spores:10,  xp:5 } },
+  { id:'harvest_10',      cat:'Harvesting',  name:'Green Thumb',          desc:'Harvest 10 plants',                     reward:{spores:25,  xp:15} },
+  { id:'harvest_50',      cat:'Harvesting',  name:'Prolific Grower',       desc:'Harvest 50 plants',                     reward:{spores:75,  xp:40} },
+  { id:'harvest_100',     cat:'Harvesting',  name:'Century Harvest',       desc:'Harvest 100 plants',                    reward:{spores:150, xp:80} },
+  { id:'well_tended_5',   cat:'Harvesting',  name:'Careful Hands',        desc:'Land 5 well-tended harvests',           reward:{spores:40,  xp:20} },
+  { id:'all_species',     cat:'Harvesting',  name:'Full Garden',           desc:'Harvest all 6 species at least once',   reward:{spores:50,  xp:30} },
+  { id:'first_mutation',  cat:'Mutations',   name:'Something Changed',     desc:'Discover your first mutation',          reward:{spores:15,  xp:10} },
+  { id:'first_hybrid',    cat:'Mutations',   name:'Cross-Pollinated',      desc:'Discover your first hybrid',            reward:{spores:20,  xp:15} },
+  { id:'rare_trait',      cat:'Mutations',   name:'Rare Find',             desc:'Discover a plant with a rare trait',    reward:{spores:30,  xp:20} },
+  { id:'double_mutation', cat:'Mutations',   name:'Double Trouble',        desc:'Discover a plant with two rare traits', reward:{spores:120, xp:70} },
+  { id:'herbarium_5',     cat:'Mutations',   name:'Budding Botanist',      desc:'Press 5 unique strains',                reward:{spores:20,  xp:10} },
+  { id:'herbarium_15',    cat:'Mutations',   name:'Field Guide',           desc:'Press 15 unique strains',               reward:{spores:60,  xp:35} },
+  { id:'herbarium_25',    cat:'Mutations',   name:'Master Botanist',       desc:'Press 25 unique strains',               reward:{spores:120, xp:60} },
+  { id:'first_pest',      cat:'Pests',       name:'Pest Control',          desc:'Squash your first pest',                reward:{spores:10,  xp:5 } },
+  { id:'pest_10',         cat:'Pests',       name:'Exterminator',          desc:'Squash 10 pests',                       reward:{spores:35,  xp:20} },
+  { id:'pest_free',       cat:'Pests',       name:'Spotless',              desc:'Harvest 5 plants with no pests ever',   reward:{spores:40,  xp:20} },
+  { id:'first_task',      cat:'Tasks',       name:'Board Member',          desc:'Complete your first task',              reward:{spores:15,  xp:10} },
+  { id:'tasks_10',        cat:'Tasks',       name:'Task Master',           desc:'Complete 10 tasks total',               reward:{spores:50,  xp:30} },
+  { id:'first_upgrade',   cat:'Upgrades',    name:'Investor',              desc:'Buy your first upgrade',                reward:{spores:10,  xp:5 } },
+  { id:'max_upgrade',     cat:'Upgrades',    name:'Maxed Out',             desc:'Max out any single upgrade',            reward:{spores:60,  xp:30} },
+  { id:'level_5',         cat:'Levelling',   name:'Apprentice',            desc:'Reach level 5',                         reward:{spores:30,  xp:0 } },
+  { id:'level_10',        cat:'Levelling',   name:'Journeyman',            desc:'Reach level 10',                        reward:{spores:75,  xp:0 } },
+  { id:'level_20',        cat:'Levelling',   name:'Expert',                desc:'Reach level 20',                        reward:{spores:150, xp:0 } },
+  { id:'spores_500',      cat:'Milestones',  name:'Saving Up',             desc:'Earn 500 total spores',                 reward:{spores:0,   xp:15} },
+  { id:'spores_2000',     cat:'Milestones',  name:'Spore Hoarder',         desc:'Earn 2,000 total spores ever',          reward:{spores:50,  xp:40} },
+  { id:'unlock_all',      cat:'Milestones',  name:'Full House',            desc:'Unlock all 9 pots',                     reward:{spores:80,  xp:40} },
+  { id:'unlock_all_desert', cat:'Milestones', name:'Sands Uncovered',      desc:'Unlock all 9 desert pots',              reward:{spores:120, xp:60} },
+  { id:'first_research',  cat:'Research',    name:'Lab Rat',               desc:'Complete your first research',          reward:{spores:15,  xp:10} },
+  { id:'research_10',     cat:'Research',    name:'Dedicated Researcher',  desc:'Complete 10 research runs',             reward:{spores:60,  xp:30} },
+  { id:'research_rare',   cat:'Research',    name:'Rare Discovery',        desc:'Collect a Rare-tier research or better', reward:{spores:40,  xp:20} },
+  { id:'research_exceptional', cat:'Research', name:'Breakthrough',        desc:'Collect an Exceptional-tier research',  reward:{spores:80,  xp:40} },
+  { id:'research_legendary', cat:'Research', name:'Legendary Breakthrough', desc:'Collect a Legendary-tier research',  reward:{spores:200, xp:100} },
+  { id:'gems_10',         cat:'Milestones',  name:'Gem Collector',        desc:'Earn 10 gems (lifetime)',               reward:{spores:40,  xp:20} },
+  { id:'gems_50',         cat:'Milestones',  name:'Gem Hoarder',          desc:'Earn 50 gems (lifetime)',               reward:{spores:100, xp:50} },
+  { id:'first_prestige',  cat:'Prestige',    name:'Fresh Start',          desc:'Prestige for the first time',           reward:{spores:100, xp:50} },
+  { id:'prestige_5',      cat:'Prestige',    name:'Reborn Again',         desc:'Prestige 5 times',                      reward:{spores:300, xp:150} },
+  { id:'first_decor',     cat:'Collection',  name:'Decorator',            desc:'Unlock your first decoration',          reward:{spores:30,  xp:15} },
+  { id:'all_decor',       cat:'Collection',  name:'Interior Designer',    desc:'Unlock every pot finish and wallpaper', reward:{spores:180, xp:90} },
+  { id:'first_pest_id',   cat:'Pests',       name:'Know Your Enemy',      desc:'Identify your first pest species',      reward:{spores:20,  xp:10} },
+  { id:'pest_bestiary',   cat:'Pests',       name:'Pest Bestiary',        desc:'Identify every pest species',           reward:{spores:120, xp:60} },
 ];
 const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
 
@@ -1163,6 +1165,11 @@ const ACH_PIX = {
   recycle: {color:'#B5764A',rows:['..#.#..','.#...#.','#.....#','#.....#','.#...#.','..#.#..','.......' ]},
   star:    {color:'#FFC857',rows:['...#...','..###..','.#####.','#######','..#.#..','.#...#.','#.....#' ]},
   trophy:  {color:'#FFD24C',rows:['.#####.','#.....#','#.....#','.#####.','..###..','.#####.','#######' ]},
+  bolt:    {color:'#FFD24C',rows:['....##.','...##..','..##...','.#####.','...##..','..##...','.##....' ]},
+  cactus:  {color:'#7ED957',rows:['..#.#..','..#.#..','###.###','..#.#..','..#.#..','..###..','...#...' ]},
+  statue:  {color:'#A8B0AC',rows:['..###..','..###..','.#####.','..###..','..###..','.#####.','#######' ]},
+  tv:      {color:'#7EC8E3',rows:['.......','.#####.','#######','#.....#','#######','...#...','..###..' ]},
+  broom:   {color:'#D9A84C',rows:['......#','.....#.','....#..','...#...','..#....','.#.###.','#.#.#.#' ]},
 };
 const ACH_ICON_MAP = {
   first_harvest:'seedling', harvest_10:'seedling', harvest_50:'wheat', harvest_100:'wheat',
@@ -1181,9 +1188,9 @@ const ACH_ICON_MAP = {
   first_decor:'dotgrid', all_decor:'dotgrid',
   first_pest_id:'bug', pest_bestiary:'book',
 };
-function renderPixIcon(key, unlocked){
+function renderPixIcon(key, unlocked, cell){
   const icon = ACH_PIX[key] || ACH_PIX.diamond;
-  const cell = 4;
+  cell = cell || 4;
   const cols = icon.rows[0].length;
   const color = unlocked ? icon.color : '#3A4540';
   let html = '';
@@ -1256,7 +1263,7 @@ function checkAchievements(){
       if(ach){
         if(ach.reward.spores) addSpores(ach.reward.spores);
         if(ach.reward.xp) grantXp(ach.reward.xp);
-        showToast(ach.icon+' Achievement: '+ach.name+(ach.reward.spores ? '  +'+ach.reward.spores+'\u25C6' : ''));
+        showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderAchIcon(id, true)+'<span>Achievement: '+ach.name+(ach.reward.spores ? '  +'+ach.reward.spores+'\u25C6' : '')+'</span></span>');
       }
       anyNew = true;
     }
@@ -1601,7 +1608,7 @@ function renderMonument(){
 }
 function onContributeToMonument(){
   if(contributeToMonument()){
-    showToast('🗿 The monument grows a little taller. +0.5% harvest spores, permanently.');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('statue', true)+'<span>The monument grows a little taller. +0.5% harvest spores, permanently.</span></span>');
   }
 }
 
@@ -1651,7 +1658,7 @@ function onWatchAdForGems(){
     saveState();
     updateHeader();
     renderConsumables();
-    showToast('📺 +'+AD_GEM_REWARD+' gems from the ad!');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('tv', true)+'<span>+'+AD_GEM_REWARD+' gems from the ad!</span></span>');
   }, document.getElementById('watchAdGemsBtn'));
 }
 function renderConsumables(){
@@ -2981,14 +2988,14 @@ function rollWeather(){
   else weather = 'storm';
   applyWeather(weather);
   if(weather==='storm' && prevWeather!=='storm'){
-    showToast('⚡ A mutation storm rolls in — mutation odds are up while it lasts!');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('bolt', true)+'<span>A mutation storm rolls in — mutation odds are up while it lasts!</span></span>');
   }
   updateStormBadge();
 
   const wasPestSwarm = pestSwarmActive;
   pestSwarmActive = Math.random() < PEST_SWARM_CHANCE;
   if(pestSwarmActive && !wasPestSwarm){
-    showToast('🐛 A pest swarm is moving through — infestations are more likely!');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('bug', true)+'<span>A pest swarm is moving through — infestations are more likely!</span></span>');
   }
   updatePestSwarmBadge();
 }
@@ -3564,7 +3571,7 @@ function checkHerbSets(){
       state.herbSets[set.id] = Date.now();
       addSpores(set.reward.spores);
       if(set.reward.xp) grantXp(set.reward.xp);
-      showToast('✨ Set complete: '+set.name+'  +'+set.reward.spores+'◆');
+      showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('sparkle', true)+'<span>Set complete: '+set.name+'  +'+set.reward.spores+'◆</span></span>');
       anyNew = true;
     }
   }
@@ -3863,9 +3870,9 @@ function autoHarvestTick(){
   if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
   const totalSpores = results.reduce((sum,r)=>sum+r.sellValue, 0);
   const newFinds = results.filter(r=>r.isNew).length;
-  let msg = '🌿 Auto-harvested '+results.length+(results.length===1?' plot':' plots')+'  +'+totalSpores+'◆';
+  let msg = 'Auto-harvested '+results.length+(results.length===1?' plot':' plots')+'  +'+totalSpores+'◆';
   if(newFinds) msg += '  ('+newFinds+' new!)';
-  showToast(msg);
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('seedling', true)+'<span>'+msg+'</span></span>');
 }
 function autoPlantWing(wing){
   const planted = [];
@@ -3882,7 +3889,7 @@ function autoPlantTick(){
   const planted = autoPlantWing('verdant').concat(autoPlantWing('desert'));
   if(!planted.length) return;
   updateAllTiles(); updateAllDesertTiles(); updateHeader();
-  showToast('🌾 Farmers planted '+planted.length+' seed'+(planted.length===1?'':'s')+' from your seed bank');
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted '+planted.length+' seed'+(planted.length===1?'':'s')+' from your seed bank</span></span>');
 }
 function autoPestWing(wing){
   const squashed = [];
@@ -3895,7 +3902,7 @@ function autoPestTick(){
   if(getPrestigeBonus('autoPest') <= 0) return;
   const squashed = autoPestWing('verdant').concat(autoPestWing('desert'));
   if(!squashed.length) return;
-  showToast('🧹 Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s'));
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('broom', true)+'<span>Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s')+'</span></span>');
 }
 function squashPestOffline(plot, summary){
   const pestType = plot.pest && plot.pest.type;
@@ -4083,7 +4090,7 @@ function onQuickReplantClick(){
   const planted = quickReplant(currentWing);
   if(!planted) return;
   refreshTilesForWing(currentWing); updateHeader();
-  showToast('🌱 Replanted '+planted+' pot'+(planted===1?'':'s')+' with your best available seeds.');
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('seedling', true)+'<span>Replanted '+planted+' pot'+(planted===1?'':'s')+' with your best available seeds.</span></span>');
 }
 function updateQuickReplantButton(){
   const btn = document.getElementById('quickReplantBtn');
@@ -4164,7 +4171,7 @@ function updateDesertToggleLock(){
 }
 function switchWing(wing){
   if(wing==='desert' && !isDesertWingUnlocked()){
-    showToast('🏜️ The Desert Wing unlocks after your first Prestige');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('cactus', true)+'<span>The Desert Wing unlocks after your first Prestige</span></span>');
     return;
   }
   currentWing = wing;
@@ -4708,7 +4715,7 @@ function clearWilted(idx, wing='verdant'){
 }
 function showScreen(name){
   if(name==='lab' && !isLabUnlockedByLevel()){
-    showToast('🔬 The Research Lab unlocks at Level '+LAB_UNLOCK_LEVEL);
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('gear', true)+'<span>The Research Lab unlocks at Level '+LAB_UNLOCK_LEVEL+'</span></span>');
     return;
   }
   document.getElementById('screen-greenhouse').classList.toggle('active', name==='greenhouse');
@@ -5028,6 +5035,10 @@ async function init(){
   applyEquippedDecor();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
+  document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);
+  document.getElementById('pestSwarmBadgeIcon').innerHTML = renderPixIcon('bug', true, 2);
+  document.getElementById('wingVerdantIcon').innerHTML = renderPixIcon('seedling', true, 2);
+  document.getElementById('wingDesertIcon').innerHTML = renderPixIcon('cactus', true, 2);
   ensureTaskBoardCurrent();
   ensureMerchantCurrent();
   ensureVisitorCurrent();

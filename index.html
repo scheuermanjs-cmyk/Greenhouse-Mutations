@@ -5027,18 +5027,10 @@ function tick(){
 }
 
 /* ===================== INIT ===================== */
-async function init(){
-  state = await loadState();
+function runAwayCatchup(awayStartOverride){
   const now = Date.now();
-  const awayStart = state.lastSavedAt || now;
-  const away = state.lastSavedAt ? now-state.lastSavedAt : 0;
-  applyEquippedDecor();
-  document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
-  document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
-  document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);
-  document.getElementById('pestSwarmBadgeIcon').innerHTML = renderPixIcon('bug', true, 2);
-  document.getElementById('wingVerdantIcon').innerHTML = renderPixIcon('seedling', true, 2);
-  document.getElementById('wingDesertIcon').innerHTML = renderPixIcon('cactus', true, 2);
+  const awayStart = awayStartOverride || state.lastSavedAt || now;
+  const away = now - awayStart;
   ensureTaskBoardCurrent();
   ensureMerchantCurrent();
   ensureVisitorCurrent();
@@ -5060,8 +5052,6 @@ async function init(){
   };
   tickAwayWing('verdant');
   tickAwayWing('desert');
-  buildPlotTiles();
-  buildDesertPlotTiles();
   updateAllTiles();
   updateAllDesertTiles();
   updateHeader();
@@ -5072,10 +5062,7 @@ async function init(){
   checkHerbSets();
   updateLabBadge();
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
-  if(!state.everPlanted) document.body.classList.add('show-hint');
-  if(!state.tutorialSeen){
-    openIntro();
-  } else {
+  if(state.tutorialSeen){
     const hasOfflineEarnings = offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0;
     const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn || hasOfflineEarnings);
     const streakInfo = pendingDailyStreakInfo();
@@ -5086,6 +5073,33 @@ async function init(){
       openWelcomeBack(wiltedCount, readyCount, researchDoneOnReturn, offlineSummary);
     }
   }
+  saveState();
+}
+let pageHiddenAt = null;
+document.addEventListener('visibilitychange', ()=>{
+  if(!state) return;
+  if(document.hidden){
+    pageHiddenAt = Date.now();
+  } else if(pageHiddenAt!=null){
+    const hiddenSince = pageHiddenAt;
+    pageHiddenAt = null;
+    if(Date.now()-hiddenSince >= 5000) runAwayCatchup(hiddenSince);
+  }
+});
+async function init(){
+  state = await loadState();
+  applyEquippedDecor();
+  document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
+  document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
+  document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);
+  document.getElementById('pestSwarmBadgeIcon').innerHTML = renderPixIcon('bug', true, 2);
+  document.getElementById('wingVerdantIcon').innerHTML = renderPixIcon('seedling', true, 2);
+  document.getElementById('wingDesertIcon').innerHTML = renderPixIcon('cactus', true, 2);
+  buildPlotTiles();
+  buildDesertPlotTiles();
+  runAwayCatchup();
+  if(!state.everPlanted) document.body.classList.add('show-hint');
+  if(!state.tutorialSeen) openIntro();
   saveState();
   initSwipeNav();
   setInterval(tick, 1000);

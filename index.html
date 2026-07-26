@@ -979,11 +979,11 @@ const SKILL_TREE = {
   undyingRoots: { name:'Undying Roots',    tier:4, branch:'resist', stat:'wiltResist',    perLevel:0.06, maxLevel:3, baseCost:5, scale:2.0,
     desc:(n)=> '-'+Math.round(n*100)+'% wilt risk', requires:{key:'precision', level:2} },
 
-  farmers:      { name:'Hired Farmers',    tier:5, branch:'growth', stat:'autoPlant',    perLevel:1,    maxLevel:1, baseCost:3, scale:1,
+  farmers:      { name:'Hired Farmers',    tier:1, branch:'growth', stat:'autoPlant',    perLevel:1,    maxLevel:1, baseCost:3, scale:1,
     desc:()=> 'Empty pots are automatically replanted from your seed bank', requires:null },
-  autoHarvest: { name:'Tireless Hands',    tier:5, branch:'harvest', stat:'autoHarvest',   perLevel:1,    maxLevel:1, baseCost:3, scale:1,
+  autoHarvest: { name:'Tireless Hands',    tier:1, branch:'harvest', stat:'autoHarvest',   perLevel:1,    maxLevel:1, baseCost:3, scale:1,
     desc:()=> 'Ready plots are collected automatically, no tapping required', requires:null },
-  pestExterminator: { name:'Pest Exterminator', tier:5, branch:'resist', stat:'autoPest', perLevel:1, maxLevel:1, baseCost:3, scale:1,
+  pestExterminator: { name:'Pest Exterminator', tier:1, branch:'resist', stat:'autoPest', perLevel:1, maxLevel:1, baseCost:3, scale:1,
     desc:()=> 'Pests are squashed automatically the moment they appear', requires:null }
 };
 function defaultSkillTree(){
@@ -2099,10 +2099,11 @@ function renderPrestigeTree(){
   const tierNames = {1:'Tier I', 2:'Tier II', 3:'Tier III', 4:'Tier IV', 5:'Tier V'};
   let html = '';
   for(let tier=1; tier<=5; tier++){
+    const keysInTier = Object.keys(SKILL_TREE).filter(key=>SKILL_TREE[key].tier===tier);
+    if(!keysInTier.length) continue;
     html += '<div class="ach-category" style="margin-top:18px;">'+tierNames[tier]+'</div>';
-    for(const key in SKILL_TREE){
+    for(const key of keysInTier){
       const cfg = SKILL_TREE[key];
-      if(cfg.tier!==tier) continue;
       const level = skillNodeLevel(key);
       const maxed = level>=cfg.maxLevel;
       const locked = isSkillNodeLocked(key);

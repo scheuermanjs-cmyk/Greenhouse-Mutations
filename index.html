@@ -2156,7 +2156,7 @@ function confirmPrestige(){
 /* ===================== RENDER: RESEARCH LAB ===================== */
 function fmtDuration(ms){
   const mins = Math.round(ms/60000);
-  return mins<60 ? mins+'m' : (mins/60)+'h';
+  return mins<60 ? mins+'m' : (Math.round(mins/6)/10)+'h';
 }
 const LAB_MACHINE_W = 31;
 const LAB_MACHINE_H = 48;

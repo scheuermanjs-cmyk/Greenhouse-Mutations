@@ -251,8 +251,9 @@
   .plot-tile-inner{ position:relative; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:4px; }
 
   /* ---------- wing toggle + desert wing ---------- */
-  .wing-toggle{ display:flex; gap:2px; padding:6px 6px 0; background:var(--panel); }
-  .wing-toggle-btn{ flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:9px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
+  .wing-toggle{ display:flex; background:var(--panel); }
+  .wing-toggle-btn{ flex:1; display:flex; align-items:center; justify-content:center; gap:4px; background:var(--panel-2); color:var(--text-muted); border:3px solid var(--outline); padding:13px 4px; font-family:'Press Start 2P'; font-size:9px; cursor:pointer; }
+  .wing-toggle-btn + .wing-toggle-btn{ border-left:none; }
   .wing-toggle-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel); }
   .wing-toggle-btn.wing-locked{ opacity:.45; }
   .desert-wing-panel{ position:relative; background:linear-gradient(to bottom, #C98A4B 0%, #8B5A2B 100%); padding:14px 10px 10px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); overflow:hidden; }

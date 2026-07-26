@@ -4845,6 +4845,8 @@ function renderWelcomeBackScreen(wiltedCount, readyCount, researchDone, offlineS
     if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
     if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
     if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
+  } else if(!hasOffline && !(offlineSummary && offlineSummary.discoveries && offlineSummary.discoveries.length)){
+    html += '<p class="welcome-more-note" style="margin-top:4px;">Nothing happened while you were away — everything\'s right where you left it.</p>';
   }
 
   html += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">';
@@ -5076,8 +5078,7 @@ function runAwayCatchup(awayStartOverride){
   updateLabBadge();
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   if(state.tutorialSeen){
-    const hasOfflineEarnings = offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0;
-    const showWelcomeBack = away>120000 && (wiltedCount>0 || readyCount>0 || researchDoneOnReturn || hasOfflineEarnings);
+    const showWelcomeBack = away>120000;
     const streakInfo = pendingDailyStreakInfo();
     if(streakInfo){
       if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn, offlineSummary };

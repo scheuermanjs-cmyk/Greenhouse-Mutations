@@ -578,6 +578,31 @@
   .sparkle{ position:absolute; width:7px; height:7px; opacity:0; animation:sparklePop 1s steps(3) forwards; }
   @keyframes sparklePop{ 0%{ opacity:0; transform:scale(0); } 40%{ opacity:1; transform:scale(1.3); } 100%{ opacity:0; transform:scale(.6); } }
 
+  /* ---------- welcome back / offline earnings ---------- */
+  .welcome-overlay{
+    position:fixed; inset:0; z-index:31; display:none; flex-direction:column; align-items:center;
+    padding:28px 18px calc(28px + env(safe-area-inset-bottom)); overflow-y:auto;
+    background:
+      radial-gradient(circle at 50% 10%, rgba(126,217,87,.20), transparent 55%),
+      radial-gradient(circle at 88% 88%, rgba(199,125,255,.14), transparent 50%),
+      var(--panel);
+  }
+  .welcome-overlay.open{ display:flex; }
+  .welcome-card{ width:100%; max-width:420px; margin:auto 0; }
+  .welcome-hero{ text-align:center; margin-bottom:20px; }
+  .welcome-hero h1{ font-size:20px; line-height:1.5; text-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .welcome-hero p{ color:var(--text-muted); font-size:14px; margin-top:8px; }
+  .welcome-section-label{ font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); margin-bottom:8px; }
+  .welcome-rewards-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px; }
+  .welcome-reward-chip{ background:var(--panel-2); border:3px solid var(--outline); padding:12px 6px; text-align:center; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .welcome-reward-chip .val{ font-size:15px; color:var(--accent); }
+  .welcome-reward-chip .lbl{ font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; margin-top:5px; }
+  .welcome-discovery-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(86px,1fr)); gap:8px; margin-bottom:8px; }
+  .welcome-discovery-card{ background:var(--parchment); color:var(--parchment-ink); border:2px solid var(--parchment-line); padding:10px 4px 6px; text-align:center; position:relative; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
+  .welcome-discovery-card .badge{ position:absolute; top:-7px; right:-5px; background:var(--warn); color:#3B2E1E; font-family:'Press Start 2P'; font-size:7px; padding:3px 4px; border:2px solid var(--outline); }
+  .welcome-discovery-card .name{ font-size:10px; margin-top:4px; line-height:1.25; }
+  .welcome-more-note{ text-align:center; color:var(--text-muted); font-size:12px; margin-bottom:16px; }
+
   /* ---------- intro / start screen / tutorial ---------- */
   .intro-overlay{
     position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:24px;
@@ -814,6 +839,10 @@
   <div id="sheet">
     <div class="sheet-grab"></div>
     <div id="sheetBody"></div>
+  </div>
+
+  <div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-card" id="welcomeCard"></div>
   </div>
 
 <script>
@@ -3766,7 +3795,7 @@ function harvestPlot(idx, wing='verdant'){
   checkAchievements();
   checkHerbSets();
   saveState();
-  return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned };
+  return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned, xpGain };
 }
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
@@ -3822,9 +3851,11 @@ function squashPestOffline(plot, summary){
   addGems(1);
   grantXp(3);
   summary.pestsSquashed++;
+  summary.gems += 1;
+  summary.xp += 3;
 }
 function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant, hasPest){
-  const summary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0 };
+  const summary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const plot = plotsForWing(wing)[idx];
   let cursor = awayStart;
   let guard = 0;
@@ -3854,13 +3885,19 @@ function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant
     if(!result) break;
     summary.harvests++;
     summary.spores += result.sellValue;
-    if(result.isNew) summary.newFinds++;
+    summary.xp += result.xpGain||0;
+    summary.gems += result.gemsEarned||0;
+    if(result.isNew){
+      summary.newFinds++;
+      summary.discoveries.push({ name:result.name, genome:result.genome });
+    }
     cursor = finishAt;
   }
   return summary;
 }
 function mergeOfflineSummary(a, b){
-  return { harvests:a.harvests+b.harvests, spores:a.spores+b.spores, newFinds:a.newFinds+b.newFinds, planted:a.planted+b.planted, pestsSquashed:a.pestsSquashed+b.pestsSquashed };
+  return { harvests:a.harvests+b.harvests, spores:a.spores+b.spores, newFinds:a.newFinds+b.newFinds, planted:a.planted+b.planted, pestsSquashed:a.pestsSquashed+b.pestsSquashed,
+    xp:(a.xp||0)+(b.xp||0), gems:(a.gems||0)+(b.gems||0), discoveries:(a.discoveries||[]).concat(b.discoveries||[]) };
 }
 function countReadyPlots(wing='verdant'){
   return plotsForWing(wing).filter(p=>!p.locked && getDisplayStatus(p)==='ready').length;
@@ -4673,52 +4710,73 @@ function showToastHtml(html){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>t.classList.remove('show'), 6000);
 }
+function closeWelcomeBack(){
+  document.getElementById('welcomeOverlay').classList.remove('open');
+}
 function harvestAllFromWelcome(){
   const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
   updateAllTiles(); updateAllDesertTiles(); updateHeader(); renderHerbarium();
+  closeWelcomeBack();
   if(results.length) openHarvestAllSummary(results);
-  else closeSheet();
 }
 function collectResearchFromWelcome(){
   const doneSlot = [0,1,2].find(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   const result = doneSlot!=null ? collectResearch(doneSlot) : null;
   updateHeader(); renderHerbarium(); updateLabBadge(); renderLabShelf();
+  closeWelcomeBack();
   if(result){
     currentSheetIdx = null;
     currentLabSlot = null;
     revealShowing = true;
     renderReveal(researchRevealResult(result));
-  } else {
-    closeSheet();
+    document.getElementById('sheet').classList.add('open');
+    document.getElementById('sheetBackdrop').classList.add('open');
   }
 }
-function renderWelcomeBackSheet(wiltedCount, readyCount, researchDone, offlineSummary){
-  const body = document.getElementById('sheetBody');
-  let html = '<div class="sheet-head"><h3>Welcome back!</h3></div>'
-    + '<p class="sheet-blurb">Here’s what happened while you were away.</p>';
-  if(offlineSummary && (offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0)){
-    html += '<div class="sheet-subhead">While you were away</div>';
-    if(offlineSummary.harvests>0) html += '<div class="stat-row"><span>🌿 Auto-harvested</span><span>'+offlineSummary.harvests+' &nbsp;+'+offlineSummary.spores+'◆</span></div>';
-    if(offlineSummary.newFinds>0) html += '<div class="stat-row"><span>New discoveries</span><span>'+offlineSummary.newFinds+'</span></div>';
-    if(offlineSummary.planted>0) html += '<div class="stat-row"><span>🌾 Auto-planted</span><span>'+offlineSummary.planted+'</span></div>';
-    if(offlineSummary.pestsSquashed>0) html += '<div class="stat-row"><span>🧹 Pests exterminated</span><span>'+offlineSummary.pestsSquashed+'</span></div>';
+function renderWelcomeBackScreen(wiltedCount, readyCount, researchDone, offlineSummary){
+  const card = document.getElementById('welcomeCard');
+  const hasOffline = offlineSummary && (offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0);
+  let html = '<div class="welcome-hero"><h1>Welcome back!</h1><p>Here’s what happened while you were away.</p></div>';
+
+  if(hasOffline){
+    const chips = [];
+    if(offlineSummary.spores>0) chips.push({val:'+'+offlineSummary.spores+' ◆', lbl:'Spores'});
+    if(offlineSummary.xp>0) chips.push({val:'+'+offlineSummary.xp, lbl:'XP'});
+    if(offlineSummary.gems>0) chips.push({val:'+'+offlineSummary.gems+' '+renderGemIcon(2), lbl:'Gems'});
+    if(offlineSummary.harvests>0) chips.push({val:offlineSummary.harvests, lbl:'Auto-harvested'});
+    if(offlineSummary.planted>0) chips.push({val:offlineSummary.planted, lbl:'Auto-planted'});
+    if(offlineSummary.pestsSquashed>0) chips.push({val:offlineSummary.pestsSquashed, lbl:'Pests squashed'});
+    html += '<div class="welcome-section-label">While you were away</div>'
+      + '<div class="welcome-rewards-grid">'+chips.map(c=>'<div class="welcome-reward-chip"><div class="val">'+c.val+'</div><div class="lbl">'+c.lbl+'</div></div>').join('')+'</div>';
   }
-  if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
-  if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
-  if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
+
+  if(offlineSummary && offlineSummary.discoveries && offlineSummary.discoveries.length){
+    const shown = offlineSummary.discoveries.slice(0,24);
+    const extra = offlineSummary.discoveries.length - shown.length;
+    html += '<div class="welcome-section-label">New discoveries</div>'
+      + '<div class="welcome-discovery-grid">'+shown.map(d=>
+        '<div class="welcome-discovery-card"><div class="badge">NEW</div>'+renderSprite(d.genome,'sm','bloom')+'<div class="name">'+d.name+'</div></div>'
+      ).join('')+'</div>';
+    if(extra>0) html += '<div class="welcome-more-note">+'+extra+' more new discoveries</div>';
+  }
+
+  if(readyCount>0 || wiltedCount>0 || researchDone){
+    if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
+    if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
+    if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
+  }
+
   html += '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">';
   if(readyCount>0) html += '<button class="btn btn-primary btn-block" onclick="harvestAllFromWelcome()">Harvest All ('+readyCount+')</button>';
   if(researchDone) html += '<button class="btn btn-accent btn-block" onclick="collectResearchFromWelcome()">Collect Research</button>';
-  html += '<button class="btn btn-block" onclick="closeSheet()">'+((readyCount>0||researchDone)?'Later':'Okay')+'</button>';
+  html += '<button class="btn btn-block" onclick="closeWelcomeBack()">'+((readyCount>0||researchDone)?'Later':'Let’s go!')+'</button>';
   html += '</div>';
-  body.innerHTML = html;
+  card.innerHTML = html;
 }
 function openWelcomeBack(wiltedCount, readyCount, researchDone, offlineSummary){
-  currentSheetIdx = null;
-  revealShowing = false;
-  renderWelcomeBackSheet(wiltedCount, readyCount, researchDone, offlineSummary);
-  document.getElementById('sheet').classList.add('open');
-  document.getElementById('sheetBackdrop').classList.add('open');
+  closeSheet();
+  renderWelcomeBackScreen(wiltedCount, readyCount, researchDone, offlineSummary);
+  document.getElementById('welcomeOverlay').classList.add('open');
 }
 
 /* ===================== DAILY STREAK ===================== */
@@ -4916,7 +4974,7 @@ async function init(){
   const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
   const hasAutoPest = getPrestigeBonus('autoPest') > 0;
   let wiltedCount = 0, readyCount = 0;
-  let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0 };
+  let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const tickAwayWing = (wing)=>{
     plotsForWing(wing).forEach((p, idx)=>{
       if(p.locked || (p.status!=='growing' && p.status!=='empty')) return;

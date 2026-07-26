@@ -1434,7 +1434,7 @@ function claimTask(key){
   showToast('Task complete! '+rewardSummary(task.reward));
 }
 function rerollTaskBoardCost(){
-  return 2;
+  return 8;
 }
 function rerollTaskBoard(){
   const cost = rerollTaskBoardCost();
@@ -1574,7 +1574,7 @@ function onContributeToMonument(){
 }
 
 /* ===================== CONSUMABLES ===================== */
-const LUCKY_CHARM_COST = 2;
+const LUCKY_CHARM_COST = 8;
 const LUCKY_CHARM_BOOST = 0.15;
 const LUCKY_CHARM_CAP = 0.4;
 function buyLuckyCharm(){
@@ -1739,8 +1739,8 @@ function renderDecorShop(){
 }
 
 /* ===================== TRAVELING MERCHANT ===================== */
-const MERCHANT_SEED_COST = 4;
-const MERCHANT_COSMETIC_COST = 12;
+const MERCHANT_SEED_COST = 15;
+const MERCHANT_COSMETIC_COST = 45;
 const MERCHANT_COSMETICS = [
   { kind:'pot', key:'moonglow' },
   { kind:'pot', key:'embercast' },
@@ -1755,7 +1755,7 @@ const MERCHANT_COSMETICS = [
   { kind:'wallpaper', key:'tidalCurrent' },
   { kind:'wallpaper', key:'cinderdrift' }
 ];
-const MERCHANT_REROLL_COST = 3;
+const MERCHANT_REROLL_COST = 12;
 function pickMerchantSeedOffer(level){
   const keys = getUnlockedSpeciesKeys(level);
   const key = keys[Math.floor(Math.random()*keys.length)];
@@ -3062,7 +3062,7 @@ function computeStress(plot){
 }
 function instantGrowCost(plot){
   const remainingSec = Math.max(0, (plot.plantedAt+plot.growthDurationMs) - Date.now())/1000;
-  return Math.max(1, Math.ceil(remainingSec / 180));
+  return Math.max(1, Math.ceil(remainingSec / 40));
 }
 function instantGrowPlot(idx, wing='verdant'){
   const plot = plotsForWing(wing)[idx];

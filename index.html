@@ -737,6 +737,8 @@
       <div id="merchantList"></div>
       <div class="ach-category" style="margin-top:18px;">Consumables</div>
       <div id="consumablesList"></div>
+      <div class="ach-category" style="margin-top:18px;">Offline Earnings</div>
+      <div id="offlineCapList"></div>
       <div class="ach-category" style="margin-top:18px;">Pot &amp; Furniture Finish</div>
       <div id="potDecorList"></div>
       <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
@@ -1576,6 +1578,7 @@ function renderUpgrades(){
       + '</div>';
   }).join('');
   renderConsumables();
+  renderOfflineCapUpgrade();
   renderDecorShop();
   renderMerchant();
   renderMonument();
@@ -1672,6 +1675,60 @@ function renderConsumables(){
     + '</div>'
     + '<button class="btn btn-small'+(ready?' btn-primary':'')+'" id="watchAdGemsBtn" '+(ready?'':'disabled')+' onclick="onWatchAdForGems()">'+(ready?'Watch':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
     + '</div>';
+}
+
+/* ===================== OFFLINE EARNINGS CAP ===================== */
+const OFFLINE_CAP_BASE_HOURS = 2;
+const OFFLINE_CAP_TIERS = [
+  { name:'Standing Orders I',   addHours:2, cost:60 },
+  { name:'Standing Orders II',  addHours:2, cost:150 },
+  { name:'Standing Orders III', addHours:3, cost:350 },
+  { name:'Standing Orders IV',  addHours:3, cost:750 }
+];
+function offlineCapLevel(){
+  return state.offlineCapLevel||0;
+}
+function offlineCapHours(){
+  let hours = OFFLINE_CAP_BASE_HOURS;
+  for(let i=0;i<offlineCapLevel();i++) hours += OFFLINE_CAP_TIERS[i].addHours;
+  return hours;
+}
+function offlineCapMs(){
+  return offlineCapHours()*3600*1000;
+}
+function nextOfflineCapTier(){
+  return OFFLINE_CAP_TIERS[offlineCapLevel()] || null;
+}
+function purchaseOfflineCapUpgrade(){
+  const next = nextOfflineCapTier();
+  if(!next) return false;
+  if((state.gems||0) < next.cost) return false;
+  state.gems -= next.cost;
+  state.offlineCapLevel = offlineCapLevel()+1;
+  saveState();
+  renderOfflineCapUpgrade();
+  updateHeader();
+  return true;
+}
+function renderOfflineCapUpgrade(){
+  const el = document.getElementById('offlineCapList');
+  if(!el) return;
+  const hours = offlineCapHours();
+  const next = nextOfflineCapTier();
+  let html = '<div class="upg-card">'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">'+(next ? next.name : 'Standing Orders')+'</div>'
+    + '<div class="upg-desc">Your automations (Farmers, Tireless Hands, Exterminator) keep working while you\'re away, up to a time limit</div>'
+    + '<div class="upg-current">Current cap: '+hours+' hours</div>'
+    + '</div>';
+  if(next){
+    const afford = (state.gems||0)>=next.cost;
+    html += '<button class="btn btn-small '+(afford?'btn-primary':'')+'" '+(afford?'':'disabled')+' onclick="purchaseOfflineCapUpgrade()">+'+next.addHours+'h for '+next.cost+' '+renderGemIcon(2)+'</button>';
+  } else {
+    html += '<button class="btn btn-small" disabled>MAXED</button>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 /* ===================== DECORATIONS ===================== */
@@ -2984,6 +3041,7 @@ function defaultState(){
     specialVisitorsClaimed:{},
     monument:{ level:0 },
     adCooldownUntil:0,
+    offlineCapLevel:0,
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -3854,7 +3912,7 @@ function squashPestOffline(plot, summary){
   summary.gems += 1;
   summary.xp += 3;
 }
-function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant, hasPest){
+function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarvest, hasPlant, hasPest){
   const summary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const plot = plotsForWing(wing)[idx];
   let cursor = awayStart;
@@ -3862,7 +3920,7 @@ function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant
   while(guard++ < 200){
     if(plot.locked) break;
     if(plot.status==='empty'){
-      if(!hasPlant) break;
+      if(!hasPlant || cursor>=cappedEnd) break;
       const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
       if(!stack) break;
       if(!plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) break;
@@ -3872,14 +3930,17 @@ function simulateOfflinePlot(idx, wing, awayStart, awayEnd, hasHarvest, hasPlant
     }
     if(plot.status!=='growing') break;
     const finishAt = plot.plantedAt + plot.growthDurationMs;
-    const evalAt = Math.min(finishAt, awayEnd);
+    // risk/growth always evaluated against real elapsed time, never capped -- the cap only limits
+    // how many auto-harvest/replant cycles get simulated & counted, not pest/death exposure
+    const evalAt = Math.min(finishAt, realNow);
     applyDeathRisk(plot, evalAt);
     if(plot.status==='wilted') break;
     applyPestRisk(plot, evalAt);
     if(plot.pest && hasPest) squashPestOffline(plot, summary);
     applySprinkler(plot, evalAt);
     applyGardenLight(plot, evalAt);
-    if(finishAt > awayEnd) break;
+    if(finishAt > realNow) break;
+    if(finishAt > cappedEnd) break;
     if(!hasHarvest) break;
     const result = harvestPlot(idx, wing);
     if(!result) break;
@@ -4973,13 +5034,14 @@ async function init(){
   const hasAutoHarvest = getPrestigeBonus('autoHarvest') > 0;
   const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
   const hasAutoPest = getPrestigeBonus('autoPest') > 0;
+  const cappedEnd = Math.min(now, awayStart + offlineCapMs());
   let wiltedCount = 0, readyCount = 0;
   let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const tickAwayWing = (wing)=>{
     plotsForWing(wing).forEach((p, idx)=>{
       if(p.locked || (p.status!=='growing' && p.status!=='empty')) return;
       const before = p.status;
-      const result = simulateOfflinePlot(idx, wing, awayStart, now, hasAutoHarvest, hasAutoPlant, hasAutoPest);
+      const result = simulateOfflinePlot(idx, wing, awayStart, now, cappedEnd, hasAutoHarvest, hasAutoPlant, hasAutoPest);
       offlineSummary = mergeOfflineSummary(offlineSummary, result);
       if(p.status==='wilted' && before!=='wilted') wiltedCount++;
       else if(getDisplayStatus(p)==='ready') readyCount++;

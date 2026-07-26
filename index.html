@@ -2907,8 +2907,9 @@ function tilePotStack(plantSlotHtml, locked){
   return '<div class="tile-pot-stack"><div class="tile-plant-slot">'+plantSlotHtml+'</div>'+renderPot('sm', locked)+'</div>';
 }
 function gearAccessoryRow(rowClass, slotClass, potHtml, showSprinkler, size){
+  // sprinkler sprite intentionally hidden -- the Sprinkler System upgrade still
+  // functions normally (see applySprinkler()), this just suppresses the visual.
   return '<div class="'+rowClass+'">'
-    + (showSprinkler ? '<div class="'+slotClass+'">'+renderSprinkler(size)+'</div>' : '')
     + potHtml
     + '</div>';
 }

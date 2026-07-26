@@ -1587,11 +1587,47 @@ function buyLuckyCharm(){
   updateHeader();
   return true;
 }
+/* ===================== REWARDED ADS =====================
+   Mock ad provider — this is the ONLY function to swap out once the app
+   is wrapped with Capacitor + AdMob. Replace the body with a real
+   rewarded-video call (e.g. Capacitor AdMob's showRewardVideoAd()) and
+   call onReward() only from its "user earned reward" event; everything
+   else (cooldown, gem grant, UI) stays the same. */
+const AD_MOCK_DURATION_MS = 2500;
+function showRewardedAd(onReward, btnEl){
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Watching ad…'; }
+  setTimeout(onReward, AD_MOCK_DURATION_MS);
+}
+const AD_COOLDOWN_MS = 3*60*1000;
+const AD_GEM_REWARD = 5;
+function adReady(){
+  return Date.now() >= (state.adCooldownUntil||0);
+}
+function updateAdCooldownDisplay(){
+  const btn = document.getElementById('watchAdGemsBtn');
+  if(!btn || btn.textContent==='Watching ad…') return;
+  const ready = adReady();
+  btn.disabled = !ready;
+  btn.className = 'btn btn-small'+(ready?' btn-primary':'');
+  btn.textContent = ready ? 'Watch' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+}
+function onWatchAdForGems(){
+  if(!adReady()) return;
+  showRewardedAd(()=>{
+    addGems(AD_GEM_REWARD);
+    state.adCooldownUntil = Date.now() + AD_COOLDOWN_MS;
+    saveState();
+    updateHeader();
+    renderConsumables();
+    showToast('📺 +'+AD_GEM_REWARD+' gems from the ad!');
+  }, document.getElementById('watchAdGemsBtn'));
+}
 function renderConsumables(){
   const el = document.getElementById('consumablesList');
   if(!el) return;
   const boost = state.nextMutationBoost||0;
   const atCap = boost >= LUCKY_CHARM_CAP;
+  const ready = adReady();
   el.innerHTML = '<div class="upg-card">'
     + '<div class="upg-info">'
     + '<div class="upg-name">Lucky Charm</div>'
@@ -1599,6 +1635,13 @@ function renderConsumables(){
     + (boost>0 ? '<div class="upg-current">Active boost: +'+Math.round(boost*100)+'%'+(atCap?' (max)':'')+'</div>' : '')
     + '</div>'
     + '<button class="btn btn-small '+((state.gems||0)>=LUCKY_CHARM_COST && !atCap?'btn-primary':'')+'" '+((state.gems||0)<LUCKY_CHARM_COST||atCap?'disabled':'')+' onclick="buyLuckyCharm()">'+(atCap?'MAXED':LUCKY_CHARM_COST+' '+renderGemIcon(2))+'</button>'
+    + '</div>'
+    + '<div class="upg-card">'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">Watch an Ad</div>'
+    + '<div class="upg-desc">Watch a short ad for +'+AD_GEM_REWARD+' '+renderGemIcon(2)+'</div>'
+    + '</div>'
+    + '<button class="btn btn-small'+(ready?' btn-primary':'')+'" id="watchAdGemsBtn" '+(ready?'':'disabled')+' onclick="onWatchAdForGems()">'+(ready?'Watch':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
     + '</div>';
 }
 
@@ -2884,6 +2927,7 @@ function defaultState(){
     visitor:{ periodStart:null, request:null, fulfilled:false },
     specialVisitorsClaimed:{},
     monument:{ level:0 },
+    adCooldownUntil:0,
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -4782,6 +4826,7 @@ function tick(){
     const merchantRefreshed = ensureMerchantCurrent();
     if(merchantRefreshed){ renderMerchant(); showToast('The traveling merchant has new stock!'); }
     else updateMerchantTimer();
+    updateAdCooldownDisplay();
   }
   updateLabBadge();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();

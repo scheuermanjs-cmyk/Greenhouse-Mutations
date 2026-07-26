@@ -2396,6 +2396,7 @@ function renderLabSlotSheet(slot){
       + '<div class="lab-timer" id="labTimer">'+fmtTime(remaining)+'</div>'
       + '<div class="lab-progress"><div class="lab-progress-fill" id="labProgressFill" style="width:'+pct+'%"></div></div>'
       + '<button class="btn btn-small btn-block" id="labFinishBtn" style="margin-top:10px;" '+((state.gems||0)<finishCost?'disabled':'')+' onclick="onInstantFinishResearch('+slot+')">Finish Research Now ('+finishCost+' '+renderGemIcon(2)+')</button>'
+      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="labAdFinishBtn" style="margin-top:8px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishResearch('+slot+')">'+(adReady()?'Watch Ad to Finish Free':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
       + '</div>';
   } else {
     const r = state.researchSlots[slot];
@@ -2419,6 +2420,32 @@ function updateLabSlotLiveBits(slot){
   if(fillEl) fillEl.style.width = pct+'%';
   const finishBtn = document.getElementById('labFinishBtn');
   if(finishBtn){ const cost = instantResearchCost(slot); finishBtn.innerHTML = 'Finish Research Now ('+cost+' '+renderGemIcon(2)+')'; finishBtn.disabled = (state.gems||0)<cost; }
+  const adFinishBtn = document.getElementById('labAdFinishBtn');
+  if(adFinishBtn && adFinishBtn.textContent!=='Watching ad…'){
+    const ready = adReady();
+    adFinishBtn.disabled = !ready;
+    adFinishBtn.className = 'btn btn-small btn-block'+(ready?' btn-accent':'');
+    adFinishBtn.textContent = ready ? 'Watch Ad to Finish Free' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+  }
+}
+function finishResearchFree(slot){
+  const r = state.researchSlots[slot];
+  if(!r || getResearchStatus(slot)!=='researching') return false;
+  r.startedAt = Date.now() - r.durationMs;
+  saveState();
+  return true;
+}
+function onWatchAdToFinishResearch(slot){
+  if(!adReady()) return;
+  showRewardedAd(()=>{
+    if(finishResearchFree(slot)){
+      state.adCooldownUntil = Date.now() + AD_COOLDOWN_MS;
+      saveState();
+      renderLabSlotSheet(slot);
+      renderLab();
+      updateHeader();
+    }
+  }, document.getElementById('labAdFinishBtn'));
 }
 function onInstantFinishResearch(slot){
   if(instantFinishResearch(slot)){
@@ -4406,7 +4433,8 @@ function renderSheetFull(idx){
       + sheetAccessoryRow('<div class="pot-wrap-lg">'+renderPot('lg', false)+'</div>', sprinklerLevel>0)
       + pestAlertHtml(idx)
       + '<div class="sheet-timer" id="sheetTimer">'+fmtTime(remaining)+'</div>'
-      + '<button class="btn btn-small btn-block" id="instantGrowBtn" style="margin-bottom:12px;" '+((state.gems||0)<growCost?'disabled':'')+' onclick="onInstantGrow('+idx+')">Finish Growing Now ('+growCost+' '+renderGemIcon(2)+')</button>'
+      + '<button class="btn btn-small btn-block" id="instantGrowBtn" style="margin-bottom:8px;" '+((state.gems||0)<growCost?'disabled':'')+' onclick="onInstantGrow('+idx+')">Finish Growing Now ('+growCost+' '+renderGemIcon(2)+')</button>'
+      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="growAdFinishBtn" style="margin-bottom:12px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishGrowing('+idx+',\''+wing+'\')">'+(adReady()?'Watch Ad to Finish Free':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
       + '<div class="slider-row"><label>Light'+lightAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.lightTarget+'%)</span></label><input id="lightSlider" type="range" min="0" max="100" value="'+plot.light+'" style="background:'+sliderGradient(stress.lightTarget)+'" oninput="onSlider('+idx+',\'light\',this.value)"></div>'
       + '<div class="slider-row"><label>Water'+waterAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.waterTarget+'%)</span></label><input id="waterSlider" type="range" min="0" max="100" value="'+plot.water+'" style="background:'+sliderGradient(stress.waterTarget)+'" oninput="onSlider('+idx+',\'water\',this.value)"></div>'
       + '<div class="mutation-line">Mutation chance: <span id="sheetChance">'+chance+'%</span>'+(state.nextMutationBoost?' <span style="color:var(--violet);font-size:12px;">(boosted!)</span>':'')+'</div>'
@@ -4441,8 +4469,36 @@ function updateSheetLiveBits(idx){
   if(warnEl){ const stress = computeStress(plot); warnEl.classList.toggle('show', stress.maxStress>30); }
   const growBtn = document.getElementById('instantGrowBtn');
   if(growBtn){ const cost = instantGrowCost(plot); growBtn.innerHTML = 'Finish Growing Now ('+cost+' '+renderGemIcon(2)+')'; growBtn.disabled = (state.gems||0)<cost; }
+  const adGrowBtn = document.getElementById('growAdFinishBtn');
+  if(adGrowBtn && adGrowBtn.textContent!=='Watching ad…'){
+    const ready = adReady();
+    adGrowBtn.disabled = !ready;
+    adGrowBtn.className = 'btn btn-small btn-block'+(ready?' btn-accent':'');
+    adGrowBtn.textContent = ready ? 'Watch Ad to Finish Free' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+  }
   const lightEl = document.getElementById('lightSlider'); if(lightEl && document.activeElement!==lightEl) lightEl.value = plot.light;
   const waterEl = document.getElementById('waterSlider'); if(waterEl && document.activeElement!==waterEl) waterEl.value = plot.water;
+}
+function finishGrowingFree(idx, wing='verdant'){
+  const plot = plotsForWing(wing)[idx];
+  if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='growing') return false;
+  plot.plantedAt = Date.now() - plot.growthDurationMs;
+  const now = Date.now();
+  plot.lastDeathCheck = now; plot.lastPestCheck = now; plot.lastSprinklerCheck = now; plot.lastLightCheck = now;
+  saveState();
+  return true;
+}
+function onWatchAdToFinishGrowing(idx, wing='verdant'){
+  if(!adReady()) return;
+  showRewardedAd(()=>{
+    if(finishGrowingFree(idx, wing)){
+      state.adCooldownUntil = Date.now() + AD_COOLDOWN_MS;
+      saveState();
+      renderSheetFull(idx);
+      refreshTilesForWing(wing);
+      updateHeader();
+    }
+  }, document.getElementById('growAdFinishBtn'));
 }
 function renderReveal(result, opts){
   opts = opts || {};

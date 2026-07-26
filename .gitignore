@@ -1,0 +1,32 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Capacitor build output (regenerated via `npx cap sync`)
+www/
+
+# Android (Gradle/Android Studio)
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/**/*.iml
+android/captures/
+android/.cxx/
+
+# Never commit signing keys or credentials
+*.keystore
+*.jks
+android/app/google-services.json
+key.properties
+
+# iOS (if ever added)
+ios/App/Pods/
+ios/App/App/public/
+ios/.idea/
+
+# OS cruft
+.DS_Store
+Thumbs.db

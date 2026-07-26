@@ -1,0 +1,31 @@
+{
+  "name": "greenhouse-pwa",
+  "version": "1.0.0",
+  "description": "",
+  "main": "cloudflare-worker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync": "node scripts/sync-web.js && npx cap sync android",
+    "android": "npm run sync && npx cap open android"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scheuermanjs-cmyk/Greenhouse-Mutations.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/scheuermanjs-cmyk/Greenhouse-Mutations/issues"
+  },
+  "homepage": "https://github.com/scheuermanjs-cmyk/Greenhouse-Mutations#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.2"
+  }
+}

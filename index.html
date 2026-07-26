@@ -2855,12 +2855,23 @@ function renderFarmer(size, type){
   }
   return '<div class="pix-farmer" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
-const SPRINKLER_ROWS = ['..H..','.HHH.','..P..','..P..','..P..','.GGG.'];
+const SPRINKLER_ROWS = [
+  '....N....',
+  '....H....',
+  '.N..H..N.',
+  'HHHHHHHHH',
+  '..H.H.H..',
+  '....P....',
+  '....P....',
+  '...BBB...',
+  '..BBBBB..'
+];
 function gardenGearColor(token){
   if(token==='.') return null;
-  if(token==='H') return '#A8B0AC';
-  if(token==='P') return '#5C6660';
-  if(token==='G') return '#3A4540';
+  if(token==='N') return '#7EC8E3';
+  if(token==='H') return '#C4CCC8';
+  if(token==='P') return '#8A9490';
+  if(token==='B') return '#3A4540';
   return null;
 }
 function gearCells(rows, cell, glowTokens){
@@ -2882,12 +2893,12 @@ function renderDroplet(){
   const dy2 = (2+Math.random()*3).toFixed(1);
   const dur = (1.1+Math.random()*0.9).toFixed(2);
   const delay = (Math.random()*1.4).toFixed(2);
-  const startX = (40+Math.random()*20).toFixed(0);
+  const startX = (15+Math.random()*70).toFixed(0);
   return '<span class="droplet" style="--dx:'+dx+'px;--dy:'+dy+'px;--dx2:'+dx2+'px;--dy2:'+dy2+'px;--dur:'+dur+'s;--delay:'+delay+'s;--startX:'+startX+'%"></span>';
 }
 function renderSprinkler(size){
   const cell = size==='lg' ? 6 : 3;
-  const count = 2 + Math.floor(Math.random()*2);
+  const count = 3 + Math.floor(Math.random()*3);
   let droplets = '';
   for(let i=0;i<count;i++) droplets += renderDroplet();
   return '<div class="tile-gear-wrap">'+gearCells(SPRINKLER_ROWS, cell) + droplets + '</div>';

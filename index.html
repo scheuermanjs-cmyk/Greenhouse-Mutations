@@ -1117,6 +1117,8 @@ function doPrestige(){
   const keepSpecialVisitorsClaimed = state.specialVisitorsClaimed;
   const keepMonument = state.monument;
   const keepSettings = state.settings;
+  const keepGems = state.gems;
+  const keepOfflineCapLevel = state.offlineCapLevel;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1126,7 +1128,9 @@ function doPrestige(){
     decor: keepDecor,
     specialVisitorsClaimed: keepSpecialVisitorsClaimed,
     monument: keepMonument,
-    settings: keepSettings
+    settings: keepSettings,
+    gems: keepGems,
+    offlineCapLevel: keepOfflineCapLevel
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();

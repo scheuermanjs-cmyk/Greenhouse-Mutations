@@ -371,6 +371,14 @@
   .skill-branch-tag{ display:inline-block; font-size:9px; color:#0F1A12; padding:1px 4px; margin-right:6px; border:2px solid var(--outline); text-transform:uppercase; letter-spacing:.3px; vertical-align:middle; }
   .upg-btn{ flex-shrink:0; min-width:84px; text-align:center; }
   .upg-card.is-equipped{ border-color:var(--accent); box-shadow:3px 3px 0 var(--accent-dark); }
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 2px; }
+  .toggle-row + .toggle-row{ border-top:2px dashed var(--outline); }
+  .toggle-row-label{ font-size:16px; }
+  .toggle-row-desc{ font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .toggle-switch{ position:relative; flex-shrink:0; width:46px; height:26px; background:var(--panel); border:3px solid var(--outline); cursor:pointer; }
+  .toggle-switch.is-on{ background:var(--accent-dark); }
+  .toggle-knob{ position:absolute; top:2px; left:2px; width:16px; height:16px; background:var(--text-muted); transition:left .15s; }
+  .toggle-switch.is-on .toggle-knob{ left:24px; background:var(--accent); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
@@ -772,6 +780,10 @@
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
       <div class="ach-category" style="margin-top:18px;">Trophies</div>
       <div id="achList"></div>
+      <div class="ach-category" style="margin-top:18px;">Sound</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="soundSettingsList"></div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Save Backup</div>
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div class="upg-desc">Export your save to a file, or import one to restore progress. Handy before clearing browser data or switching phones.</div>
@@ -957,6 +969,7 @@ function contributeToMonument(){
   const cost = monumentCost(monumentLevel());
   if(state.spores < cost) return false;
   state.spores -= cost;
+  sfxPurchase();
   state.monument.level = monumentLevel()+1;
   saveState();
   renderMonument();
@@ -971,6 +984,7 @@ function grantXp(amount){
   state.xp = (state.xp||0) + amount;
   const after = getLevelFromXp(state.xp);
   if(after>before){
+    sfxLevelUp();
     let gemsEarned = 0;
     for(let lvl=before+1; lvl<=after; lvl++) gemsEarned += levelUpGemReward(lvl);
     addGems(gemsEarned);
@@ -1064,6 +1078,7 @@ function purchaseSkillNode(key){
   const cost = skillNodeCost(key, level);
   if((state.prestige.skillPoints||0) < cost) return false;
   state.prestige.skillPoints -= cost;
+  sfxPurchase();
   state.prestige.skillTree[key] = level+1;
   saveState();
   renderPrestige();
@@ -1083,6 +1098,7 @@ function doPrestige(){
   const keepDecor = state.decor;
   const keepSpecialVisitorsClaimed = state.specialVisitorsClaimed;
   const keepMonument = state.monument;
+  const keepSettings = state.settings;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1091,7 +1107,8 @@ function doPrestige(){
     achStats: keepAchStats,
     decor: keepDecor,
     specialVisitorsClaimed: keepSpecialVisitorsClaimed,
-    monument: keepMonument
+    monument: keepMonument,
+    settings: keepSettings
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1101,6 +1118,7 @@ function doPrestige(){
   renderUpgrades();
   renderHerbarium();
   renderPrestige();
+  sfxPrestige();
   showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('sparkle', true)+'<span>Prestige '+state.prestige.count+'! Earned '+earned+' skill point'+(earned===1?'':'s')+'.</span></span>');
   return true;
 }
@@ -1262,6 +1280,7 @@ function checkAchievements(){
       state.achievements[id] = Date.now();
       const ach = ACH_BY_ID[id];
       if(ach){
+        sfxAchievement();
         if(ach.reward.spores) addSpores(ach.reward.spores);
         if(ach.reward.xp) grantXp(ach.reward.xp);
         showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderAchIcon(id, true)+'<span>Achievement: '+ach.name+(ach.reward.spores ? '  +'+ach.reward.spores+'\u25C6' : '')+'</span></span>');
@@ -1458,6 +1477,7 @@ function claimTask(key){
   const progress = state.taskBoard.progress[key]||0;
   if(progress < task.goal) return;
   state.taskBoard.claimed[key] = true;
+  sfxClaim();
   addSpores(task.reward.spores);
   grantXp(20);
   state.achStats.tasksClaimed = (state.achStats.tasksClaimed||0)+1;
@@ -1555,6 +1575,7 @@ function purchaseUpgrade(key){
   const cost = upgradeCost(key, level);
   if(state.spores < cost) return;
   state.spores -= cost;
+  sfxPurchase();
   state.upgrades[key] = level+1;
   bumpTaskProgress('buy_upgrade', 1);
   state.achStats.upgradesBought = (state.achStats.upgradesBought||0)+1;
@@ -1621,6 +1642,7 @@ function buyLuckyCharm(){
   if((state.gems||0) < LUCKY_CHARM_COST) return false;
   if((state.nextMutationBoost||0) >= LUCKY_CHARM_CAP) return false;
   state.gems -= LUCKY_CHARM_COST;
+  sfxPurchase();
   state.nextMutationBoost = Math.min(LUCKY_CHARM_CAP, (state.nextMutationBoost||0) + LUCKY_CHARM_BOOST);
   saveState();
   renderConsumables();
@@ -1712,6 +1734,7 @@ function purchaseOfflineCapUpgrade(){
   if(!next) return false;
   if((state.gems||0) < next.cost) return false;
   state.gems -= next.cost;
+  sfxPurchase();
   state.offlineCapLevel = offlineCapLevel()+1;
   saveState();
   renderOfflineCapUpgrade();
@@ -1818,6 +1841,7 @@ function purchaseDecor(kind, key){
   if(owned.includes(key)) return false;
   if(state.spores < cfg.cost) return false;
   state.spores -= cfg.cost;
+  sfxPurchase();
   owned.push(key);
   equipDecor(kind, key);
   saveState();
@@ -1943,6 +1967,7 @@ function buyMerchantSeed(){
   if(!offer || state.merchant.seedBought) return false;
   if((state.gems||0) < offer.cost) return false;
   state.gems -= offer.cost;
+  sfxPurchase();
   const genome = { species:offer.species, hue:offer.hue, glow:true, growthMult:1, yieldMult:1.15, sellMult:1, extraSeed:0, rareTrait:offer.rareTrait, rareTrait2:null, hybridWith:null };
   addToInventory(offer.species, genome, 1);
   state.merchant.seedBought = true;
@@ -1957,6 +1982,7 @@ function buyMerchantCosmetic(){
   if(!offer || state.merchant.cosmeticBought) return false;
   if((state.gems||0) < offer.cost) return false;
   state.gems -= offer.cost;
+  sfxPurchase();
   decorOwned(offer.kind).push(offer.key);
   state.merchant.cosmeticBought = true;
   saveState();
@@ -2965,7 +2991,7 @@ rainAudio.loop = true;
 rainAudio.volume = 0.45;
 let userInteracted = false;
 function playRainAudio(){
-  if(!userInteracted) return;
+  if(!userInteracted || !musicEnabled()) return;
   rainAudio.play().catch(()=>{});
 }
 function stopRainAudio(){
@@ -2974,7 +3000,12 @@ function stopRainAudio(){
 document.addEventListener('pointerdown', ()=>{
   if(userInteracted) return;
   userInteracted = true;
+  ensureAudio();
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
   if(currentWeather==='rain' || currentWeather==='storm') playRainAudio();
+  if(currentWeather==='storm') startWind();
+  if(musicEnabled()) startMusic();
+  scheduleBirdChirps();
 }, {once:true});
 
 function applyWeather(weather){
@@ -2986,6 +3017,8 @@ function applyWeather(weather){
   el.className = cls.join(' ');
   if(weather==='rain' || weather==='storm') playRainAudio();
   else stopRainAudio();
+  if(weather==='storm') startWind();
+  else stopWind();
 }
 const MUTATION_STORM_BONUS = 0.12;
 const PEST_SWARM_CHANCE = 0.10;
@@ -3028,6 +3061,246 @@ function strikeLightning(){
   void flash.offsetWidth;
   flash.classList.add('flash');
 }
+
+/* ===================== AUDIO ENGINE ===================== */
+function sfxEnabled(){ return !state || !state.settings || state.settings.sfxEnabled!==false; }
+function musicEnabled(){ return !state || !state.settings || state.settings.musicEnabled!==false; }
+
+let audioCtx = null, sfxBus = null, ambienceBus = null;
+function ensureAudio(){
+  if(audioCtx) return audioCtx;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if(!Ctx) return null;
+  audioCtx = new Ctx();
+  sfxBus = audioCtx.createGain();
+  sfxBus.gain.value = sfxEnabled() ? 1 : 0;
+  sfxBus.connect(audioCtx.destination);
+  ambienceBus = audioCtx.createGain();
+  ambienceBus.gain.value = musicEnabled() ? 1 : 0;
+  ambienceBus.connect(audioCtx.destination);
+  return audioCtx;
+}
+function applyAudioSettings(){
+  ensureAudio();
+  if(sfxBus) sfxBus.gain.value = sfxEnabled() ? 1 : 0;
+  if(ambienceBus) ambienceBus.gain.value = musicEnabled() ? 1 : 0;
+  rainAudio.muted = !musicEnabled();
+  if(musicEnabled()){
+    if(userInteracted){ startMusic(); if(currentWeather==='storm') startWind(); }
+  } else {
+    stopMusic(); stopWind();
+  }
+}
+
+function playTone(freq, dur, opts){
+  opts = opts || {};
+  const ctx = ensureAudio();
+  if(!ctx || !sfxEnabled()) return;
+  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+  const t0 = ctx.currentTime + (opts.delay||0);
+  const osc = ctx.createOscillator();
+  osc.type = opts.type || 'square';
+  osc.frequency.setValueAtTime(freq, t0);
+  if(opts.sweepTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1,opts.sweepTo), t0+dur);
+  const g = ctx.createGain();
+  const vol = opts.gain!=null ? opts.gain : 0.18;
+  const attack = opts.attack!=null ? opts.attack : 0.008;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(vol, t0+attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  osc.connect(g); g.connect(sfxBus);
+  osc.start(t0); osc.stop(t0+dur+0.03);
+}
+function playNoiseBurst(dur, opts){
+  opts = opts || {};
+  const ctx = ensureAudio();
+  if(!ctx || !sfxEnabled()) return;
+  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+  const t0 = ctx.currentTime + (opts.delay||0);
+  const size = Math.max(1, Math.floor(ctx.sampleRate*dur));
+  const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<size;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/size, 1.5);
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = opts.filterType || 'lowpass';
+  filter.frequency.value = opts.filterFreq || 1200;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(opts.gain!=null?opts.gain:0.22, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+  src.connect(filter); filter.connect(g); g.connect(sfxBus);
+  src.start(t0);
+}
+
+/* ---- SFX library ---- */
+function sfxTick(){ playTone(720, 0.035, {type:'square', gain:0.05}); }
+function sfxPlant(){ playTone(330,0.08,{type:'triangle',gain:0.15}); playTone(494,0.12,{type:'triangle',gain:0.13,delay:0.05}); }
+function sfxHarvestPlain(){
+  playTone(523,0.08,{type:'square',gain:0.14});
+  playTone(659,0.1,{type:'square',gain:0.14,delay:0.06});
+  playTone(784,0.13,{type:'square',gain:0.14,delay:0.12});
+}
+function sfxDiscovery(tier){
+  const notes = [784,988,1175,1568,1976,2349];
+  const count = 3 + Math.min(Math.max(tier,0),3);
+  for(let i=0;i<count;i++){
+    const f = notes[Math.min(i,notes.length-1)];
+    playTone(f, 0.22, {type:'sine', gain:0.15, delay:i*0.06, sweepTo:f*1.25});
+  }
+  if(tier>=3) playNoiseBurst(0.3,{filterFreq:4000,gain:0.08,delay:0.05});
+}
+function sfxHarvestResult(result){
+  if(!result) return;
+  if(result.isNew) sfxDiscovery(getSeedRarityTier(result.genome));
+  else sfxHarvestPlain();
+}
+function sfxPestSquash(){ playNoiseBurst(0.1,{filterFreq:550,gain:0.28}); playTone(140,0.09,{type:'sawtooth',gain:0.12,delay:0.02}); }
+function sfxLevelUp(){ [523,659,784,1046,1318].forEach((f,i)=>playTone(f,0.16,{type:'square',gain:0.15,delay:i*0.075})); }
+function sfxAchievement(){ playTone(880,0.12,{type:'triangle',gain:0.17}); playTone(1108,0.2,{type:'triangle',gain:0.17,delay:0.09}); }
+function sfxPrestige(){
+  [261.63,329.63,392.00,523.25].forEach((f,i)=>playTone(f,1.0,{type:'sawtooth',gain:0.09,delay:i*0.03,attack:0.06}));
+  [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>playTone(f,0.3,{type:'sine',gain:0.12,delay:0.3+i*0.09,sweepTo:f*1.15}));
+  playNoiseBurst(0.5,{filterFreq:3500,gain:0.14,delay:0.05});
+}
+function sfxUnlockPlot(){ playTone(392,0.08,{type:'square',gain:0.14}); playTone(523,0.12,{type:'square',gain:0.14,delay:0.06}); }
+function sfxClaim(){ playTone(660,0.09,{type:'triangle',gain:0.15}); playTone(880,0.13,{type:'triangle',gain:0.15,delay:0.06}); }
+function sfxPurchase(){ playTone(320,0.06,{type:'square',gain:0.12}); playTone(220,0.09,{type:'square',gain:0.1,delay:0.04}); }
+
+/* ---- Ambient background music (procedural loop) ---- */
+const MUSIC_CHORDS = [ [130.81,196.00], [174.61,261.63], [196.00,293.66], [146.83,220.00] ];
+const MUSIC_SCALE = [523.25,587.33,659.25,783.99,880.00];
+let musicTimer = null, musicStep = 0, musicNextTime = 0;
+function musicPad(freq, dur, t0){
+  const osc = audioCtx.createOscillator();
+  osc.type='sine'; osc.frequency.value=freq;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(0.05, t0+dur*0.35);
+  g.gain.linearRampToValueAtTime(0, t0+dur);
+  osc.connect(g); g.connect(ambienceBus);
+  osc.start(t0); osc.stop(t0+dur+0.1);
+}
+function musicPluck(freq, t0){
+  const osc = audioCtx.createOscillator();
+  osc.type='triangle'; osc.frequency.value=freq;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(0.045, t0+0.04);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+1.1);
+  osc.connect(g); g.connect(ambienceBus);
+  osc.start(t0); osc.stop(t0+1.2);
+}
+const MUSIC_STEP_DUR = 1.9;
+function scheduleMusic(){
+  if(!audioCtx) return;
+  while(musicNextTime < audioCtx.currentTime + 2.2){
+    const chord = MUSIC_CHORDS[Math.floor(musicStep/4) % MUSIC_CHORDS.length];
+    chord.forEach(f=>musicPad(f, MUSIC_STEP_DUR*1.6, musicNextTime));
+    if(musicStep%3===1) musicPluck(MUSIC_SCALE[Math.floor(Math.random()*MUSIC_SCALE.length)], musicNextTime + MUSIC_STEP_DUR*0.25);
+    musicNextTime += MUSIC_STEP_DUR;
+    musicStep++;
+  }
+}
+function startMusic(){
+  const ctx = ensureAudio();
+  if(!ctx || !musicEnabled() || musicTimer) return;
+  if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+  musicNextTime = ctx.currentTime + 0.15;
+  musicStep = 0;
+  scheduleMusic();
+  musicTimer = setInterval(scheduleMusic, 500);
+}
+function stopMusic(){
+  if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
+}
+
+/* ---- Weather ambience: wind + birds ---- */
+let windSource = null, windGainNode = null;
+function startWind(){
+  const ctx = ensureAudio();
+  if(!ctx || !userInteracted || !musicEnabled() || windSource) return;
+  const size = ctx.sampleRate*2;
+  const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let last=0;
+  for(let i=0;i<size;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; data[i]=last*3.2; }
+  const src = ctx.createBufferSource();
+  src.buffer = buffer; src.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type='bandpass'; filter.frequency.value=500; filter.Q.value=0.5;
+  windGainNode = ctx.createGain();
+  windGainNode.gain.value = 0.1;
+  src.connect(filter); filter.connect(windGainNode); windGainNode.connect(ambienceBus);
+  src.start();
+  windSource = src;
+}
+function stopWind(){
+  if(windSource){ try{ windSource.stop(); }catch(e){} windSource=null; windGainNode=null; }
+}
+let birdTimer = null;
+function playBirdChirp(){
+  const ctx = ensureAudio();
+  if(!ctx || !sfxEnabled()) return;
+  const t0 = ctx.currentTime;
+  [0,0.13].forEach(off=>{
+    const f = 1700+Math.random()*900;
+    const osc = ctx.createOscillator();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(f, t0+off);
+    osc.frequency.exponentialRampToValueAtTime(f*1.35, t0+off+0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t0+off);
+    g.gain.linearRampToValueAtTime(0.045, t0+off+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+off+0.16);
+    osc.connect(g); g.connect(sfxBus);
+    osc.start(t0+off); osc.stop(t0+off+0.2);
+  });
+}
+function scheduleBirdChirps(){
+  if(birdTimer) return;
+  const step = ()=>{
+    if(currentWeather==='clear' && userInteracted){
+      playBirdChirp();
+      birdTimer = setTimeout(step, 5000+Math.random()*9000);
+    } else {
+      birdTimer = setTimeout(step, 4000);
+    }
+  };
+  birdTimer = setTimeout(step, 4000+Math.random()*6000);
+}
+document.addEventListener('click', function(e){
+  const el = e.target.closest('.btn, .nav-btn, .wing-toggle-btn');
+  if(!el || el.disabled) return;
+  sfxTick();
+});
+function toggleSfxSetting(){
+  state.settings.sfxEnabled = !sfxEnabled();
+  applyAudioSettings();
+  saveState();
+  renderSoundSettings();
+  if(sfxEnabled()) sfxTick();
+}
+function toggleMusicSetting(){
+  state.settings.musicEnabled = !musicEnabled();
+  applyAudioSettings();
+  saveState();
+  renderSoundSettings();
+}
+function renderSoundSettings(){
+  const list = document.getElementById('soundSettingsList');
+  if(!list) return;
+  list.innerHTML =
+    '<div class="toggle-row">'
+    + '<div><div class="toggle-row-label">Sound Effects</div><div class="toggle-row-desc">Harvest, planting, pests, rewards, and button taps</div></div>'
+    + '<div class="toggle-switch'+(sfxEnabled()?' is-on':'')+'" onclick="toggleSfxSetting()"><div class="toggle-knob"></div></div>'
+    + '</div>'
+    + '<div class="toggle-row">'
+    + '<div><div class="toggle-row-label">Music &amp; Ambience</div><div class="toggle-row-desc">Background music, rain, wind, and garden birdsong</div></div>'
+    + '<div class="toggle-switch'+(musicEnabled()?' is-on':'')+'" onclick="toggleMusicSetting()"><div class="toggle-knob"></div></div>'
+    + '</div>';
+}
+
 let revealShowing = false;
 let lastSheetDisplayStatus = null;
 let saveTimer = null;
@@ -3062,6 +3335,7 @@ function defaultState(){
     monument:{ level:0 },
     adCooldownUntil:0,
     offlineCapLevel:0,
+    settings:{ sfxEnabled:true, musicEnabled:true },
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -3118,6 +3392,12 @@ function normalizeState(parsed){
       }
       if(!merged.specialVisitorsClaimed || typeof merged.specialVisitorsClaimed!=='object') merged.specialVisitorsClaimed = {};
       if(!merged.monument || typeof merged.monument!=='object' || typeof merged.monument.level!=='number') merged.monument = { level:0 };
+      if(!merged.settings || typeof merged.settings!=='object'){
+        merged.settings = { sfxEnabled:true, musicEnabled:true };
+      } else {
+        if(typeof merged.settings.sfxEnabled!=='boolean') merged.settings.sfxEnabled = true;
+        if(typeof merged.settings.musicEnabled!=='boolean') merged.settings.musicEnabled = true;
+      }
       return merged;
 }
 async function loadState(){
@@ -3879,6 +4159,8 @@ function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
   const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
   if(!results.length) return;
+  const bestTier = results.reduce((max,r)=> r.isNew ? Math.max(max, getSeedRarityTier(r.genome)) : max, -1);
+  if(bestTier>=0) sfxDiscovery(bestTier); else sfxHarvestPlain();
   updateAllTiles(); updateAllDesertTiles(); updateHeader();
   if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
   const totalSpores = results.reduce((sum,r)=>sum+r.sellValue, 0);
@@ -3901,6 +4183,7 @@ function autoPlantTick(){
   if(getPrestigeBonus('autoPlant') <= 0) return;
   const planted = autoPlantWing('verdant').concat(autoPlantWing('desert'));
   if(!planted.length) return;
+  sfxPlant();
   updateAllTiles(); updateAllDesertTiles(); updateHeader();
   showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted '+planted.length+' seed'+(planted.length===1?'':'s')+' from your seed bank</span></span>');
 }
@@ -4380,6 +4663,7 @@ function squashPest(idx, wing='verdant'){
   const plot = plotsForWing(wing)[idx];
   const pestType = plot.pest && plot.pest.type;
   plot.pest = null;
+  sfxPestSquash();
   bumpTaskProgress('squash_pest', 1);
   state.achStats.pestsSquashed = (state.achStats.pestsSquashed||0)+1;
   if(pestType){
@@ -4648,11 +4932,11 @@ function onSlider(idx, key, val){
 }
 function plantBase(idx, key, wing='verdant'){
   if(!isSpeciesUnlocked(key)) return;
-  plantSeed(idx, {type:'base', speciesKey:key}, wing);
+  if(plantSeed(idx, {type:'base', speciesKey:key}, wing)) sfxPlant();
   renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
 function plantFromInventory(idx, stackId, wing='verdant'){
-  plantSeed(idx, {type:'inventory', stackId}, wing);
+  if(plantSeed(idx, {type:'inventory', stackId}, wing)) sfxPlant();
   renderSheetFull(idx); refreshTilesForWing(wing); updateHeader();
 }
 function unlockPlot(idx, wing='verdant'){
@@ -4660,6 +4944,7 @@ function unlockPlot(idx, wing='verdant'){
   if(state.spores < plot.unlockCost) return;
   state.spores -= plot.unlockCost;
   plot.locked = false;
+  sfxUnlockPlot();
   bumpTaskProgress('unlock_plot', 1);
   checkAchievements();
   if(pruneImpossibleTasks()) showToast('A task board slot refreshed since a task became impossible.');
@@ -4669,6 +4954,7 @@ function unlockPlot(idx, wing='verdant'){
 function doHarvest(idx){
   const result = harvestPlot(idx, currentSheetWing);
   if(!result) return;
+  sfxHarvestResult(result);
   revealShowing = true;
   renderReveal(result);
   refreshTilesForWing(currentSheetWing); updateHeader(); renderHerbarium();
@@ -4715,6 +5001,8 @@ function openHarvestAllSummary(results){
 function onHarvestAllClick(){
   const results = harvestAllReady(currentWing);
   if(!results.length) return;
+  const bestTier = results.reduce((max,r)=> r.isNew ? Math.max(max, getSeedRarityTier(r.genome)) : max, -1);
+  if(bestTier>=0) sfxDiscovery(bestTier); else sfxHarvestPlain();
   refreshTilesForWing(currentWing); updateHeader(); renderHerbarium();
   openHarvestAllSummary(results);
 }
@@ -4742,7 +5030,7 @@ function showScreen(name){
   if(name==='herbarium') renderHerbarium();
   if(name==='upgrades') renderUpgrades();
   if(name==='tasks') renderTasks();
-  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); }
+  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); renderSoundSettings(); }
   if(name==='lab'){ renderLab(); renderLabShelf(); }
 }
 const SCREEN_SWIPE_ORDER = ['greenhouse','tasks','achievements','upgrades','herbarium','lab'];
@@ -5103,6 +5391,7 @@ document.addEventListener('visibilitychange', ()=>{
 async function init(){
   state = await loadState();
   applyEquippedDecor();
+  rainAudio.muted = !musicEnabled();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);

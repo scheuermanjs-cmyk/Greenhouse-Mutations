@@ -4,7 +4,5 @@
     <string name="title_activity_main">Greenhouse: Mutations</string>
     <string name="package_name">com.scheuermanjs.greenhousemutations</string>
     <string name="custom_url_scheme">com.scheuermanjs.greenhousemutations</string>
-    <!-- Google's published sample/test AdMob App ID. Swap for your real AdMob
-         App ID (from your AdMob account's app settings) before release. -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_app_id">ca-app-pub-3102211971185605~1191823974</string>
 </resources>

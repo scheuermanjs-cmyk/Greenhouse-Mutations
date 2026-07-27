@@ -4337,7 +4337,7 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   saveState();
   return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned, xpGain };
 }
-const AUTO_ACTION_BASE_MS = 15000;
+const AUTO_ACTION_BASE_MS = 30000;
 const AUTO_ACTION_MIN_MS = 5000;
 function autoPlantIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoPlantSpeed')); }
 function autoHarvestIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoHarvestSpeed')); }
@@ -4420,19 +4420,21 @@ function squashPestOffline(plot, summary){
   summary.gems += 1;
   summary.xp += 3;
 }
-function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarvest, hasPlant, hasPest){
+function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarvest, hasPlant, hasPest, actionBudget){
   const summary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const plot = plotsForWing(wing)[idx];
+  const budget = actionBudget || { harvest:Infinity, plant:Infinity };
   let cursor = awayStart;
   let guard = 0;
   while(guard++ < 200){
     if(plot.locked) break;
     if(plot.status==='empty'){
-      if(!hasPlant || cursor>=cappedEnd) break;
+      if(!hasPlant || budget.plant<=0 || cursor>=cappedEnd) break;
       const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
       if(!stack) break;
       if(!plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) break;
       plot.plantedAt = cursor; plot.lastDeathCheck = cursor; plot.lastPestCheck = cursor; plot.lastSprinklerCheck = cursor; plot.lastLightCheck = cursor;
+      budget.plant--;
       summary.planted++;
       continue;
     }
@@ -4452,9 +4454,10 @@ function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarves
     if(plot.pest && hasPest) squashPestOffline(plot, summary);
     if(finishAt > realNow) break;
     if(finishAt > cappedEnd) break;
-    if(!hasHarvest) break;
+    if(!hasHarvest || budget.harvest<=0) break;
     const result = harvestPlot(idx, wing, offlineEarningsMult());
     if(!result) break;
+    budget.harvest--;
     summary.harvests++;
     summary.spores += result.sellValue;
     summary.xp += result.xpGain||0;
@@ -5549,13 +5552,21 @@ function runAwayCatchup(awayStartOverride){
   const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
   const hasAutoPest = getPrestigeBonus('autoPest') > 0;
   const cappedEnd = Math.min(now, awayStart + offlineCapMs());
+  // the same 30s (or upgraded) cooldown that gates auto-harvest/auto-plant live also caps how many
+  // total auto actions can happen across the WHOLE away period -- shared across every plot in both
+  // wings, consumed in the same verdant-then-desert, low-to-high-index order the live tick scans in
+  const awaySpan = Math.max(0, cappedEnd - awayStart);
+  const actionBudget = {
+    harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
+    plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
+  };
   let wiltedCount = 0, readyCount = 0;
   let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
   const tickAwayWing = (wing)=>{
     plotsForWing(wing).forEach((p, idx)=>{
       if(p.locked || (p.status!=='growing' && p.status!=='empty')) return;
       const before = p.status;
-      const result = simulateOfflinePlot(idx, wing, awayStart, now, cappedEnd, hasAutoHarvest, hasAutoPlant, hasAutoPest);
+      const result = simulateOfflinePlot(idx, wing, awayStart, now, cappedEnd, hasAutoHarvest, hasAutoPlant, hasAutoPest, actionBudget);
       offlineSummary = mergeOfflineSummary(offlineSummary, result);
       if(p.status==='wilted' && before!=='wilted') wiltedCount++;
       else if(getDisplayStatus(p)==='ready') readyCount++;

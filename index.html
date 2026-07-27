@@ -1042,7 +1042,10 @@ const SKILL_TREE = {
   autoHarvest: { name:'Tireless Hands',    tier:1, branch:'harvest', stat:'autoHarvest',   perLevel:1,    maxLevel:1, baseCost:3, scale:1,
     desc:()=> 'Ready plots are collected automatically, no tapping required', requires:null },
   pestExterminator: { name:'Pest Exterminator', tier:1, branch:'resist', stat:'autoPest', perLevel:1, maxLevel:1, baseCost:3, scale:1,
-    desc:()=> 'Pests are squashed automatically the moment they appear', requires:null }
+    desc:()=> 'Pests are squashed automatically the moment they appear', requires:null },
+
+  offlineYield: { name:'Absentee Bloom', tier:1, branch:'offline', stat:'offlineEarnings', perLevel:0.15, maxLevel:5, baseCost:2, scale:1.6,
+    desc:(n)=> '+'+Math.round(n*100)+'% offline spore earnings', requires:null }
 };
 function defaultSkillTree(){
   const tree = {};
@@ -1769,6 +1772,10 @@ function renderConsumables(){
 }
 
 /* ===================== OFFLINE EARNINGS CAP ===================== */
+const OFFLINE_EARNINGS_BASE = 0.25;
+function offlineEarningsMult(){
+  return Math.min(1, OFFLINE_EARNINGS_BASE + getPrestigeBonus('offlineEarnings'));
+}
 const OFFLINE_CAP_BASE_HOURS = 2;
 const OFFLINE_CAP_TIERS = [
   { name:'Standing Orders I',   addHours:2, cost:60 },
@@ -1812,6 +1819,7 @@ function renderOfflineCapUpgrade(){
     + '<div class="upg-name">'+(next ? next.name : 'Standing Orders')+'</div>'
     + '<div class="upg-desc">Your automations (Farmers, Tireless Hands, Exterminator) keep working while you\'re away, up to a time limit</div>'
     + '<div class="upg-current">Current cap: '+hours+' hours</div>'
+    + '<div class="upg-current">Earning rate while away: '+Math.round(offlineEarningsMult()*100)+'% (raise this with the Absentee Bloom prestige skill)</div>'
     + '</div>';
   if(next){
     const afford = (state.gems||0)>=next.cost;
@@ -2311,7 +2319,8 @@ function renderPrestigeSummary(){
 const BRANCH_META = {
   growth:  { label:'Growth',  color:'#7ED957' },
   harvest: { label:'Harvest', color:'#E8B93C' },
-  resist:  { label:'Resist',  color:'#6E9BD1' }
+  resist:  { label:'Resist',  color:'#6E9BD1' },
+  offline: { label:'Offline', color:'#C77DFF' }
 };
 function renderPrestigeTree(){
   const el = document.getElementById('prestigeTreeList');
@@ -4218,7 +4227,7 @@ function plantSeed(idx, source, wing='verdant'){
   saveState();
   return true;
 }
-function harvestPlot(idx, wing='verdant'){
+function harvestPlot(idx, wing='verdant', earningsMult=1){
   const plot = plotsForWing(wing)[idx];
   if(plot.locked || plot.status!=='growing' || getDisplayStatus(plot)!=='ready') return null;
   const { genome: finalGenome, mutated, crossInfo } = rollMutation(plot, idx, wing);
@@ -4234,7 +4243,8 @@ function harvestPlot(idx, wing='verdant'){
   const precisionBonus = Math.min(precisionLight, precisionWater) * (getLevelBonus('wellTended') || 0.25);
   const speciesKey = plot.genome.species;
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
-  const sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * randRange(0.85,1.15));
+  let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * randRange(0.85,1.15));
+  if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
   const seedQty = 1 + (finalGenome.extraSeed||0);
   addToInventory(plot.genome.species, finalGenome, seedQty);
@@ -4364,7 +4374,7 @@ function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarves
     if(finishAt > realNow) break;
     if(finishAt > cappedEnd) break;
     if(!hasHarvest) break;
-    const result = harvestPlot(idx, wing);
+    const result = harvestPlot(idx, wing, offlineEarningsMult());
     if(!result) break;
     summary.harvests++;
     summary.spores += result.sellValue;

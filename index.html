@@ -3215,14 +3215,14 @@ function playRainDrop(){
   const ctx = audioCtx;
   if(!ctx) return;
   const t0 = ctx.currentTime;
-  const f = 1800+Math.random()*1600;
+  const f = 1300+Math.random()*1000;
   const osc = ctx.createOscillator();
   osc.type='sine';
   osc.frequency.setValueAtTime(f, t0);
   osc.frequency.exponentialRampToValueAtTime(f*0.6, t0+0.05);
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(0.02+Math.random()*0.02, t0+0.005);
+  g.gain.linearRampToValueAtTime(0.01+Math.random()*0.012, t0+0.006);
   g.gain.exponentialRampToValueAtTime(0.0001, t0+0.09);
   osc.connect(g); g.connect(ambienceBus);
   osc.start(t0); osc.stop(t0+0.1);
@@ -3232,8 +3232,8 @@ function scheduleRainDrops(intense){
   const step = ()=>{
     if(!rainSource){ rainDropTimer = null; return; }
     playRainDrop();
-    if(Math.random()<0.3) playRainDrop();
-    rainDropTimer = setTimeout(step, intense ? 60+Math.random()*90 : 130+Math.random()*220);
+    if(Math.random()<0.15) playRainDrop();
+    rainDropTimer = setTimeout(step, intense ? 110+Math.random()*140 : 220+Math.random()*320);
   };
   rainDropTimer = setTimeout(step, 50);
 }
@@ -3247,15 +3247,15 @@ function startRain(intense){
   const src = ctx.createBufferSource();
   src.buffer = buffer; src.loop = true;
   const hp = ctx.createBiquadFilter();
-  hp.type='highpass'; hp.frequency.value=1400;
+  hp.type='highpass'; hp.frequency.value=800;
   const bp = ctx.createBiquadFilter();
-  bp.type='bandpass'; bp.frequency.value=3400; bp.Q.value=0.6;
+  bp.type='bandpass'; bp.frequency.value=2200; bp.Q.value=0.45;
   rainGainNode = ctx.createGain();
-  rainGainNode.gain.value = intense ? 0.11 : 0.07;
+  rainGainNode.gain.value = intense ? 0.065 : 0.04;
   rainLfo = ctx.createOscillator();
   rainLfo.type='sine'; rainLfo.frequency.value=6.5;
   rainLfoGain = ctx.createGain();
-  rainLfoGain.gain.value = 0.015;
+  rainLfoGain.gain.value = 0.008;
   rainLfo.connect(rainLfoGain);
   rainLfoGain.connect(rainGainNode.gain);
   rainLfo.start();

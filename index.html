@@ -748,7 +748,9 @@
     </section>
 
     <section class="screen" id="screen-upgrades">
-      <div class="screen-title">Permanent upgrades for every pot</div>
+      <div class="ach-category" style="margin-top:0;">Gem Shop</div>
+      <div id="gemShopList"></div>
+      <div class="screen-title" style="margin-top:18px;">Permanent upgrades for every pot</div>
       <div id="upgList"></div>
       <div class="screen-title-row" style="margin-top:18px;">
         <div class="ach-category" style="margin:0;">Traveling Merchant</div>
@@ -1140,6 +1142,7 @@ function doPrestige(){
   const keepSettings = state.settings;
   const keepGems = state.gems;
   const keepOfflineCapLevel = state.offlineCapLevel;
+  const keepIap = state.iap;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1152,7 +1155,8 @@ function doPrestige(){
     skylight: keepSkylight,
     settings: keepSettings,
     gems: keepGems,
-    offlineCapLevel: keepOfflineCapLevel
+    offlineCapLevel: keepOfflineCapLevel,
+    iap: keepIap
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1656,6 +1660,7 @@ function renderUpgrades(){
   renderMerchant();
   renderMonument();
   renderSkylight();
+  renderGemShop();
 }
 function renderMonument(){
   const el = document.getElementById('monumentCard');
@@ -1800,6 +1805,147 @@ function onWatchAdForGems(){
     renderConsumables();
     showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('tv', true)+'<span>+'+AD_GEM_REWARD+' gems from the ad!</span></span>');
   }, document.getElementById('watchAdGemsBtn'));
+}
+/* ===================== IN-APP PURCHASES (GEM SHOP) =====================
+   Uses the RevenueCat Capacitor plugin (@revenuecat/purchases-capacitor)
+   natively via the runtime window.Capacitor.Plugins bridge -- no bundler
+   needed since this project ships as a plain script. Real purchases only
+   work in the native Android app; the web/PWA build shows a "get it on
+   Google Play" message instead since there's no way to process real
+   payments in a browser. */
+// Public RevenueCat SDK key -- replace once the RevenueCat project/app exists.
+const REVENUECAT_API_KEY = 'REPLACE_WITH_REVENUECAT_PUBLIC_SDK_KEY';
+const GEM_PRODUCTS = [
+  { id:'gems_pinch',   name:'Pinch of Gems',    gems:100 },
+  { id:'gems_handful', name:'Handful of Gems',  gems:550 },
+  { id:'gems_basket',  name:'Basket of Gems',   gems:1200 },
+  { id:'gems_vault',   name:'Greenhouse Vault', gems:2600 }
+];
+const STARTER_PACK_ID = 'starter_pack';
+const STARTER_PACK_GEMS = 300;
+const STARTER_PACK_SPORES = 1000;
+let iapInitialized = false;
+let iapPackagesByProductId = null;
+function nativePurchasesAvailable(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
+    && window.Capacitor.Plugins && window.Capacitor.Plugins.Purchases);
+}
+function initIAP(){
+  if(!nativePurchasesAvailable() || iapInitialized) return;
+  iapInitialized = true;
+  const Purchases = window.Capacitor.Plugins.Purchases;
+  // configure() is a fire-and-forget native call (no promise to await), unlike the other
+  // Purchases methods below -- the native bridge preserves call order, so it's safe to
+  // immediately follow it with the promise-based calls without waiting on it first.
+  Purchases.configure({ apiKey: REVENUECAT_API_KEY });
+  Promise.all([Purchases.getOfferings(), Purchases.getCustomerInfo()]).then(([offerings, customerInfoResult])=>{
+    const current = offerings && offerings.current;
+    const packages = (current && current.availablePackages) || [];
+    iapPackagesByProductId = {};
+    packages.forEach(pkg => { iapPackagesByProductId[pkg.product.identifier] = pkg; });
+    const owned = (customerInfoResult && customerInfoResult.customerInfo && customerInfoResult.customerInfo.allPurchasedProductIdentifiers) || [];
+    if(owned.includes(STARTER_PACK_ID) && !state.iap.starterPackPurchased){
+      state.iap.starterPackPurchased = true;
+      saveState();
+    }
+    renderGemShop();
+  }).catch(()=>{});
+}
+function purchaseProduct(productId, btnEl){
+  if(!nativePurchasesAvailable() || !iapPackagesByProductId) return;
+  const pkg = iapPackagesByProductId[productId];
+  if(!pkg){ showToast('Not available right now — try again later.'); return; }
+  const Purchases = window.Capacitor.Plugins.Purchases;
+  const originalHTML = btnEl ? btnEl.innerHTML : '';
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Processing…'; }
+  Purchases.purchasePackage({ aPackage: pkg }).then(()=>{
+    onIAPPurchaseSuccess(productId);
+  }).catch((err)=>{
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = originalHTML; }
+    if(!err || !err.userCancelled) showToast('Purchase failed — please try again.');
+  });
+}
+function onIAPPurchaseSuccess(productId){
+  const gemProduct = GEM_PRODUCTS.find(p=>p.id===productId);
+  if(gemProduct){
+    addGems(gemProduct.gems);
+    sfxPurchase();
+    saveState();
+    updateHeader();
+    renderGemShop();
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderGemIcon(2)+'<span>+'+gemProduct.gems+' gems! Thank you for the support.</span></span>');
+    return;
+  }
+  if(productId===STARTER_PACK_ID){
+    state.iap.starterPackPurchased = true;
+    addGems(STARTER_PACK_GEMS);
+    addSpores(STARTER_PACK_SPORES);
+    sfxPurchase();
+    saveState();
+    updateHeader();
+    renderGemShop();
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderGemIcon(2)+'<span>Welcome pack claimed! +'+STARTER_PACK_GEMS+' gems, +'+STARTER_PACK_SPORES+' spores.</span></span>');
+  }
+}
+function restoreIAP(){
+  if(!nativePurchasesAvailable()) return;
+  const Purchases = window.Capacitor.Plugins.Purchases;
+  Purchases.restorePurchases().then((result)=>{
+    const owned = (result && result.customerInfo && result.customerInfo.allPurchasedProductIdentifiers) || [];
+    if(owned.includes(STARTER_PACK_ID)){
+      state.iap.starterPackPurchased = true;
+      saveState();
+      renderGemShop();
+      showToast('Purchases restored!');
+    } else {
+      showToast('No previous purchases found.');
+    }
+  }).catch(()=>{ showToast('Restore failed — try again later.'); });
+}
+function renderGemShop(){
+  const el = document.getElementById('gemShopList');
+  if(!el) return;
+  if(!nativePurchasesAvailable()){
+    el.innerHTML = '<div class="upg-desc" style="margin:-6px 2px 8px;">Gem packs are available in the Google Play version of the app.</div>';
+    return;
+  }
+  if(!iapPackagesByProductId){
+    el.innerHTML = '<div class="upg-desc" style="margin:-6px 2px 8px;">Loading shop…</div>';
+    return;
+  }
+  let html = '';
+  GEM_PRODUCTS.forEach(p=>{
+    const pkg = iapPackagesByProductId[p.id];
+    const priceText = pkg ? pkg.product.priceString : '—';
+    html += '<div class="upg-card">'
+      + '<div class="upg-info">'
+      + '<div class="upg-name">'+p.name+'</div>'
+      + '<div class="upg-desc">+'+p.gems+' '+renderGemIcon()+'</div>'
+      + '</div>'
+      + '<button class="btn btn-small btn-primary" '+(pkg?'':'disabled')+' onclick="purchaseProduct(\''+p.id+'\', this)">'+priceText+'</button>'
+      + '</div>';
+  });
+  const starterPkg = iapPackagesByProductId[STARTER_PACK_ID];
+  const starterPrice = starterPkg ? starterPkg.product.priceString : '—';
+  if(state.iap.starterPackPurchased){
+    html += '<div class="upg-card">'
+      + '<div class="upg-info">'
+      + '<div class="upg-name">Sprout\'s Starter Pack</div>'
+      + '<div class="upg-desc">+'+STARTER_PACK_GEMS+' '+renderGemIcon()+' &nbsp; +'+STARTER_PACK_SPORES+' '+renderSporeIcon()+'</div>'
+      + '</div>'
+      + '<button class="btn btn-small" disabled>OWNED</button>'
+      + '</div>';
+  } else {
+    html += '<div class="upg-card">'
+      + '<div class="upg-info">'
+      + '<div class="upg-name">Sprout\'s Starter Pack</div>'
+      + '<div class="upg-desc">One-time welcome offer — +'+STARTER_PACK_GEMS+' '+renderGemIcon()+' &nbsp; +'+STARTER_PACK_SPORES+' '+renderSporeIcon()+'</div>'
+      + '</div>'
+      + '<button class="btn btn-small btn-primary" '+(starterPkg?'':'disabled')+' onclick="purchaseProduct(\''+STARTER_PACK_ID+'\', this)">'+starterPrice+'</button>'
+      + '</div>';
+  }
+  html += '<button class="btn btn-block" style="margin-top:4px;" onclick="restoreIAP()">Restore Purchases</button>';
+  el.innerHTML = html;
 }
 function renderConsumables(){
   const el = document.getElementById('consumablesList');
@@ -3512,6 +3658,7 @@ function defaultState(){
     specialVisitorsClaimed:{},
     monument:{ level:0 },
     skylight:{ level:0 },
+    iap:{ starterPackPurchased:false },
     adCooldownUntil:0,
     offlineCapLevel:0,
     settings:{ sfxEnabled:true, musicEnabled:true },
@@ -3572,6 +3719,7 @@ function normalizeState(parsed){
       if(!merged.specialVisitorsClaimed || typeof merged.specialVisitorsClaimed!=='object') merged.specialVisitorsClaimed = {};
       if(!merged.monument || typeof merged.monument!=='object' || typeof merged.monument.level!=='number') merged.monument = { level:0 };
       if(!merged.skylight || typeof merged.skylight!=='object' || typeof merged.skylight.level!=='number') merged.skylight = { level:0 };
+      if(!merged.iap || typeof merged.iap!=='object' || typeof merged.iap.starterPackPurchased!=='boolean') merged.iap = { starterPackPurchased:false };
       if(!merged.settings || typeof merged.settings!=='object'){
         merged.settings = { sfxEnabled:true, musicEnabled:true };
       } else {
@@ -5611,6 +5759,7 @@ async function init(){
   state = await loadState();
   applyEquippedDecor();
   initNativeAds();
+  initIAP();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);

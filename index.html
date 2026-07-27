@@ -1803,13 +1803,19 @@ function adReady(){
   if(nativeAdsAvailable() && !nativeRewardAdReady) return false;
   return true;
 }
+function adButtonLabel(readyLabel){
+  if(adReady()) return readyLabel;
+  const cooldownRemaining = (state.adCooldownUntil||0) - Date.now();
+  if(cooldownRemaining > 0) return Math.ceil(cooldownRemaining/1000)+'s';
+  return 'Ad Not Ready';
+}
 function updateAdCooldownDisplay(){
   const btn = document.getElementById('watchAdGemsBtn');
   if(!btn || btn.textContent==='Watching ad…') return;
   const ready = adReady();
   btn.disabled = !ready;
   btn.className = 'btn btn-small'+(ready?' btn-primary':'');
-  btn.textContent = ready ? 'Watch' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+  btn.textContent = adButtonLabel('Watch');
 }
 function onWatchAdForGems(){
   if(!adReady()) return;
@@ -1986,7 +1992,7 @@ function renderConsumables(){
     + '<div class="upg-name">Watch an Ad</div>'
     + '<div class="upg-desc">Watch a short ad for +'+AD_GEM_REWARD+' '+renderGemIcon(2)+'</div>'
     + '</div>'
-    + '<button class="btn btn-small'+(ready?' btn-primary':'')+'" id="watchAdGemsBtn" '+(ready?'':'disabled')+' onclick="onWatchAdForGems()">'+(ready?'Watch':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
+    + '<button class="btn btn-small'+(ready?' btn-primary':'')+'" id="watchAdGemsBtn" '+(ready?'':'disabled')+' onclick="onWatchAdForGems()">'+adButtonLabel('Watch')+'</button>'
     + '</div>';
 }
 
@@ -2805,7 +2811,7 @@ function renderLabSlotSheet(slot){
       + '<div class="lab-timer" id="labTimer">'+fmtTime(remaining)+'</div>'
       + '<div class="lab-progress"><div class="lab-progress-fill" id="labProgressFill" style="width:'+pct+'%"></div></div>'
       + '<button class="btn btn-small btn-block" id="labFinishBtn" style="margin-top:10px;" '+((state.gems||0)<finishCost?'disabled':'')+' onclick="onInstantFinishResearch('+slot+')">Finish Research Now ('+finishCost+' '+renderGemIcon(2)+')</button>'
-      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="labAdFinishBtn" style="margin-top:8px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishResearch('+slot+')">'+(adReady()?'Watch Ad to Finish Free':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
+      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="labAdFinishBtn" style="margin-top:8px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishResearch('+slot+')">'+adButtonLabel('Watch Ad to Finish Free')+'</button>'
       + '</div>';
   } else {
     const r = state.researchSlots[slot];
@@ -2834,7 +2840,7 @@ function updateLabSlotLiveBits(slot){
     const ready = adReady();
     adFinishBtn.disabled = !ready;
     adFinishBtn.className = 'btn btn-small btn-block'+(ready?' btn-accent':'');
-    adFinishBtn.textContent = ready ? 'Watch Ad to Finish Free' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+    adFinishBtn.textContent = adButtonLabel('Watch Ad to Finish Free');
   }
 }
 function finishResearchFree(slot){
@@ -5215,7 +5221,7 @@ function renderSheetFull(idx){
       + pestAlertHtml(idx)
       + '<div class="sheet-timer" id="sheetTimer">'+fmtTime(remaining)+'</div>'
       + '<button class="btn btn-small btn-block" id="instantGrowBtn" style="margin-bottom:8px;" '+((state.gems||0)<growCost?'disabled':'')+' onclick="onInstantGrow('+idx+')">Finish Growing Now ('+growCost+' '+renderGemIcon(2)+')</button>'
-      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="growAdFinishBtn" style="margin-bottom:12px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishGrowing('+idx+',\''+wing+'\')">'+(adReady()?'Watch Ad to Finish Free':Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s')+'</button>'
+      + '<button class="btn btn-small btn-block'+(adReady()?' btn-accent':'')+'" id="growAdFinishBtn" style="margin-bottom:12px;" '+(adReady()?'':'disabled')+' onclick="onWatchAdToFinishGrowing('+idx+',\''+wing+'\')">'+adButtonLabel('Watch Ad to Finish Free')+'</button>'
       + '<div class="slider-row"><label>Light'+lightAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.lightTarget+'%)</span></label><input id="lightSlider" type="range" min="0" max="100" value="'+plot.light+'" style="background:'+sliderGradient(stress.lightTarget)+'" oninput="onSlider('+idx+',\'light\',this.value)"></div>'
       + '<div class="slider-row"><label>Water'+waterAutoTag+' <span style="color:var(--text-muted);">(wants ~'+stress.waterTarget+'%)</span></label><input id="waterSlider" type="range" min="0" max="100" value="'+plot.water+'" style="background:'+sliderGradient(stress.waterTarget)+'" oninput="onSlider('+idx+',\'water\',this.value)"></div>'
       + '<div class="mutation-line">Mutation chance: <span id="sheetChance">'+chance+'%</span>'+(state.nextMutationBoost?' <span style="color:var(--violet);font-size:12px;">(boosted!)</span>':'')+'</div>'
@@ -5255,7 +5261,7 @@ function updateSheetLiveBits(idx){
     const ready = adReady();
     adGrowBtn.disabled = !ready;
     adGrowBtn.className = 'btn btn-small btn-block'+(ready?' btn-accent':'');
-    adGrowBtn.textContent = ready ? 'Watch Ad to Finish Free' : Math.ceil(((state.adCooldownUntil||0)-Date.now())/1000)+'s';
+    adGrowBtn.textContent = adButtonLabel('Watch Ad to Finish Free');
   }
   const lightEl = document.getElementById('lightSlider'); if(lightEl && document.activeElement!==lightEl) lightEl.value = plot.light;
   const waterEl = document.getElementById('waterSlider'); if(waterEl && document.activeElement!==waterEl) waterEl.value = plot.water;

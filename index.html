@@ -1660,20 +1660,73 @@ function buyLuckyCharm(){
   return true;
 }
 /* ===================== REWARDED ADS =====================
-   Mock ad provider — this is the ONLY function to swap out once the app
-   is wrapped with Capacitor + AdMob. Replace the body with a real
-   rewarded-video call (e.g. Capacitor AdMob's showRewardVideoAd()) and
-   call onReward() only from its "user earned reward" event; everything
-   else (cooldown, gem grant, UI) stays the same. */
+   Uses the Capacitor AdMob plugin (@capacitor-community/admob) natively
+   via the runtime window.Capacitor.Plugins bridge -- no bundler/import
+   needed since this project ships as a plain script. Falls back to a
+   timed mock reward when running as a plain web page/PWA, where no ad
+   SDK is available (e.g. the GitHub Pages build). */
+// Google's published sample/test rewarded ad unit ID -- swap for your real
+// AdMob rewarded ad unit ID (from your AdMob account) before release.
+const ADMOB_REWARD_AD_UNIT_ID = 'ca-app-pub-3940256099942544/5224354917';
 const AD_MOCK_DURATION_MS = 2500;
+let nativeAdMobInitialized = false;
+let nativeRewardAdReady = false;
+
+function nativeAdsAvailable(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
+    && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob);
+}
+function preloadRewardAd(){
+  if(!nativeAdsAvailable()) return;
+  window.Capacitor.Plugins.AdMob.prepareRewardVideoAd({ adId: ADMOB_REWARD_AD_UNIT_ID }).catch(()=>{});
+}
+function initNativeAds(){
+  if(!nativeAdsAvailable() || nativeAdMobInitialized) return;
+  nativeAdMobInitialized = true;
+  const AdMobPlugin = window.Capacitor.Plugins.AdMob;
+  AdMobPlugin.initialize({}).then(()=>{
+    AdMobPlugin.addListener('onRewardedVideoAdLoaded', ()=>{ nativeRewardAdReady = true; });
+    AdMobPlugin.addListener('onRewardedVideoAdFailedToLoad', ()=>{ nativeRewardAdReady = false; });
+    preloadRewardAd();
+  }).catch(()=>{});
+}
 function showRewardedAd(onReward, btnEl){
+  if(nativeAdsAvailable()){
+    if(!nativeRewardAdReady){
+      showToast('Ad not ready yet — try again in a moment.');
+      preloadRewardAd();
+      return;
+    }
+    const AdMobPlugin = window.Capacitor.Plugins.AdMob;
+    const originalHTML = btnEl ? btnEl.innerHTML : '';
+    if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Watching ad…'; }
+    let done = false;
+    const handles = [];
+    function cleanup(){ handles.forEach(p=>p.then(h=>h.remove())); }
+    function finish(showFailToast){
+      if(done) return; done = true;
+      nativeRewardAdReady = false;
+      preloadRewardAd();
+      cleanup();
+      if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = originalHTML; }
+      if(showFailToast) showToast('Ad failed to show — try again shortly.');
+    }
+    handles.push(AdMobPlugin.addListener('onRewardedVideoAdReward', ()=>{ onReward(); }));
+    handles.push(AdMobPlugin.addListener('onRewardedVideoAdDismissed', ()=>{ finish(false); }));
+    handles.push(AdMobPlugin.addListener('onRewardedVideoAdFailedToShow', ()=>{ finish(true); }));
+    AdMobPlugin.showRewardVideoAd().catch(()=>{ finish(true); });
+    return;
+  }
+  // Web/PWA fallback -- simulated reward, no real ad SDK available in a browser
   if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Watching ad…'; }
   setTimeout(onReward, AD_MOCK_DURATION_MS);
 }
 const AD_COOLDOWN_MS = 3*60*1000;
 const AD_GEM_REWARD = 5;
 function adReady(){
-  return Date.now() >= (state.adCooldownUntil||0);
+  if(Date.now() < (state.adCooldownUntil||0)) return false;
+  if(nativeAdsAvailable() && !nativeRewardAdReady) return false;
+  return true;
 }
 function updateAdCooldownDisplay(){
   const btn = document.getElementById('watchAdGemsBtn');
@@ -5459,6 +5512,7 @@ document.addEventListener('visibilitychange', ()=>{
 async function init(){
   state = await loadState();
   applyEquippedDecor();
+  initNativeAds();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);

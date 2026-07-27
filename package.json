@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/scheuermanjs-cmyk/Greenhouse-Mutations#readme",
   "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/core": "^8.4.2"
   },

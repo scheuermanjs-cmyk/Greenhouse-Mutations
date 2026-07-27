@@ -35,7 +35,7 @@
   <div class="updated">Greenhouse: Mutations · Last updated July 26, 2026</div>
 
   <div class="card">
-    <p style="margin:0;">Short version: Greenhouse: Mutations doesn't have accounts, doesn't collect personal information, and doesn't run analytics or ad tracking. Your save file lives only on your own device. The one optional exception is push notifications, explained below.</p>
+    <p style="margin:0;">Short version: Greenhouse: Mutations doesn't have accounts and doesn't collect personal information itself. Your save file lives only on your own device. The Android app shows optional rewarded video ads via Google AdMob — you choose to watch them for a bonus, and AdMob collects some device/advertising data to serve those, described below. Push notifications are a separate, optional feature, also described below.</p>
   </div>
 
   <h2>Your Save Data</h2>
@@ -46,15 +46,20 @@
   <p>If you choose to enable notifications (for example, to be alerted when a research task finishes), your browser creates a push subscription — a delivery address and encryption keys, not your name or email — which is sent to a small server we run (a Cloudflare Worker) solely to deliver that one notification at the scheduled time. This only happens if you actively grant notification permission in-app; nothing is sent otherwise.</p>
   <p>We don't attach any other identifying information to this subscription, don't use it for any purpose besides delivering the notification you requested, and don't share it with third parties. You can revoke it at any time by disabling notifications for the app in your device or browser settings.</p>
 
-  <h2>Third-Party Services</h2>
+  <h2>Optional Rewarded Ads (Android app)</h2>
+  <p>The Android version of the app offers optional "watch an ad" buttons — for bonus gems, or to finish a research or growing timer early. These are entirely optional; nothing loads or plays unless you tap one. They're served by <strong>Google AdMob</strong>, which we integrate using the <a href="https://github.com/capacitor-community/admob" target="_blank" rel="noopener">Capacitor AdMob plugin</a>.</p>
+  <p>To choose and serve these ads, Google's AdMob SDK may collect information such as your advertising ID, device and app information, general (non-precise) location, and ad interaction data. This works the same way advertising works across most free apps — Google, not us, processes this data, and their handling of it is described in <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a> and <a href="https://support.google.com/admob/answer/6128543" target="_blank" rel="noopener">AdMob's data disclosure</a>. We never receive or store this information ourselves — we only receive confirmation that you completed watching an ad, so we know to grant the in-game reward.</p>
+  <p>You can reset or limit your device's advertising ID, or opt out of personalized ads, in your Android device's Google Settings ("Ads" section). The web/PWA version of the game (played in a browser) does not show ads at all.</p>
+
+  <h2>Other Third-Party Services</h2>
   <ul>
     <li><strong>Google Fonts</strong> — the app loads two typefaces from Google's font CDN. Google may log standard request information (such as IP address) per <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's own privacy policy</a>. No game data is sent to Google.</li>
     <li><strong>Cloudflare Workers</strong> — hosts the small push-notification scheduler described above.</li>
   </ul>
-  <p>The app does not currently include any advertising SDK or analytics/tracking service. If that changes in a future update (for example, adding real rewarded video ads), this policy will be updated first, and that update will describe exactly what data the ad provider collects.</p>
+  <p>Beyond the optional rewarded ads described above, the app does not include any analytics or user-tracking service.</p>
 
   <h2>Children's Privacy</h2>
-  <p>Greenhouse: Mutations does not knowingly collect personal information from anyone, including children. Since no accounts or personal information are collected at all, there is nothing to collect regardless of a player's age.</p>
+  <p>Greenhouse: Mutations is not directed at children and does not knowingly collect personal information from anyone. We do not ourselves collect any data that would identify a child. If you believe a child has used the app and has questions about ads shown by AdMob, please see Google's guidance linked above or contact us below.</p>
 
   <h2>Changes to This Policy</h2>
   <p>If this policy changes — for example, if a future update adds analytics or advertising — we'll update this page and revise the "last updated" date above.</p>

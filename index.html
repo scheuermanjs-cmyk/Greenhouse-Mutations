@@ -4281,8 +4281,13 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   saveState();
   return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned, xpGain };
 }
+const AUTO_ACTION_INTERVAL_MS = 15000;
+let lastAutoHarvestAt = 0;
+let lastAutoPlantAt = 0;
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
+  if(Date.now() - lastAutoHarvestAt < AUTO_ACTION_INTERVAL_MS) return;
+  lastAutoHarvestAt = Date.now();
   const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
   if(!results.length) return;
   const bestTier = results.reduce((max,r)=> r.isNew ? Math.max(max, getSeedRarityTier(r.genome)) : max, -1);
@@ -4307,6 +4312,8 @@ function autoPlantWing(wing){
 }
 function autoPlantTick(){
   if(getPrestigeBonus('autoPlant') <= 0) return;
+  if(Date.now() - lastAutoPlantAt < AUTO_ACTION_INTERVAL_MS) return;
+  lastAutoPlantAt = Date.now();
   const planted = autoPlantWing('verdant').concat(autoPlantWing('desert'));
   if(!planted.length) return;
   sfxPlant();

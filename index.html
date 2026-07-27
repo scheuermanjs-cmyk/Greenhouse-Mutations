@@ -767,6 +767,9 @@
       <div class="ach-category" style="margin-top:18px;">Greenhouse Monument</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">A statue grown from packed soil and old roots. Feed it spores forever — it never stops growing, and never resets, even after Prestige.</div>
       <div id="monumentCard"></div>
+      <div class="ach-category" style="margin-top:18px;">Greenhouse Skylight</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Widen the skylight to coax extra vigor out of every harvest. Feed it spores forever — it never stops growing, and never resets, even after Prestige.</div>
+      <div id="skylightCard"></div>
     </section>
 
     <section class="screen" id="screen-herbarium">
@@ -967,7 +970,7 @@ function getLevelBonus(stat){
   for(const [reqLvl, reward] of Object.entries(LEVEL_REWARDS)){
     if(lvl >= Number(reqLvl) && reward.stat===stat) val = reward.value;
   }
-  return val + getPrestigeBonus(stat) + getMonumentBonus(stat);
+  return val + getPrestigeBonus(stat) + getMonumentBonus(stat) + getSkylightBonus(stat);
 }
 const MONUMENT_BASE_COST = 500;
 const MONUMENT_SCALE = 1.15;
@@ -983,6 +986,23 @@ function contributeToMonument(){
   state.monument.level = monumentLevel()+1;
   saveState();
   renderMonument();
+  updateHeader();
+  return true;
+}
+const SKYLIGHT_BASE_COST = 500;
+const SKYLIGHT_SCALE = 1.15;
+const SKYLIGHT_PER_LEVEL = 0.005;
+function skylightLevel(){ return (state.skylight && state.skylight.level) || 0; }
+function skylightCost(level){ return Math.round(SKYLIGHT_BASE_COST * Math.pow(SKYLIGHT_SCALE, level)); }
+function getSkylightBonus(stat){ return stat==='harvestXp' ? skylightLevel()*SKYLIGHT_PER_LEVEL : 0; }
+function contributeToSkylight(){
+  const cost = skylightCost(skylightLevel());
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  sfxPurchase();
+  state.skylight.level = skylightLevel()+1;
+  saveState();
+  renderSkylight();
   updateHeader();
   return true;
 }
@@ -1116,6 +1136,7 @@ function doPrestige(){
   const keepDecor = state.decor;
   const keepSpecialVisitorsClaimed = state.specialVisitorsClaimed;
   const keepMonument = state.monument;
+  const keepSkylight = state.skylight;
   const keepSettings = state.settings;
   const keepGems = state.gems;
   const keepOfflineCapLevel = state.offlineCapLevel;
@@ -1128,6 +1149,7 @@ function doPrestige(){
     decor: keepDecor,
     specialVisitorsClaimed: keepSpecialVisitorsClaimed,
     monument: keepMonument,
+    skylight: keepSkylight,
     settings: keepSettings,
     gems: keepGems,
     offlineCapLevel: keepOfflineCapLevel
@@ -1633,6 +1655,7 @@ function renderUpgrades(){
   renderDecorShop();
   renderMerchant();
   renderMonument();
+  renderSkylight();
 }
 function renderMonument(){
   const el = document.getElementById('monumentCard');
@@ -1650,9 +1673,30 @@ function renderMonument(){
     + '<button class="btn btn-small btn-primary" '+(affordable?'':'disabled')+' onclick="onContributeToMonument()">'+cost+' ◆</button>'
     + '</div>';
 }
+function renderSkylight(){
+  const el = document.getElementById('skylightCard');
+  if(!el) return;
+  const level = skylightLevel();
+  const cost = skylightCost(level);
+  const bonusPct = Math.round(level*SKYLIGHT_PER_LEVEL*1000)/10;
+  const affordable = state.spores >= cost;
+  el.innerHTML = '<div class="upg-card">'
+    + '<div class="upg-info">'
+    + '<div class="upg-name">Skylight — Level '+level+'</div>'
+    + '<div class="upg-desc">Each contribution permanently adds +0.5% XP from every harvest.</div>'
+    + (level>0 ? '<div class="upg-current">Current: +'+bonusPct+'% XP per harvest</div>' : '')
+    + '</div>'
+    + '<button class="btn btn-small btn-primary" '+(affordable?'':'disabled')+' onclick="onContributeToSkylight()">'+cost+' ◆</button>'
+    + '</div>';
+}
 function onContributeToMonument(){
   if(contributeToMonument()){
     showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('statue', true)+'<span>The monument grows a little taller. +0.5% harvest spores, permanently.</span></span>');
+  }
+}
+function onContributeToSkylight(){
+  if(contributeToSkylight()){
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('star', true)+'<span>The skylight widens a little more. +0.5% harvest XP, permanently.</span></span>');
   }
 }
 
@@ -3467,6 +3511,7 @@ function defaultState(){
     visitor:{ periodStart:null, request:null, fulfilled:false },
     specialVisitorsClaimed:{},
     monument:{ level:0 },
+    skylight:{ level:0 },
     adCooldownUntil:0,
     offlineCapLevel:0,
     settings:{ sfxEnabled:true, musicEnabled:true },
@@ -3526,6 +3571,7 @@ function normalizeState(parsed){
       }
       if(!merged.specialVisitorsClaimed || typeof merged.specialVisitorsClaimed!=='object') merged.specialVisitorsClaimed = {};
       if(!merged.monument || typeof merged.monument!=='object' || typeof merged.monument.level!=='number') merged.monument = { level:0 };
+      if(!merged.skylight || typeof merged.skylight!=='object' || typeof merged.skylight.level!=='number') merged.skylight = { level:0 };
       if(!merged.settings || typeof merged.settings!=='object'){
         merged.settings = { sfxEnabled:true, musicEnabled:true };
       } else {
@@ -4280,6 +4326,7 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   if(finalGenome.rareTrait) xpGain += 8;
   if(finalGenome.rareTrait2) xpGain += 15;
   if(finalGenome.hybridWith) xpGain += 6;
+  xpGain = Math.round(xpGain * (1 + getLevelBonus('harvestXp')));
   grantXp(xpGain);
   plot.status='empty'; plot.genome=null; plot.plantedAt=0; plot.growthDurationMs=0; plot.light=50; plot.water=50; plot.lastDeathCheck=0;
   plot.pest=null; plot.lastPestCheck=0; plot.lastSprinklerCheck=0; plot.lastLightCheck=0;

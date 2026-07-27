@@ -4291,12 +4291,15 @@ function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarves
     // risk/growth always evaluated against real elapsed time, never capped -- the cap only limits
     // how many auto-harvest/replant cycles get simulated & counted, not pest/death exposure
     const evalAt = Math.min(finishAt, realNow);
+    // sprinkler/garden light correct water & light toward target for the elapsed span BEFORE
+    // death/pest risk are evaluated, so an owned auto-water/auto-light upgrade actually lowers
+    // offline stress instead of only taking effect after the wilt roll already used stale levels
+    applySprinkler(plot, evalAt);
+    applyGardenLight(plot, evalAt);
     applyDeathRisk(plot, evalAt);
     if(plot.status==='wilted') break;
     applyPestRisk(plot, evalAt);
     if(plot.pest && hasPest) squashPestOffline(plot, summary);
-    applySprinkler(plot, evalAt);
-    applyGardenLight(plot, evalAt);
     if(finishAt > realNow) break;
     if(finishAt > cappedEnd) break;
     if(!hasHarvest) break;

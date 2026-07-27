@@ -2986,23 +2986,13 @@ function applyWindowPhase(){
 
 /* ===================== WEATHER ===================== */
 let currentWeather = 'clear';
-const rainAudio = new Audio('assets/rain-loop.wav');
-rainAudio.loop = true;
-rainAudio.volume = 0.45;
 let userInteracted = false;
-function playRainAudio(){
-  if(!userInteracted || !musicEnabled()) return;
-  rainAudio.play().catch(()=>{});
-}
-function stopRainAudio(){
-  rainAudio.pause();
-}
 document.addEventListener('pointerdown', ()=>{
   if(userInteracted) return;
   userInteracted = true;
   ensureAudio();
   if(audioCtx && audioCtx.state==='suspended') audioCtx.resume().catch(()=>{});
-  if(currentWeather==='rain' || currentWeather==='storm') playRainAudio();
+  if(currentWeather==='rain' || currentWeather==='storm') startRain(currentWeather==='storm');
   if(currentWeather==='storm') startWind();
   if(musicEnabled()) startMusic();
   scheduleBirdChirps();
@@ -3015,8 +3005,8 @@ function applyWeather(weather){
   const cls = Array.from(el.classList).filter(c=>c.indexOf('weather-')!==0);
   cls.push('weather-'+weather);
   el.className = cls.join(' ');
-  if(weather==='rain' || weather==='storm') playRainAudio();
-  else stopRainAudio();
+  if(weather==='rain' || weather==='storm') startRain(weather==='storm');
+  else stopRain();
   if(weather==='storm') startWind();
   else stopWind();
 }
@@ -3084,11 +3074,14 @@ function applyAudioSettings(){
   ensureAudio();
   if(sfxBus) sfxBus.gain.value = sfxEnabled() ? 1 : 0;
   if(ambienceBus) ambienceBus.gain.value = musicEnabled() ? 1 : 0;
-  rainAudio.muted = !musicEnabled();
   if(musicEnabled()){
-    if(userInteracted){ startMusic(); if(currentWeather==='storm') startWind(); }
+    if(userInteracted){
+      startMusic();
+      if(currentWeather==='storm') startWind();
+      if(currentWeather==='rain' || currentWeather==='storm') startRain(currentWeather==='storm');
+    }
   } else {
-    stopMusic(); stopWind();
+    stopMusic(); stopWind(); stopRain();
   }
 }
 
@@ -3215,7 +3208,69 @@ function stopMusic(){
   if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
 }
 
-/* ---- Weather ambience: wind + birds ---- */
+/* ---- Weather ambience: rain + wind + birds ---- */
+let rainSource = null, rainGainNode = null, rainLfo = null, rainLfoGain = null;
+let rainDropTimer = null;
+function playRainDrop(){
+  const ctx = audioCtx;
+  if(!ctx) return;
+  const t0 = ctx.currentTime;
+  const f = 1800+Math.random()*1600;
+  const osc = ctx.createOscillator();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(f, t0);
+  osc.frequency.exponentialRampToValueAtTime(f*0.6, t0+0.05);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(0.02+Math.random()*0.02, t0+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+0.09);
+  osc.connect(g); g.connect(ambienceBus);
+  osc.start(t0); osc.stop(t0+0.1);
+}
+function scheduleRainDrops(intense){
+  if(rainDropTimer) return;
+  const step = ()=>{
+    if(!rainSource){ rainDropTimer = null; return; }
+    playRainDrop();
+    if(Math.random()<0.3) playRainDrop();
+    rainDropTimer = setTimeout(step, intense ? 60+Math.random()*90 : 130+Math.random()*220);
+  };
+  rainDropTimer = setTimeout(step, 50);
+}
+function startRain(intense){
+  const ctx = ensureAudio();
+  if(!ctx || !userInteracted || !musicEnabled() || rainSource) return;
+  const size = ctx.sampleRate*2;
+  const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<size;i++) data[i] = Math.random()*2-1;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer; src.loop = true;
+  const hp = ctx.createBiquadFilter();
+  hp.type='highpass'; hp.frequency.value=1400;
+  const bp = ctx.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=3400; bp.Q.value=0.6;
+  rainGainNode = ctx.createGain();
+  rainGainNode.gain.value = intense ? 0.11 : 0.07;
+  rainLfo = ctx.createOscillator();
+  rainLfo.type='sine'; rainLfo.frequency.value=6.5;
+  rainLfoGain = ctx.createGain();
+  rainLfoGain.gain.value = 0.015;
+  rainLfo.connect(rainLfoGain);
+  rainLfoGain.connect(rainGainNode.gain);
+  rainLfo.start();
+  src.connect(hp); hp.connect(bp); bp.connect(rainGainNode); rainGainNode.connect(ambienceBus);
+  src.start();
+  rainSource = src;
+  scheduleRainDrops(intense);
+}
+function stopRain(){
+  if(rainSource){ try{ rainSource.stop(); }catch(e){} rainSource=null; }
+  if(rainLfo){ try{ rainLfo.stop(); }catch(e){} rainLfo=null; }
+  rainGainNode = null; rainLfoGain = null;
+  if(rainDropTimer){ clearTimeout(rainDropTimer); rainDropTimer=null; }
+}
+
 let windSource = null, windGainNode = null;
 function startWind(){
   const ctx = ensureAudio();
@@ -5391,7 +5446,6 @@ document.addEventListener('visibilitychange', ()=>{
 async function init(){
   state = await loadState();
   applyEquippedDecor();
-  rainAudio.muted = !musicEnabled();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);

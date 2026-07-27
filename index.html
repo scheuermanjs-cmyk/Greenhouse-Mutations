@@ -3215,27 +3215,26 @@ function playRainDrop(){
   const ctx = audioCtx;
   if(!ctx) return;
   const t0 = ctx.currentTime;
-  const f = 1300+Math.random()*1000;
+  const f = 650+Math.random()*450;
   const osc = ctx.createOscillator();
   osc.type='sine';
   osc.frequency.setValueAtTime(f, t0);
-  osc.frequency.exponentialRampToValueAtTime(f*0.6, t0+0.05);
+  osc.frequency.exponentialRampToValueAtTime(f*0.72, t0+0.09);
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(0.01+Math.random()*0.012, t0+0.006);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0+0.09);
+  g.gain.linearRampToValueAtTime(0.005+Math.random()*0.006, t0+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+0.16);
   osc.connect(g); g.connect(ambienceBus);
-  osc.start(t0); osc.stop(t0+0.1);
+  osc.start(t0); osc.stop(t0+0.17);
 }
 function scheduleRainDrops(intense){
   if(rainDropTimer) return;
   const step = ()=>{
     if(!rainSource){ rainDropTimer = null; return; }
-    playRainDrop();
-    if(Math.random()<0.15) playRainDrop();
-    rainDropTimer = setTimeout(step, intense ? 110+Math.random()*140 : 220+Math.random()*320);
+    if(Math.random()<0.65) playRainDrop();
+    rainDropTimer = setTimeout(step, intense ? 260+Math.random()*260 : 420+Math.random()*480);
   };
-  rainDropTimer = setTimeout(step, 50);
+  rainDropTimer = setTimeout(step, 300);
 }
 function startRain(intense){
   const ctx = ensureAudio();
@@ -3243,23 +3242,24 @@ function startRain(intense){
   const size = ctx.sampleRate*2;
   const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
   const data = buffer.getChannelData(0);
-  for(let i=0;i<size;i++) data[i] = Math.random()*2-1;
+  let last=0;
+  for(let i=0;i<size;i++){ const w=Math.random()*2-1; last=(last+0.06*w)/1.06; data[i]=last*5; }
   const src = ctx.createBufferSource();
   src.buffer = buffer; src.loop = true;
   const hp = ctx.createBiquadFilter();
-  hp.type='highpass'; hp.frequency.value=800;
-  const bp = ctx.createBiquadFilter();
-  bp.type='bandpass'; bp.frequency.value=2200; bp.Q.value=0.45;
+  hp.type='highpass'; hp.frequency.value=300;
+  const lp = ctx.createBiquadFilter();
+  lp.type='lowpass'; lp.frequency.value = intense ? 2400 : 1800;
   rainGainNode = ctx.createGain();
-  rainGainNode.gain.value = intense ? 0.065 : 0.04;
+  rainGainNode.gain.value = intense ? 0.04 : 0.024;
   rainLfo = ctx.createOscillator();
-  rainLfo.type='sine'; rainLfo.frequency.value=6.5;
+  rainLfo.type='sine'; rainLfo.frequency.value=0.35;
   rainLfoGain = ctx.createGain();
-  rainLfoGain.gain.value = 0.008;
+  rainLfoGain.gain.value = 0.004;
   rainLfo.connect(rainLfoGain);
   rainLfoGain.connect(rainGainNode.gain);
   rainLfo.start();
-  src.connect(hp); hp.connect(bp); bp.connect(rainGainNode); rainGainNode.connect(ambienceBus);
+  src.connect(hp); hp.connect(lp); lp.connect(rainGainNode); rainGainNode.connect(ambienceBus);
   src.start();
   rainSource = src;
   scheduleRainDrops(intense);

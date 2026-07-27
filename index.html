@@ -4489,56 +4489,56 @@ const AUTO_ACTION_BASE_MS = 30000;
 const AUTO_ACTION_MIN_MS = 5000;
 function autoPlantIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoPlantSpeed')); }
 function autoHarvestIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoHarvestSpeed')); }
-let lastAutoHarvestAt = 0;
-let lastAutoPlantAt = 0;
-function autoHarvestOnce(){
-  for(const wing of ['verdant','desert']){
-    const plots = plotsForWing(wing);
-    for(let idx=0; idx<plots.length; idx++){
-      if(!plots[idx].locked && getDisplayStatus(plots[idx])==='ready'){
-        const result = harvestPlot(idx, wing);
-        if(result) return { result, wing };
-      }
+// Each wing runs its own independent auto-harvester/auto-farmer with its own cooldown --
+// a fast-cycling greenhouse plot never steals the desert wing's turn or vice versa.
+let lastAutoHarvestAt = { verdant:0, desert:0 };
+let lastAutoPlantAt = { verdant:0, desert:0 };
+const WING_LABELS = { verdant:'the greenhouse', desert:'the desert wing' };
+function autoHarvestOnce(wing){
+  const plots = plotsForWing(wing);
+  for(let idx=0; idx<plots.length; idx++){
+    if(!plots[idx].locked && getDisplayStatus(plots[idx])==='ready'){
+      const result = harvestPlot(idx, wing);
+      if(result) return result;
     }
   }
   return null;
 }
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
-  if(Date.now() - lastAutoHarvestAt < autoHarvestIntervalMs()) return;
-  lastAutoHarvestAt = Date.now();
-  const found = autoHarvestOnce();
-  if(!found) return;
-  const { result, wing } = found;
-  if(result.isNew) sfxDiscovery(getSeedRarityTier(result.genome)); else sfxHarvestPlain();
-  refreshTilesForWing(wing); updateHeader();
-  if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
-  let msg = 'Auto-harvested 1 plot  +'+result.sellValue+'◆';
-  if(result.isNew) msg += '  (new!)';
-  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('seedling', true)+'<span>'+msg+'</span></span>');
+  ['verdant','desert'].forEach(wing=>{
+    if(Date.now() - lastAutoHarvestAt[wing] < autoHarvestIntervalMs()) return;
+    lastAutoHarvestAt[wing] = Date.now();
+    const result = autoHarvestOnce(wing);
+    if(!result) return;
+    if(result.isNew) sfxDiscovery(getSeedRarityTier(result.genome)); else sfxHarvestPlain();
+    refreshTilesForWing(wing); updateHeader();
+    if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
+    let msg = 'Auto-harvested 1 plot in '+WING_LABELS[wing]+'  +'+result.sellValue+'◆';
+    if(result.isNew) msg += '  (new!)';
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('seedling', true)+'<span>'+msg+'</span></span>');
+  });
 }
-function autoPlantOnce(){
-  for(const wing of ['verdant','desert']){
-    const plots = plotsForWing(wing);
-    for(let idx=0; idx<plots.length; idx++){
-      if(plots[idx].locked || plots[idx].status!=='empty') continue;
-      const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
-      if(!stack) continue;
-      if(plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) return { wing };
-    }
+function autoPlantOnce(wing){
+  const plots = plotsForWing(wing);
+  for(let idx=0; idx<plots.length; idx++){
+    if(plots[idx].locked || plots[idx].status!=='empty') continue;
+    const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
+    if(!stack) continue;
+    if(plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) return true;
   }
-  return null;
+  return false;
 }
 function autoPlantTick(){
   if(getPrestigeBonus('autoPlant') <= 0) return;
-  if(Date.now() - lastAutoPlantAt < autoPlantIntervalMs()) return;
-  lastAutoPlantAt = Date.now();
-  const found = autoPlantOnce();
-  if(!found) return;
-  const wing = found.wing;
-  sfxPlant();
-  refreshTilesForWing(wing); updateHeader();
-  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted a seed from your seed bank</span></span>');
+  ['verdant','desert'].forEach(wing=>{
+    if(Date.now() - lastAutoPlantAt[wing] < autoPlantIntervalMs()) return;
+    lastAutoPlantAt[wing] = Date.now();
+    if(!autoPlantOnce(wing)) return;
+    sfxPlant();
+    refreshTilesForWing(wing); updateHeader();
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted a seed in '+WING_LABELS[wing]+'</span></span>');
+  });
 }
 function autoPestWing(wing){
   const squashed = [];
@@ -5701,12 +5701,19 @@ function runAwayCatchup(awayStartOverride){
   const hasAutoPest = getPrestigeBonus('autoPest') > 0;
   const cappedEnd = Math.min(now, awayStart + offlineCapMs());
   // the same 30s (or upgraded) cooldown that gates auto-harvest/auto-plant live also caps how many
-  // total auto actions can happen across the WHOLE away period -- shared across every plot in both
-  // wings, consumed in the same verdant-then-desert, low-to-high-index order the live tick scans in
+  // total auto actions can happen across the away period -- each wing gets its OWN independent
+  // budget now that the greenhouse and desert wing run separate auto-harvesters/auto-farmers,
+  // consumed in low-to-high-index order within that wing, matching the live tick's scan order
   const awaySpan = Math.max(0, cappedEnd - awayStart);
-  const actionBudget = {
-    harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
-    plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
+  const actionBudgetByWing = {
+    verdant: {
+      harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
+      plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
+    },
+    desert: {
+      harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
+      plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
+    }
   };
   let wiltedCount = 0, readyCount = 0;
   let offlineSummary = { harvests:0, spores:0, newFinds:0, planted:0, pestsSquashed:0, xp:0, gems:0, discoveries:[] };
@@ -5714,7 +5721,7 @@ function runAwayCatchup(awayStartOverride){
     plotsForWing(wing).forEach((p, idx)=>{
       if(p.locked || (p.status!=='growing' && p.status!=='empty')) return;
       const before = p.status;
-      const result = simulateOfflinePlot(idx, wing, awayStart, now, cappedEnd, hasAutoHarvest, hasAutoPlant, hasAutoPest, actionBudget);
+      const result = simulateOfflinePlot(idx, wing, awayStart, now, cappedEnd, hasAutoHarvest, hasAutoPlant, hasAutoPest, actionBudgetByWing[wing]);
       offlineSummary = mergeOfflineSummary(offlineSummary, result);
       if(p.status==='wilted' && before!=='wilted') wiltedCount++;
       else if(getDisplayStatus(p)==='ready') readyCount++;

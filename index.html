@@ -1045,7 +1045,12 @@ const SKILL_TREE = {
     desc:()=> 'Pests are squashed automatically the moment they appear', requires:null },
 
   offlineYield: { name:'Absentee Bloom', tier:1, branch:'offline', stat:'offlineEarnings', perLevel:0.15, maxLevel:5, baseCost:2, scale:1.6,
-    desc:(n)=> '+'+Math.round(n*100)+'% offline spore earnings', requires:null }
+    desc:(n)=> '+'+Math.round(n*100)+'% offline spore earnings', requires:null },
+
+  farmersSpeed: { name:'Efficient Farmhands', tier:2, branch:'growth', stat:'autoPlantSpeed', perLevel:2000, maxLevel:5, baseCost:2, scale:1.7,
+    desc:(n)=> '-'+Math.round(n/1000)+'s auto-plant cooldown', requires:{key:'farmers', level:1} },
+  harvestSpeed: { name:'Swift Collection', tier:2, branch:'harvest', stat:'autoHarvestSpeed', perLevel:2000, maxLevel:5, baseCost:2, scale:1.7,
+    desc:(n)=> '-'+Math.round(n/1000)+'s auto-harvest cooldown', requires:{key:'autoHarvest', level:1} }
 };
 function defaultSkillTree(){
   const tree = {};
@@ -4281,44 +4286,60 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   saveState();
   return { mutated, isNew, name, sellValue, seedQty, genome:finalGenome, crossInfo, pestPenalty, precisionBonus, gemsEarned, xpGain };
 }
-const AUTO_ACTION_INTERVAL_MS = 15000;
+const AUTO_ACTION_BASE_MS = 15000;
+const AUTO_ACTION_MIN_MS = 5000;
+function autoPlantIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoPlantSpeed')); }
+function autoHarvestIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoHarvestSpeed')); }
 let lastAutoHarvestAt = 0;
 let lastAutoPlantAt = 0;
+function autoHarvestOnce(){
+  for(const wing of ['verdant','desert']){
+    const plots = plotsForWing(wing);
+    for(let idx=0; idx<plots.length; idx++){
+      if(!plots[idx].locked && getDisplayStatus(plots[idx])==='ready'){
+        const result = harvestPlot(idx, wing);
+        if(result) return { result, wing };
+      }
+    }
+  }
+  return null;
+}
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
-  if(Date.now() - lastAutoHarvestAt < AUTO_ACTION_INTERVAL_MS) return;
+  if(Date.now() - lastAutoHarvestAt < autoHarvestIntervalMs()) return;
   lastAutoHarvestAt = Date.now();
-  const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
-  if(!results.length) return;
-  const bestTier = results.reduce((max,r)=> r.isNew ? Math.max(max, getSeedRarityTier(r.genome)) : max, -1);
-  if(bestTier>=0) sfxDiscovery(bestTier); else sfxHarvestPlain();
-  updateAllTiles(); updateAllDesertTiles(); updateHeader();
+  const found = autoHarvestOnce();
+  if(!found) return;
+  const { result, wing } = found;
+  if(result.isNew) sfxDiscovery(getSeedRarityTier(result.genome)); else sfxHarvestPlain();
+  refreshTilesForWing(wing); updateHeader();
   if(document.getElementById('screen-herbarium').classList.contains('active')) renderHerbarium();
-  const totalSpores = results.reduce((sum,r)=>sum+r.sellValue, 0);
-  const newFinds = results.filter(r=>r.isNew).length;
-  let msg = 'Auto-harvested '+results.length+(results.length===1?' plot':' plots')+'  +'+totalSpores+'◆';
-  if(newFinds) msg += '  ('+newFinds+' new!)';
+  let msg = 'Auto-harvested 1 plot  +'+result.sellValue+'◆';
+  if(result.isNew) msg += '  (new!)';
   showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('seedling', true)+'<span>'+msg+'</span></span>');
 }
-function autoPlantWing(wing){
-  const planted = [];
-  plotsForWing(wing).forEach((p, idx)=>{
-    if(p.locked || p.status!=='empty') return;
-    const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
-    if(!stack) return;
-    if(plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) planted.push(idx);
-  });
-  return planted;
+function autoPlantOnce(){
+  for(const wing of ['verdant','desert']){
+    const plots = plotsForWing(wing);
+    for(let idx=0; idx<plots.length; idx++){
+      if(plots[idx].locked || plots[idx].status!=='empty') continue;
+      const stack = getSortedInventory().find(s=>s.qty>0 && speciesWing(s.species)===wing);
+      if(!stack) continue;
+      if(plantSeed(idx, {type:'inventory', stackId:stack.id}, wing)) return { wing };
+    }
+  }
+  return null;
 }
 function autoPlantTick(){
   if(getPrestigeBonus('autoPlant') <= 0) return;
-  if(Date.now() - lastAutoPlantAt < AUTO_ACTION_INTERVAL_MS) return;
+  if(Date.now() - lastAutoPlantAt < autoPlantIntervalMs()) return;
   lastAutoPlantAt = Date.now();
-  const planted = autoPlantWing('verdant').concat(autoPlantWing('desert'));
-  if(!planted.length) return;
+  const found = autoPlantOnce();
+  if(!found) return;
+  const wing = found.wing;
   sfxPlant();
-  updateAllTiles(); updateAllDesertTiles(); updateHeader();
-  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted '+planted.length+' seed'+(planted.length===1?'':'s')+' from your seed bank</span></span>');
+  refreshTilesForWing(wing); updateHeader();
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('wheat', true)+'<span>Farmers planted a seed from your seed bank</span></span>');
 }
 function autoPestWing(wing){
   const squashed = [];

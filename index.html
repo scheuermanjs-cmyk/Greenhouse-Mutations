@@ -3924,7 +3924,7 @@ function confirmImportSave(){
    Realtime Database REST API (no second native plugin needed), reusing the exact JSON.stringify(state)
    / normalizeState(JSON.parse(...)) round-trip already proven out by Export/Import Save above. */
 // Replace once the Firebase project exists -- see plan handoff notes for exact console steps.
-const FIREBASE_RTDB_URL = 'https://REPLACE_WITH_YOUR_PROJECT-default-rtdb.firebaseio.com';
+const FIREBASE_RTDB_URL = 'https://greenhouse-mutations-default-rtdb.firebaseio.com';
 let cloudInitialized = false;
 let cloudSyncInterval = null;
 let pendingCloudData = null;
@@ -3996,6 +3996,7 @@ function signInWithGoogle(){
       showToast('Signed in! Your save is now backed up to the cloud.');
     }
   }).catch((err)=>{
+    console.error('Google sign-in failed', err);
     if(!err || !err.userCancelled) showToast('Sign-in failed — please try again.');
   });
 }

@@ -203,6 +203,26 @@
   .desert-cactus-c{ left:82%; height:15px; }
   .window.is-desert-wing .bird{ display:none; }
 
+  /* ---------- frostbound wing window dressing ---------- */
+  .frost-haze, .frost-icicle{ display:none; }
+  .window.is-frost-wing .hills{ background:#DCEEF5; clip-path:polygon(0% 82%, 10% 68%, 22% 78%, 34% 60%, 48% 74%, 60% 55%, 72% 70%, 84% 52%, 94% 66%, 100% 58%, 100% 100%, 0% 100%); }
+  .window.is-frost-wing .frost-haze{
+    display:block; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(to bottom, rgba(140,210,255,.18) 0%, rgba(150,110,220,.10) 55%, transparent 80%);
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .window.is-frost-wing .frost-haze{ animation:auroraShimmer 5s ease-in-out infinite; }
+  }
+  @keyframes auroraShimmer{ 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
+  .window.is-frost-wing .frost-icicle{
+    display:block; position:absolute; top:0; width:5px; background:#B8E8F5; z-index:1;
+    clip-path:polygon(0 0, 100% 0, 50% 100%);
+  }
+  .frost-icicle-a{ left:16%; height:14px; }
+  .frost-icicle-b{ left:48%; height:20px; }
+  .frost-icicle-c{ left:80%; height:12px; }
+  .window.is-frost-wing .bird{ display:none; }
+
   /* ---------- weather ---------- */
   .clouds span{ transition:background 1.5s ease, opacity 1.5s ease; }
   .window.weather-cloudy .clouds, .window.weather-rain .clouds, .window.weather-storm .clouds{ opacity:1; }
@@ -264,6 +284,16 @@
   .desert-wing-panel::after{
     content:''; position:absolute; top:2px; right:8px; width:14px; height:14px; opacity:.85;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Crect x='2' y='0' width='1' height='2' fill='%237ED957'/%3E%3Crect x='4' y='0' width='1' height='2' fill='%237ED957'/%3E%3Crect x='0' y='2' width='3' height='1' fill='%237ED957'/%3E%3Crect x='4' y='2' width='3' height='1' fill='%237ED957'/%3E%3Crect x='2' y='3' width='1' height='2' fill='%237ED957'/%3E%3Crect x='4' y='3' width='1' height='2' fill='%237ED957'/%3E%3Crect x='2' y='5' width='3' height='1' fill='%237ED957'/%3E%3Crect x='3' y='6' width='1' height='1' fill='%237ED957'/%3E%3C/svg%3E");
+    background-size:contain; background-repeat:no-repeat; image-rendering:pixelated;
+  }
+  .frost-wing-panel{ position:relative; background:linear-gradient(to bottom, #DCEEF5 0%, #8FB8C9 100%); padding:14px 10px 10px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); overflow:hidden; }
+  .frost-wing-panel::before{
+    content:''; position:absolute; top:0; left:-4px; right:-4px; height:9px; background:#EAF6FB;
+    clip-path:polygon(0% 100%, 6% 30%, 16% 70%, 26% 10%, 38% 55%, 50% 20%, 62% 60%, 74% 15%, 86% 50%, 100% 25%, 100% 100%);
+  }
+  .frost-wing-panel::after{
+    content:''; position:absolute; top:2px; right:8px; width:14px; height:14px; opacity:.9;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7'%3E%3Crect x='3' y='0' width='1' height='7' fill='%23FFFFFF'/%3E%3Crect x='0' y='3' width='7' height='1' fill='%23FFFFFF'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23FFFFFF'/%3E%3Crect x='5' y='1' width='1' height='1' fill='%23FFFFFF'/%3E%3Crect x='1' y='5' width='1' height='1' fill='%23FFFFFF'/%3E%3Crect x='5' y='5' width='1' height='1' fill='%23FFFFFF'/%3E%3C/svg%3E");
     background-size:contain; background-repeat:no-repeat; image-rendering:pixelated;
   }
 
@@ -688,6 +718,10 @@
         <div class="desert-cactus desert-cactus-a"></div>
         <div class="desert-cactus desert-cactus-b"></div>
         <div class="desert-cactus desert-cactus-c"></div>
+        <div class="frost-haze"></div>
+        <div class="frost-icicle frost-icicle-a"></div>
+        <div class="frost-icicle frost-icicle-b"></div>
+        <div class="frost-icicle frost-icicle-c"></div>
         <div class="clouds">
           <div class="cloud cloud-a"><span></span><span></span></div>
           <div class="cloud cloud-b"><span></span><span></span></div>
@@ -746,6 +780,9 @@
       <div class="plot-grid" id="plotGrid"></div>
       <div class="desert-wing-panel" id="desertWingPanel" style="display:none;">
         <div class="plot-grid" id="plotGridDesert"></div>
+      </div>
+      <div class="frost-wing-panel" id="frostWingPanel" style="display:none;">
+        <div class="plot-grid" id="plotGridFrost"></div>
       </div>
     </section>
 
@@ -872,6 +909,7 @@
     <div class="wing-toggle" id="wingToggle">
       <button class="wing-toggle-btn active" id="wingBtnVerdant" onclick="switchWing('verdant')"><span id="wingVerdantIcon"></span> Verdant Greenhouse</button>
       <button class="wing-toggle-btn" id="wingBtnDesert" onclick="switchWing('desert')"><span id="wingDesertIcon"></span> Desert Wing</button>
+      <button class="wing-toggle-btn" id="wingBtnFrost" onclick="switchWing('frost')"><span id="wingFrostIcon"></span> Frostbound Wing</button>
     </div>
     <nav>
       <button class="nav-btn active" data-screen="greenhouse" onclick="showScreen('greenhouse')">GROW</button>
@@ -907,7 +945,13 @@ const SPECIES = {
   needlebrush:{ name:'Needlebrush', hue:45, growthSec:300, baseSell:42, deathResist:0.25, seedCost:14, lightTarget:82, waterTarget:12, blurb:'Thin needled fronds that catch the wind and thrive on almost nothing.', wing:'desert', unlockLevel:5 },
   duneglow:   { name:'Duneglow',   hue:18,  growthSec:450, baseSell:65, deathResist:0.15, seedCost:20, glowBias:0.06, lightTarget:85, waterTarget:10, blurb:'Holds the day’s heat long after sunset, glowing like a coal. Slow to bloom, richly rewarding when it does.', wing:'desert', unlockLevel:8 },
   sunflare:   { name:'Sunflare',   hue:28,  growthSec:520, baseSell:80, deathResist:0.1,  seedCost:26, glowBias:0.05, lightTarget:90, waterTarget:8,  blurb:'Opens wide to catch every last ray of heat. A slow, radiant bloom.', wing:'desert', unlockLevel:13 },
-  mirageroot: { name:'Mirageroot', hue:8,   growthSec:620, baseSell:100,deathResist:0.05, seedCost:34, glowBias:0.08, lightTarget:88, waterTarget:6,  blurb:'Said to bloom only once the mind starts seeing water where there is none. Worth every minute.', wing:'desert', unlockLevel:22 }
+  mirageroot: { name:'Mirageroot', hue:8,   growthSec:620, baseSell:100,deathResist:0.05, seedCost:34, glowBias:0.08, lightTarget:88, waterTarget:6,  blurb:'Said to bloom only once the mind starts seeing water where there is none. Worth every minute.', wing:'desert', unlockLevel:22 },
+  rimepetal:  { name:'Rimepetal',  hue:195, growthSec:260, baseSell:38,  deathResist:0.30, seedCost:10, lightTarget:25, waterTarget:70, wing:'frost', unlockLevel:1,  blurb:'Frost-rimmed and unbothered by the cold. Prefers a dim, damp corner.' },
+  hoarfrond:  { name:'Hoarfrond',  hue:170, growthSec:310, baseSell:46,  deathResist:0.35, seedCost:14, lightTarget:20, waterTarget:75, wing:'frost', unlockLevel:1,  blurb:'Feathery fronds furred with hoarfrost. Barely needs the sun at all.' },
+  snowcap:    { name:'Snowcap',    hue:200, growthSec:380, baseSell:58,  deathResist:0.40, seedCost:20, lightTarget:15, waterTarget:78, wing:'frost', unlockLevel:7,  blurb:'Capped in permanent snow no matter the season. Slow, steady, unshaken.' },
+  glacierbud: { name:'Glacierbud', hue:210, growthSec:480, baseSell:78,  deathResist:0.45, seedCost:28, lightTarget:12, waterTarget:82, wing:'frost', unlockLevel:12, blurb:'A bud that has waited an age to bloom. In no hurry to stop.' },
+  auroraspire:{ name:'Auroraspire',hue:260, growthSec:560, baseSell:95,  deathResist:0.50, seedCost:36, glowBias:0.09, lightTarget:10, waterTarget:85, wing:'frost', unlockLevel:18, blurb:'Reaches for lights that aren\'t there. Glows brightest in the dark.' },
+  wraithbloom:{ name:'Wraithbloom',hue:285, growthSec:680, baseSell:120, deathResist:0.55, seedCost:45, glowBias:0.10, lightTarget:8,  waterTarget:88, wing:'frost', unlockLevel:28, blurb:'Pale as breath on glass. Rare, patient, and worth every minute of the cold.' }
 };
 function speciesWing(key){ return (SPECIES[key] && SPECIES[key].wing) || 'verdant'; }
 function verdantSpeciesKeys(){ return Object.keys(SPECIES).filter(k=>speciesWing(k)==='verdant'); }
@@ -1216,6 +1260,7 @@ const ACHIEVEMENTS = [
   { id:'spores_2000',     cat:'Milestones',  name:'Spore Hoarder',         desc:'Earn 2,000 total spores ever',          reward:{spores:50,  xp:40} },
   { id:'unlock_all',      cat:'Milestones',  name:'Full House',            desc:'Unlock all 9 pots',                     reward:{spores:80,  xp:40} },
   { id:'unlock_all_desert', cat:'Milestones', name:'Sands Uncovered',      desc:'Unlock all 9 desert pots',              reward:{spores:120, xp:60} },
+  { id:'unlock_all_frost',  cat:'Milestones', name:'Frozen Solid',         desc:'Unlock all 9 pots in the Frostbound Wing', reward:{spores:160, xp:80} },
   { id:'first_research',  cat:'Research',    name:'Lab Rat',               desc:'Complete your first research',          reward:{spores:15,  xp:10} },
   { id:'research_10',     cat:'Research',    name:'Dedicated Researcher',  desc:'Complete 10 research runs',             reward:{spores:60,  xp:30} },
   { id:'research_rare',   cat:'Research',    name:'Rare Discovery',        desc:'Collect a Rare-tier research or better', reward:{spores:40,  xp:20} },
@@ -1253,6 +1298,7 @@ const ACH_PIX = {
   statue:  {color:'#A8B0AC',rows:['..###..','..###..','.#####.','..###..','..###..','.#####.','#######' ]},
   tv:      {color:'#7EC8E3',rows:['.......','.#####.','#######','#.....#','#######','...#...','..###..' ]},
   broom:   {color:'#D9A84C',rows:['......#','.....#.','....#..','...#...','..#....','.#.###.','#.#.#.#' ]},
+  snowflake:{color:'#B8E8F5',rows:['...#...','.#.#.#.','..###..','#######','..###..','.#.#.#.','...#...' ]},
 };
 const ACH_ICON_MAP = {
   first_harvest:'seedling', harvest_10:'seedling', harvest_50:'wheat', harvest_100:'wheat',
@@ -1264,7 +1310,7 @@ const ACH_ICON_MAP = {
   first_upgrade:'gear', max_upgrade:'gear',
   level_5:'arrow', level_10:'arrow', level_20:'arrow',
   spores_500:'diamond', spores_2000:'diamond',
-  unlock_all:'dotgrid', unlock_all_desert:'dotgrid',
+  unlock_all:'dotgrid', unlock_all_desert:'dotgrid', unlock_all_frost:'dotgrid',
   first_research:'gear', research_10:'gear', research_rare:'star', research_exceptional:'trophy', research_legendary:'trophy',
   gems_10:'sparkle', gems_50:'star',
   first_prestige:'trophy', prestige_5:'trophy',
@@ -1322,6 +1368,7 @@ function checkAchievements(){
     spores_2000:    s.totalSpores>=2000,
     unlock_all:     (state.plots||[]).filter(p=>!p.locked).length>=9,
     unlock_all_desert: (state.desertPlots||[]).filter(p=>!p.locked).length>=9,
+    unlock_all_frost: (state.frostPlots||[]).filter(p=>!p.locked).length>=9,
     first_research: (s.researchCompleted||0)>=1,
     research_10:    (s.researchCompleted||0)>=10,
     research_rare:  (s.bestResearchTier||-1)>=2,
@@ -1500,7 +1547,7 @@ function bumpTaskProgress(type, amount, matchSpecies){
   if(changed){ saveState(); updateTasksBadge(); }
 }
 function isTaskPossible(task){
-  if(task.type==='unlock_plot') return state.plots.some(p=>p.locked) || (state.desertPlots||[]).some(p=>p.locked);
+  if(task.type==='unlock_plot') return state.plots.some(p=>p.locked) || (state.desertPlots||[]).some(p=>p.locked) || (state.frostPlots||[]).some(p=>p.locked);
   if(task.type==='buy_upgrade') return Object.entries(UPGRADES).some(([k,cfg])=>(state.upgrades[k]||0)<cfg.maxLevel);
   return true;
 }
@@ -2943,7 +2990,13 @@ const SPECIES_HALF = {
   needlebrush:['.c.c.','.b.b.','.a.a.','.b.b.','.a.a.'],
   duneglow:   ['....c','..abc','.bcba','abbba','.bbaa','..aaa'],
   sunflare:   ['c...c','.b.b.','..a..','.bbb.','aaaaa'],
-  mirageroot: ['...c.','..cb.','.bab.','baab.','.aa..']
+  mirageroot: ['...c.','..cb.','.bab.','baab.','.aa..'],
+  rimepetal:  ['..c..','.cbc.','cbbbc','.bab.','..a..'],
+  hoarfrond:  ['....c','...cb','..cba','.cbba','..aa.'],
+  snowcap:    ['.ccc.','ccccc','bbbbb','bbbbb','.aaa.'],
+  glacierbud: ['..c..','.cbc.','.bbb.','.bab.','..a..'],
+  auroraspire:['....c','...cb','..cba','.bbba','.bbca','..bba'],
+  wraithbloom:['....c','..ccb','.cbba','cbbba','.bbca','..aaa']
 };
 const SPECIES_HEAD_FULL = {};
 const SPECIES_HEAD_BUD = {};
@@ -3002,7 +3055,13 @@ const STEM_STYLES = {
   needlebrush:(i) => i%2===0 ? '..wtttw..' : '...ttt...',
   duneglow:   (i) => i%2===0 ? '..rtttr..' : '...ttt...',
   sunflare:   (i) => i%2===0 ? '..qtttq..' : '...ttt...',
-  mirageroot: (i) => i%2===0 ? '..mtttm..' : '...ttt...'
+  mirageroot: (i) => i%2===0 ? '..mtttm..' : '...ttt...',
+  rimepetal:  (i) => '...ttt...',
+  hoarfrond:  (i) => i%2===0 ? '...tt....' : '....tt...',
+  snowcap:    (i) => i%2===0 ? '..ittti..' : '...ttt...',
+  glacierbud: (i) => i%2===1 ? '..ittti..' : '...ttt...',
+  auroraspire:(i) => i%2===0 ? '..ittt...' : '...ttti..',
+  wraithbloom:(i) => i%2===0 ? '..ittti..' : '...ttt...'
 };
 function stemRows(height, speciesKey, crossKey){
   const rows = [];
@@ -3041,6 +3100,7 @@ function cellColor(token, hue, wilt){
   if(token==='w') return wilt ? '#8A8070' : 'hsl('+hue+' 55% 78%)';
   if(token==='q') return wilt ? '#7A6A3D' : 'hsl('+hue+' 85% 55%)';
   if(token==='m') return wilt ? '#5C6B6B' : '#BFE8E0';
+  if(token==='i') return wilt ? '#6B7A7A' : 'hsl('+hue+' 55% 82%)';
   if(wilt){
     if(token==='a') return '#6B5A45';
     if(token==='b') return '#8A7558';
@@ -3665,11 +3725,20 @@ function buildInitialPlots(){
   }
   return arr;
 }
-function plotsForWing(wing){ return wing==='desert' ? state.desertPlots : state.plots; }
-function refreshTilesForWing(wing){ if(wing==='desert') updateAllDesertTiles(); else updateAllTiles(); }
+function plotsForWing(wing){
+  if(wing==='desert') return state.desertPlots;
+  if(wing==='frost') return state.frostPlots;
+  return state.plots;
+}
+function refreshTilesForWing(wing){
+  if(wing==='desert') updateAllDesertTiles();
+  else if(wing==='frost') updateAllFrostTiles();
+  else updateAllTiles();
+}
 function isDesertWingUnlocked(){ return (state.prestige.count||0) > 0; }
+function isThirdWingUnlocked(){ return (state.prestige.count||0) >= 2; }
 function defaultState(){
-  return { spores:20, gems:0, xp:0, everPlanted:false, plots:buildInitialPlots(), desertPlots:buildInitialPlots(), inventory:[], herbarium:[],
+  return { spores:20, gems:0, xp:0, everPlanted:false, plots:buildInitialPlots(), desertPlots:buildInitialPlots(), frostPlots:buildInitialPlots(), inventory:[], herbarium:[],
     upgrades:{ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 },
     taskBoard:{ slot:getBoardSlot(), tasks:rollNewTasks(), progress:{}, claimed:{} }, nextMutationBoost:0,
     achievements:{}, herbSets:{}, researchSlots:[null,null,null], labSlotUnlocked:[false,true,false],
@@ -3694,6 +3763,7 @@ function normalizeState(parsed){
       const merged = Object.assign(defaultState(), parsed);
       if(!Array.isArray(merged.plots) || merged.plots.length!==9) merged.plots = buildInitialPlots();
       if(!Array.isArray(merged.desertPlots) || merged.desertPlots.length!==9) merged.desertPlots = buildInitialPlots();
+      if(!Array.isArray(merged.frostPlots) || merged.frostPlots.length!==9) merged.frostPlots = buildInitialPlots();
       merged.upgrades = Object.assign({ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 }, parsed.upgrades||{});
       if(typeof merged.xp!=='number') merged.xp = 0;
       if(typeof merged.gems!=='number') merged.gems = 0;
@@ -4517,9 +4587,9 @@ function autoPlantIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_
 function autoHarvestIntervalMs(){ return Math.max(AUTO_ACTION_MIN_MS, AUTO_ACTION_BASE_MS - getPrestigeBonus('autoHarvestSpeed')); }
 // Each wing runs its own independent auto-harvester/auto-farmer with its own cooldown --
 // a fast-cycling greenhouse plot never steals the desert wing's turn or vice versa.
-let lastAutoHarvestAt = { verdant:0, desert:0 };
-let lastAutoPlantAt = { verdant:0, desert:0 };
-const WING_LABELS = { verdant:'the greenhouse', desert:'the desert wing' };
+let lastAutoHarvestAt = { verdant:0, desert:0, frost:0 };
+let lastAutoPlantAt = { verdant:0, desert:0, frost:0 };
+const WING_LABELS = { verdant:'the greenhouse', desert:'the desert wing', frost:'the frostbound wing' };
 function autoHarvestOnce(wing){
   const plots = plotsForWing(wing);
   for(let idx=0; idx<plots.length; idx++){
@@ -4532,7 +4602,7 @@ function autoHarvestOnce(wing){
 }
 function autoHarvestTick(){
   if(getPrestigeBonus('autoHarvest') <= 0) return;
-  ['verdant','desert'].forEach(wing=>{
+  ['verdant','desert','frost'].forEach(wing=>{
     if(Date.now() - lastAutoHarvestAt[wing] < autoHarvestIntervalMs()) return;
     lastAutoHarvestAt[wing] = Date.now();
     const result = autoHarvestOnce(wing);
@@ -4557,7 +4627,7 @@ function autoPlantOnce(wing){
 }
 function autoPlantTick(){
   if(getPrestigeBonus('autoPlant') <= 0) return;
-  ['verdant','desert'].forEach(wing=>{
+  ['verdant','desert','frost'].forEach(wing=>{
     if(Date.now() - lastAutoPlantAt[wing] < autoPlantIntervalMs()) return;
     lastAutoPlantAt[wing] = Date.now();
     if(!autoPlantOnce(wing)) return;
@@ -4575,7 +4645,7 @@ function autoPestWing(wing){
 }
 function autoPestTick(){
   if(getPrestigeBonus('autoPest') <= 0) return;
-  const squashed = autoPestWing('verdant').concat(autoPestWing('desert'));
+  const squashed = autoPestWing('verdant').concat(autoPestWing('desert')).concat(autoPestWing('frost'));
   if(!squashed.length) return;
   showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('broom', true)+'<span>Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s')+'</span></span>');
 }
@@ -4833,6 +4903,48 @@ function updateAllDesertTiles(){
   }
   updateHarvestAllButton();
 }
+let frostTileEls = [];
+let frostTileDisplayCache = [];
+function buildFrostPlotTiles(){
+  const grid = document.getElementById('plotGridFrost');
+  if(!grid) return;
+  grid.innerHTML = '';
+  frostTileEls = [];
+  frostTileDisplayCache = new Array(9).fill(null);
+  for(let i=0;i<9;i++){
+    const wrap = document.createElement('div');
+    wrap.className = 'plot-tile';
+    wrap.dataset.idx = i;
+    wrap.innerHTML = '<div class="plot-tile-inner"></div>';
+    wrap.addEventListener('click', ()=>openSheet(i, 'frost'));
+    grid.appendChild(wrap);
+    frostTileEls.push(wrap);
+  }
+}
+function updateAllFrostTiles(){
+  if(!frostTileEls.length) return;
+  const sprinklerOn = ((state.upgrades && state.upgrades.sprinkler) || 0) > 0;
+  for(let i=0;i<9;i++){
+    const plot = state.frostPlots[i];
+    const ds = getDisplayStatus(plot);
+    const pestFlag = !!(plot.pest && (ds==='growing'||ds==='ready'));
+    let stage = null;
+    if(ds==='growing'){
+      const pct = clamp(((Date.now()-plot.plantedAt)/plot.growthDurationMs)*100, 0, 100);
+      stage = computeStage(pct);
+    }
+    const prev = frostTileDisplayCache[i];
+    const changed = !prev || prev.ds!==ds || prev.pest!==pestFlag || prev.sprinklerOn!==sprinklerOn || prev.stage!==stage;
+    frostTileEls[i].className = 'plot-tile' + (ds==='locked' ? ' locked' : '') + (pestFlag ? ' has-pest' : '');
+    if(changed){
+      frostTileEls[i].querySelector('.plot-tile-inner').innerHTML = buildTileInnerHTML(plot, i, 'frost');
+    } else if(ds==='growing'){
+      updateTileLiveBits(frostTileEls[i], plot);
+    }
+    frostTileDisplayCache[i] = { ds, pest:pestFlag, sprinklerOn, stage };
+  }
+  updateHarvestAllButton();
+}
 const LAB_UNLOCK_LEVEL = 5;
 function isLabUnlockedByLevel(){
   return getLevelFromXp(state.xp||0) >= LAB_UNLOCK_LEVEL;
@@ -4850,19 +4962,31 @@ function updateDesertToggleLock(){
   if(!btn) return;
   btn.classList.toggle('wing-locked', !isDesertWingUnlocked());
 }
+function updateFrostToggleLock(){
+  const btn = document.getElementById('wingBtnFrost');
+  if(!btn) return;
+  btn.classList.toggle('wing-locked', !isThirdWingUnlocked());
+}
 function switchWing(wing){
   if(wing==='desert' && !isDesertWingUnlocked()){
     showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('cactus', true)+'<span>The Desert Wing unlocks after your first Prestige</span></span>');
     return;
   }
+  if(wing==='frost' && !isThirdWingUnlocked()){
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('snowflake', true)+'<span>The Frostbound Wing unlocks after your second Prestige</span></span>');
+    return;
+  }
   currentWing = wing;
   document.getElementById('wingBtnVerdant').classList.toggle('active', wing==='verdant');
   document.getElementById('wingBtnDesert').classList.toggle('active', wing==='desert');
+  document.getElementById('wingBtnFrost').classList.toggle('active', wing==='frost');
   document.getElementById('plotGrid').style.display = wing==='verdant' ? '' : 'none';
   document.getElementById('desertWingPanel').style.display = wing==='desert' ? '' : 'none';
+  document.getElementById('frostWingPanel').style.display = wing==='frost' ? '' : 'none';
   document.getElementById('windowScene').classList.toggle('is-desert-wing', wing==='desert');
+  document.getElementById('windowScene').classList.toggle('is-frost-wing', wing==='frost');
   const titleEl = document.getElementById('greenhouseScreenTitle');
-  if(titleEl) titleEl.textContent = wing==='desert' ? 'Coax life from sand and sun' : 'Place a seed, tend the pot, see what grows';
+  if(titleEl) titleEl.textContent = wing==='desert' ? 'Coax life from sand and sun' : wing==='frost' ? 'Coax life from ice and shadow' : 'Place a seed, tend the pot, see what grows';
   updateHarvestAllButton();
 }
 function hasAnyPurchasableSkillNode(){
@@ -4902,6 +5026,7 @@ function updateHeader(){
   if(labelEl) labelEl.textContent = prog.level>=MAX_LEVEL ? 'MAX' : prog.current+' / '+prog.needed+' XP';
   updateLabNavLock();
   updateDesertToggleLock();
+  updateFrostToggleLock();
   updatePrestigeBadge();
   updateTasksBadge();
 }
@@ -5468,8 +5593,8 @@ function closeWelcomeBack(){
   document.getElementById('welcomeOverlay').classList.remove('open');
 }
 function harvestAllFromWelcome(){
-  const results = harvestAllReady('verdant').concat(harvestAllReady('desert'));
-  updateAllTiles(); updateAllDesertTiles(); updateHeader(); renderHerbarium();
+  const results = harvestAllReady('verdant').concat(harvestAllReady('desert')).concat(harvestAllReady('frost'));
+  updateAllTiles(); updateAllDesertTiles(); updateAllFrostTiles(); updateHeader(); renderHerbarium();
   closeWelcomeBack();
   if(results.length) openHarvestAllSummary(results);
 }
@@ -5680,8 +5805,10 @@ function tick(){
   const now = Date.now();
   state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   state.desertPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  state.frostPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   updateAllTiles();
   updateAllDesertTiles();
+  updateAllFrostTiles();
   updateHeader();
   applyWindowPhase();
   autoPestTick();
@@ -5739,6 +5866,10 @@ function runAwayCatchup(awayStartOverride){
     desert: {
       harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
       plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
+    },
+    frost: {
+      harvest: hasAutoHarvest ? Math.floor(awaySpan / autoHarvestIntervalMs()) + 1 : 0,
+      plant: hasAutoPlant ? Math.floor(awaySpan / autoPlantIntervalMs()) + 1 : 0
     }
   };
   let wiltedCount = 0, readyCount = 0;
@@ -5755,8 +5886,10 @@ function runAwayCatchup(awayStartOverride){
   };
   tickAwayWing('verdant');
   tickAwayWing('desert');
+  tickAwayWing('frost');
   updateAllTiles();
   updateAllDesertTiles();
+  updateAllFrostTiles();
   updateHeader();
   renderHerbarium();
   renderUpgrades();
@@ -5799,8 +5932,10 @@ async function init(){
   document.getElementById('pestSwarmBadgeIcon').innerHTML = renderPixIcon('bug', true, 2);
   document.getElementById('wingVerdantIcon').innerHTML = renderPixIcon('seedling', true, 2);
   document.getElementById('wingDesertIcon').innerHTML = renderPixIcon('cactus', true, 2);
+  document.getElementById('wingFrostIcon').innerHTML = renderPixIcon('snowflake', true, 2);
   buildPlotTiles();
   buildDesertPlotTiles();
+  buildFrostPlotTiles();
   runAwayCatchup();
   if(!state.everPlanted) document.body.classList.add('show-hint');
   if(!state.tutorialSeen) openIntro();

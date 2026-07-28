@@ -3317,7 +3317,7 @@ function applyWindowPhase(){
   const el = document.getElementById('windowScene');
   if(el){
     const weatherClass = Array.from(el.classList).find(c=>c.indexOf('weather-')===0);
-    const wingClass = el.classList.contains('is-desert-wing') ? ' is-desert-wing' : '';
+    const wingClass = el.classList.contains('is-desert-wing') ? ' is-desert-wing' : el.classList.contains('is-frost-wing') ? ' is-frost-wing' : '';
     el.className = 'window is-'+phase+(weatherClass?' '+weatherClass:'')+wingClass;
   }
   if(phase===currentSkyPhase) return;

@@ -1,5 +1,11 @@
 {
   "appId": "com.scheuermanjs.greenhousemutations",
   "appName": "Greenhouse: Mutations",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"]
+    }
+  }
 }

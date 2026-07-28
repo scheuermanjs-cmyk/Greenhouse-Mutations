@@ -852,6 +852,10 @@
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div id="soundSettingsList"></div>
       </div>
+      <div class="ach-category" style="margin-top:18px;">Cloud Save</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="cloudSaveCard"></div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Save Backup</div>
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div class="upg-desc">Export your save to a file, or import one to restore progress. Handy before clearing browser data or switching phones.</div>
@@ -1203,6 +1207,7 @@ function doPrestige(){
   const keepGems = state.gems;
   const keepOfflineCapLevel = state.offlineCapLevel;
   const keepIap = state.iap;
+  const keepCloud = state.cloud;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1216,7 +1221,8 @@ function doPrestige(){
     settings: keepSettings,
     gems: keepGems,
     offlineCapLevel: keepOfflineCapLevel,
-    iap: keepIap
+    iap: keepIap,
+    cloud: keepCloud
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -3757,6 +3763,7 @@ function defaultState(){
     adCooldownUntil:0,
     offlineCapLevel:0,
     settings:{ sfxEnabled:true, musicEnabled:true },
+    cloud:{ signedIn:false, uid:null, email:null, lastSyncedAt:0 },
     lastSavedAt:Date.now() };
 }
 function normalizeState(parsed){
@@ -3821,6 +3828,12 @@ function normalizeState(parsed){
       } else {
         if(typeof merged.settings.sfxEnabled!=='boolean') merged.settings.sfxEnabled = true;
         if(typeof merged.settings.musicEnabled!=='boolean') merged.settings.musicEnabled = true;
+      }
+      if(!merged.cloud || typeof merged.cloud!=='object'){
+        merged.cloud = { signedIn:false, uid:null, email:null, lastSyncedAt:0 };
+      } else {
+        if(typeof merged.cloud.signedIn!=='boolean') merged.cloud.signedIn = false;
+        if(typeof merged.cloud.lastSyncedAt!=='number') merged.cloud.lastSyncedAt = 0;
       }
       return merged;
 }
@@ -3903,6 +3916,174 @@ function confirmImportSave(){
   pendingImportData = null;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   location.reload();
+}
+
+/* ===================== CLOUD SAVE (Google Sign-In + Firebase Realtime Database) =====================
+   Uses the RevenueCat/AdMob-style runtime bridge (window.Capacitor.Plugins.FirebaseAuthentication)
+   for the native Google Sign-In handshake only -- storage itself is plain fetch() against the
+   Realtime Database REST API (no second native plugin needed), reusing the exact JSON.stringify(state)
+   / normalizeState(JSON.parse(...)) round-trip already proven out by Export/Import Save above. */
+// Replace once the Firebase project exists -- see plan handoff notes for exact console steps.
+const FIREBASE_RTDB_URL = 'https://REPLACE_WITH_YOUR_PROJECT-default-rtdb.firebaseio.com';
+let cloudInitialized = false;
+let cloudSyncInterval = null;
+let pendingCloudData = null;
+function nativeCloudAvailable(){
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
+    && window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseAuthentication);
+}
+function getFreshIdToken(){
+  return window.Capacitor.Plugins.FirebaseAuthentication.getIdToken().then(r=>r.token);
+}
+function looksLikeValidSave(obj){
+  return obj && typeof obj==='object' && typeof obj.xp!=='undefined' && Array.isArray(obj.plots);
+}
+function fetchCloudSave(uid, token){
+  return fetch(FIREBASE_RTDB_URL+'/saves/'+uid+'.json?auth='+token).then(res=>res.json()).catch(()=>null);
+}
+function uploadCloudSave(){
+  if(!state.cloud || !state.cloud.signedIn || !nativeCloudAvailable()) return Promise.resolve();
+  return getFreshIdToken().then(token=>{
+    return fetch(FIREBASE_RTDB_URL+'/saves/'+state.cloud.uid+'.json?auth='+token, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(state)
+    });
+  }).then(()=>{ state.cloud.lastSyncedAt = Date.now(); saveState(); }).catch(()=>{});
+}
+function startCloudSyncTimer(){
+  if(cloudSyncInterval) return;
+  cloudSyncInterval = setInterval(()=>{ if(state.cloud && state.cloud.signedIn) uploadCloudSave(); }, 120000);
+}
+function stopCloudSyncTimer(){
+  clearInterval(cloudSyncInterval);
+  cloudSyncInterval = null;
+}
+function initCloudAuth(){
+  if(!nativeCloudAvailable() || cloudInitialized) return;
+  cloudInitialized = true;
+  const FirebaseAuthentication = window.Capacitor.Plugins.FirebaseAuthentication;
+  FirebaseAuthentication.getCurrentUser().then((result)=>{
+    const user = result && result.user;
+    if(!user) return null;
+    state.cloud.signedIn = true;
+    state.cloud.uid = user.uid;
+    state.cloud.email = user.email;
+    renderCloudSave();
+    startCloudSyncTimer();
+    return getFreshIdToken().then(token=>fetchCloudSave(user.uid, token));
+  }).then((cloud)=>{
+    if(looksLikeValidSave(cloud) && Math.abs((cloud.lastSavedAt||0)-(state.lastSavedAt||0)) > 60000){
+      openCloudConflict(cloud);
+    }
+  }).catch(()=>{});
+}
+function signInWithGoogle(){
+  if(!nativeCloudAvailable()) return;
+  const FirebaseAuthentication = window.Capacitor.Plugins.FirebaseAuthentication;
+  FirebaseAuthentication.signInWithGoogle().then((result)=>{
+    const user = result.user;
+    state.cloud.signedIn = true;
+    state.cloud.uid = user.uid;
+    state.cloud.email = user.email;
+    saveState();
+    renderCloudSave();
+    startCloudSyncTimer();
+    return getFreshIdToken().then(token=>fetchCloudSave(user.uid, token));
+  }).then((cloud)=>{
+    if(looksLikeValidSave(cloud)){
+      openCloudConflict(cloud);
+    } else {
+      uploadCloudSave();
+      showToast('Signed in! Your save is now backed up to the cloud.');
+    }
+  }).catch((err)=>{
+    if(!err || !err.userCancelled) showToast('Sign-in failed — please try again.');
+  });
+}
+function signOutCloud(){
+  if(!nativeCloudAvailable()) return;
+  window.Capacitor.Plugins.FirebaseAuthentication.signOut().then(()=>{
+    state.cloud.signedIn = false;
+    state.cloud.uid = null;
+    state.cloud.email = null;
+    stopCloudSyncTimer();
+    saveState();
+    renderCloudSave();
+    showToast('Signed out. Your local save is untouched.');
+  }).catch(()=>{});
+}
+function syncCloudNow(){
+  if(!state.cloud || !state.cloud.signedIn) return;
+  uploadCloudSave().then(()=>{ renderCloudSave(); showToast('Synced!'); });
+}
+function confirmDeleteCloudSave(){
+  currentSheetIdx = null;
+  revealShowing = false;
+  const body = document.getElementById('sheetBody');
+  body.innerHTML = '<div class="sheet-head"><h3>Delete Cloud Save?</h3></div>'
+    + '<p class="sheet-blurb">This permanently deletes your backed-up save from the cloud. Your local save on this device is not affected.</p>'
+    + '<button class="btn btn-danger btn-block" onclick="deleteCloudSave()">Delete Cloud Save</button>'
+    + '<button class="btn btn-block" style="margin-top:8px;" onclick="closeSheet()">Cancel</button>';
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function deleteCloudSave(){
+  if(!state.cloud || !state.cloud.signedIn) return;
+  closeSheet();
+  getFreshIdToken().then(token=>{
+    return fetch(FIREBASE_RTDB_URL+'/saves/'+state.cloud.uid+'.json?auth='+token, { method:'DELETE' });
+  }).then(()=>{ showToast('Cloud save deleted.'); }).catch(()=>{ showToast('Could not delete cloud save — try again.'); });
+}
+function openCloudConflict(cloudState){
+  pendingCloudData = cloudState;
+  currentSheetIdx = null;
+  revealShowing = false;
+  const localLevel = getLevelFromXp(state.xp||0);
+  const cloudLevel = getLevelFromXp(cloudState.xp||0);
+  const body = document.getElementById('sheetBody');
+  body.innerHTML = '<div class="sheet-head"><h3>Cloud Save Found</h3></div>'
+    + '<p class="sheet-blurb">This account already has a save backed up. Which do you want to keep? The one you don\'t pick will be overwritten.</p>'
+    + '<div class="stat-row"><span>This device</span><span>Level '+localLevel+' &middot; '+Math.round(state.spores)+' spores</span></div>'
+    + '<div class="stat-row"><span>Cloud save</span><span>Level '+cloudLevel+' &middot; '+Math.round(cloudState.spores||0)+' spores</span></div>'
+    + '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="keepLocalOverCloud()">Keep This Device\'s Save</button>'
+    + '<button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="keepCloudOverLocal()">Use Cloud Save Instead</button>';
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function keepLocalOverCloud(){
+  pendingCloudData = null;
+  closeSheet();
+  uploadCloudSave();
+  showToast('Kept this device\'s save and backed it up to the cloud.');
+}
+function keepCloudOverLocal(){
+  if(!pendingCloudData) return;
+  const keepCloud = state.cloud;
+  state = normalizeState(pendingCloudData);
+  state.cloud = keepCloud;
+  pendingCloudData = null;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  location.reload();
+}
+function renderCloudSave(){
+  const el = document.getElementById('cloudSaveCard');
+  if(!el) return;
+  if(!nativeCloudAvailable()){
+    el.innerHTML = '<div class="upg-desc">Cloud save is available in the Android app — sign in to back up your save and restore it on another device.</div>';
+    return;
+  }
+  if(!state.cloud || !state.cloud.signedIn){
+    el.innerHTML = '<div class="upg-desc">Sign in to back up your save and restore it on another device.</div>'
+      + '<button class="btn btn-block" style="margin-top:10px;" onclick="signInWithGoogle()">Sign in with Google</button>';
+    return;
+  }
+  const lastSync = state.cloud.lastSyncedAt ? new Date(state.cloud.lastSyncedAt).toLocaleString() : 'never';
+  el.innerHTML = '<div class="upg-desc">Signed in as '+state.cloud.email+'</div>'
+    + '<div class="upg-desc" style="margin-top:2px;">Last synced: '+lastSync+'</div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;">'
+    + '<button class="btn btn-block" onclick="syncCloudNow()">Sync Now</button>'
+    + '<button class="btn btn-block" onclick="signOutCloud()">Sign Out</button>'
+    + '</div>'
+    + '<button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="confirmDeleteCloudSave()">Delete Cloud Save</button>';
 }
 
 /* ===================== HELPERS ===================== */
@@ -5540,7 +5721,7 @@ function showScreen(name){
   if(name==='herbarium') renderHerbarium();
   if(name==='upgrades') renderUpgrades();
   if(name==='tasks') renderTasks();
-  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); renderSoundSettings(); }
+  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); renderSoundSettings(); renderCloudSave(); }
   if(name==='lab'){ renderLab(); renderLabShelf(); }
 }
 const SCREEN_SWIPE_ORDER = ['greenhouse','tasks','achievements','upgrades','herbarium','lab'];
@@ -5915,6 +6096,7 @@ document.addEventListener('visibilitychange', ()=>{
   if(!state) return;
   if(document.hidden){
     pageHiddenAt = Date.now();
+    if(state.cloud && state.cloud.signedIn) uploadCloudSave();
   } else if(pageHiddenAt!=null){
     const hiddenSince = pageHiddenAt;
     pageHiddenAt = null;
@@ -5926,6 +6108,7 @@ async function init(){
   applyEquippedDecor();
   initNativeAds();
   initIAP();
+  initCloudAuth();
   document.getElementById('gemIcon').innerHTML = renderGemIcon(2);
   document.getElementById('sporeIcon').innerHTML = renderSporeIcon(2);
   document.getElementById('stormBadgeIcon').innerHTML = renderPixIcon('bolt', true, 2);

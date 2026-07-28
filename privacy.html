@@ -30,15 +30,20 @@
 <body>
 <div class="wrap">
   <h1>Privacy Policy</h1>
-  <div class="updated">Greenhouse: Mutations · Last updated July 26, 2026</div>
+  <div class="updated">Greenhouse: Mutations · Last updated July 28, 2026</div>
 
   <div class="card">
-    <p style="margin:0;">Short version: Greenhouse: Mutations doesn't have accounts and doesn't collect personal information itself. Your save file lives only on your own device. The Android app shows optional rewarded video ads via Google AdMob — you choose to watch them for a bonus, and AdMob collects some device/advertising data to serve those, described below. Push notifications are a separate, optional feature, also described below.</p>
+    <p style="margin:0;">Short version: by default, Greenhouse: Mutations doesn't have accounts and doesn't collect personal information itself — your save file lives only on your own device. If you choose to sign in with Google (entirely optional), we store your save data in the cloud so you can restore it on another device, described below. The Android app also shows optional rewarded video ads via Google AdMob — you choose to watch them for a bonus, and AdMob collects some device/advertising data to serve those, also described below. Push notifications are a separate, optional feature, also described below.</p>
   </div>
 
   <h2>Your Save Data</h2>
-  <p>All of your game progress — your plants, herbarium, achievements, currencies, and settings — is stored locally on your device using browser local storage. It is never sent to us or to any server. If you use the in-app "Export Save" feature, the save file is written directly to your device; we never see or receive it.</p>
-  <p>Uninstalling the app, or clearing your browser/app data, permanently deletes this save data. We have no copy and cannot recover it for you.</p>
+  <p>All of your game progress — your plants, herbarium, achievements, currencies, and settings — is stored locally on your device using browser local storage. It is never sent to us or to any server unless you choose to enable Cloud Save (below). If you use the in-app "Export Save" feature, the save file is written directly to your device; we never see or receive it.</p>
+  <p>Uninstalling the app, or clearing your browser/app data, permanently deletes this locally-stored save data. We have no copy and cannot recover it for you, unless you had Cloud Save enabled.</p>
+
+  <h2>Optional Cloud Save (Google Sign-In)</h2>
+  <p>If you choose to tap "Sign in with Google" (found in the Trophies screen), the app uses <strong>Firebase Authentication</strong> to sign you in with your existing Google account, and stores a copy of your save data — the same game progress described above — in <strong>Firebase Realtime Database</strong>, a cloud database service operated by Google. This lets you restore your progress if you switch devices or reinstall the app.</p>
+  <p>Signing in shares your Google account identifier and the email address associated with it with us, solely to link your save to your account and to show you which account you're signed in as. We don't use this for advertising, don't sell it, and don't share it with anyone beyond Google/Firebase acting as our data processor.</p>
+  <p>You can sign out at any time (your local save is unaffected), and you can permanently delete your cloud-stored save with the "Delete Cloud Save" button in the same screen. Cloud Save is entirely optional — the game is fully playable without ever signing in.</p>
 
   <h2>Optional Push Notifications</h2>
   <p>If you choose to enable notifications (for example, to be alerted when a research task finishes), your browser creates a push subscription — a delivery address and encryption keys, not your name or email — which is sent to a small server we run (a Cloudflare Worker) solely to deliver that one notification at the scheduled time. This only happens if you actively grant notification permission in-app; nothing is sent otherwise.</p>
@@ -53,6 +58,7 @@
   <ul>
     <li><strong>Google Fonts</strong> — the app loads two typefaces from Google's font CDN. Google may log standard request information (such as IP address) per <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's own privacy policy</a>. No game data is sent to Google.</li>
     <li><strong>Cloudflare Workers</strong> — hosts the small push-notification scheduler described above.</li>
+    <li><strong>Firebase (Google)</strong> — used only if you opt in to Cloud Save, for sign-in and storing your save data. Governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
   </ul>
   <p>Beyond the optional rewarded ads described above, the app does not include any analytics or user-tracking service.</p>
 

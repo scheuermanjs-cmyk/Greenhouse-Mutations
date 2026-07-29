@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greenhouse: Mutations — grow, cross-breed, and collect impossible plants</title>
+<meta name="description" content="A cozy pixel-art idle game about growing, mutating, and cross-pollinating strange little plants across three greenhouses. Free to play, no login required.">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --panel:#1A2B1D; --panel-2:#223A26; --panel-3:#152018; --outline:#0A120C;
+    --accent:#7ED957; --accent-dark:#3F8C2A; --violet:#B98CE8;
+    --text:#EAF2E2; --text-muted:#8FA68C; --amber:#F2B84B; --frost:#8FD8E8;
+  }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0; background:var(--panel); color:var(--text);
+    font-family:'VT323',monospace; font-size:19px; line-height:1.55;
+  }
+  h1,h2,h3{ font-family:'Press Start 2P',monospace; font-weight:400; line-height:1.5; text-wrap:balance; }
+  a{ color:inherit; }
+  img{ max-width:100%; display:block; image-rendering:pixelated; }
+  .wrap{ max-width:960px; margin:0 auto; padding:0 24px; }
+
+  /* ---------- top bar ---------- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 24px; max-width:960px; margin:0 auto; }
+  .topbar-brand{ display:flex; align-items:center; gap:10px; font-family:'Press Start 2P'; font-size:12px; color:var(--text); text-decoration:none; }
+  .topbar-brand img{ width:28px; height:28px; }
+  .topbar nav{ display:flex; gap:22px; font-size:16px; color:var(--text-muted); }
+  .topbar nav a{ text-decoration:none; }
+  .topbar nav a:hover{ color:var(--accent); }
+  @media (max-width:640px){ .topbar nav{ display:none; } }
+
+  /* ---------- hero ---------- */
+  .hero{ position:relative; overflow:hidden; padding:36px 0 64px; background:radial-gradient(ellipse at 50% 0%, var(--panel-2) 0%, var(--panel) 70%); border-bottom:4px solid var(--outline); }
+  .hero-sparkle{ position:absolute; width:6px; height:6px; background:var(--amber); box-shadow:0 0 8px var(--amber); opacity:.8; animation:twinkle 2.6s ease-in-out infinite; }
+  @keyframes twinkle{ 0%,100%{ opacity:.25; transform:scale(.8);} 50%{ opacity:.9; transform:scale(1);} }
+  @media (prefers-reduced-motion: reduce){ .hero-sparkle{ animation:none; } }
+  .hero-inner{ position:relative; z-index:1; text-align:center; padding-top:8px; }
+  .hero-logo{ width:132px; height:132px; margin:0 auto 18px; filter:drop-shadow(0 8px 0 rgba(0,0,0,.35)); }
+  .hero h1{ font-size:28px; color:var(--text); margin:0 0 4px; letter-spacing:1px; }
+  .hero h1 .accent{ color:var(--accent); display:block; margin-top:10px; }
+  .hero-tagline{ font-size:22px; color:var(--text-muted); max-width:520px; margin:22px auto 0; }
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:34px; }
+
+  /* ---------- pixel button system (matches in-game .btn) ---------- */
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:15px 22px; font-size:16px; font-family:'VT323'; text-transform:uppercase; letter-spacing:.6px; text-decoration:none; background:var(--panel-2); color:var(--text); border:3px solid var(--outline); box-shadow:4px 4px 0 var(--outline); transition:transform .08s, box-shadow .08s; cursor:pointer; }
+  .btn:hover{ transform:translate(-1px,-1px); box-shadow:5px 5px 0 var(--outline); }
+  .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--outline); }
+  .btn-primary{ background:var(--accent); color:#0F1A12; }
+  .btn-muted{ opacity:.6; cursor:default; }
+  .btn-muted:hover{ transform:none; box-shadow:4px 4px 0 var(--outline); }
+
+  /* ---------- sections ---------- */
+  section{ padding:64px 0; }
+  .section-title{ font-size:22px; text-align:center; margin:0 0 8px; }
+  .section-sub{ text-align:center; color:var(--text-muted); font-size:19px; max-width:520px; margin:0 auto 44px; }
+
+  /* ---------- feature grid ---------- */
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:760px){ .feature-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:520px){ .feature-grid{ grid-template-columns:1fr; } }
+  .feature-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:4px 4px 0 rgba(0,0,0,.35); padding:20px 18px; }
+  .feature-icon{ width:40px; height:40px; margin-bottom:14px; border:3px solid var(--outline); display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--panel-3); }
+  .feature-card h3{ font-size:14px; color:var(--text); margin-bottom:10px; }
+  .feature-card p{ margin:0; color:var(--text-muted); font-size:17px; }
+
+  /* ---------- wings strip ---------- */
+  .wings{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media (max-width:700px){ .wings{ grid-template-columns:1fr; } }
+  .wing-card{ position:relative; padding:26px 18px 20px; border:3px solid var(--outline); box-shadow:4px 4px 0 rgba(0,0,0,.4); text-align:center; overflow:hidden; }
+  .wing-card.verdant{ background:linear-gradient(to bottom, #2B4A30 0%, #1A2B1D 100%); }
+  .wing-card.desert{ background:linear-gradient(to bottom, #C98A4B 0%, #8B5A2B 100%); }
+  .wing-card.frost{ background:linear-gradient(to bottom, #DCEEF5 0%, #8FB8C9 100%); }
+  .wing-card h3{ font-size:13px; margin-bottom:10px; }
+  .wing-card.verdant h3{ color:var(--accent); }
+  .wing-card.desert h3{ color:#3A2410; }
+  .wing-card.frost h3{ color:#0F3040; }
+  .wing-card p{ margin:0; font-size:16px; }
+  .wing-card.verdant p{ color:var(--text-muted); }
+  .wing-card.desert p{ color:#4A2E12; }
+  .wing-card.frost p{ color:#1B4756; }
+  .wing-lock{ display:inline-block; margin-top:12px; font-size:13px; padding:4px 9px; border:2px solid rgba(0,0,0,.35); }
+  .wing-card.verdant .wing-lock{ background:rgba(0,0,0,.25); color:var(--text-muted); }
+  .wing-card.desert .wing-lock{ background:rgba(255,255,255,.35); color:#4A2E12; }
+  .wing-card.frost .wing-lock{ background:rgba(255,255,255,.45); color:#1B4756; }
+
+  /* ---------- CTA band ---------- */
+  .cta-band{ background:var(--panel-2); border-top:4px solid var(--outline); border-bottom:4px solid var(--outline); text-align:center; }
+  .cta-band h2{ font-size:20px; margin-bottom:14px; }
+  .cta-band p{ color:var(--text-muted); max-width:480px; margin:0 auto 28px; }
+
+  /* ---------- footer ---------- */
+  footer{ padding:40px 0 60px; text-align:center; }
+  .footer-links{ display:flex; flex-wrap:wrap; gap:22px; justify-content:center; font-size:16px; margin-bottom:18px; }
+  .footer-links a{ text-decoration:none; color:var(--text-muted); }
+  .footer-links a:hover{ color:var(--accent); }
+  .footer-fine{ color:var(--text-muted); font-size:14px; opacity:.75; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="topbar-brand" href="landing.html"><img src="assets/icon-192.png" alt=""> Greenhouse: Mutations</a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#wings">Greenhouses</a>
+    <a href="#play">Play</a>
+  </nav>
+</div>
+
+<header class="hero">
+  <div class="hero-sparkle" style="top:14%; left:10%;"></div>
+  <div class="hero-sparkle" style="top:22%; left:85%; animation-delay:.6s;"></div>
+  <div class="hero-sparkle" style="top:65%; left:6%; animation-delay:1.2s;"></div>
+  <div class="hero-sparkle" style="top:72%; left:90%; animation-delay:1.8s;"></div>
+  <div class="hero-sparkle" style="top:40%; left:94%; animation-delay:.3s;"></div>
+  <div class="wrap hero-inner">
+    <img class="hero-logo" src="assets/icon-512.png" alt="Greenhouse: Mutations logo — a glowing potted plant">
+    <h1>GREENHOUSE<span class="accent">MUTATIONS</span></h1>
+    <p class="hero-tagline">Grow, tend, and cross-pollinate strange little plants. See what mutates.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" id="play" href="index.html">▶ Play in Browser</a>
+      <a class="btn btn-muted" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2 class="section-title">A garden that keeps surprising you</h2>
+    <p class="section-sub">No two greenhouses look the same. Cross-breed species, chase rare mutations, and watch your collection grow.</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🧬</div>
+        <h3>Cross-Breeding</h3>
+        <p>Pollinate two species together and see what hybrid traits emerge — every plant has its own stem pattern and color genetics.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔬</div>
+        <h3>Research Lab</h3>
+        <p>Run specimens through a three-station research machine to discover new mutated seeds and rare variants.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">♻</div>
+        <h3>Prestige</h3>
+        <p>Reset your greenhouse for permanent power upgrades on a skill tree that keeps paying off run after run.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📖</div>
+        <h3>Herbarium &amp; Sets</h3>
+        <p>Catalog every species and hybrid you've grown, chase rarity tiers, and complete themed collection sets.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🐞</div>
+        <h3>Pests &amp; Weather</h3>
+        <p>Defend your plots from pests and ride out mutation storms — risk and reward baked into every growing season.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☁</div>
+        <h3>Optional Cloud Save</h3>
+        <p>Sign in with Google to back up your progress and pick up your greenhouse on another device — entirely optional.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="wings">
+  <div class="wrap">
+    <h2 class="section-title">Three greenhouses to unlock</h2>
+    <p class="section-sub">Each wing brings its own climate, its own species, and its own way of playing.</p>
+    <div class="wings">
+      <div class="wing-card verdant">
+        <h3>VERDANT WING</h3>
+        <p>Your home greenhouse. Six base species and every hybrid combination you can dream up.</p>
+      </div>
+      <div class="wing-card desert">
+        <h3>DESERT WING</h3>
+        <p>Sun-hardy species built for a harsher climate.</p>
+        <span class="wing-lock">Unlocks after your 1st Prestige</span>
+      </div>
+      <div class="wing-card frost">
+        <h3>FROSTBOUND WING</h3>
+        <p>Cold-resistant species that shimmer under an aurora sky.</p>
+        <span class="wing-lock">Unlocks after your 2nd Prestige</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band" id="play">
+  <div class="wrap" style="padding:50px 0;">
+    <h2>Free to play. No account required.</h2>
+    <p>Jump straight into your greenhouse in the browser, or install the Android app. Your save stays on your device — sign in with Google only if you want cross-device backup.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="index.html">▶ Play in Browser</a>
+      <a class="btn btn-muted" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-links">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="delete-account.html">Delete Account &amp; Data</a>
+      <a href="mailto:greenhousemutations@gmail.com">Contact</a>
+    </div>
+    <div class="footer-fine">Greenhouse: Mutations — a cozy pixel-art idle game.</div>
+  </div>
+</footer>
+
+</body>
+</html>

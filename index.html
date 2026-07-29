@@ -852,6 +852,12 @@
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div id="soundSettingsList"></div>
       </div>
+      <div id="adsPrivacySection" style="display:none;">
+        <div class="ach-category" style="margin-top:18px;">Ads</div>
+        <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+          <div id="adsPrivacyCard"></div>
+        </div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Cloud Save</div>
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div id="cloudSaveCard"></div>
@@ -1795,31 +1801,67 @@ function buyLuckyCharm(){
    needed since this project ships as a plain script. Falls back to a
    timed mock reward when running as a plain web page/PWA, where no ad
    SDK is available (e.g. the GitHub Pages build). */
-const ADMOB_REWARD_AD_UNIT_ID = 'ca-app-pub-3102211971185605/2724277354';
+// Set true only while doing on-device/emulator QA so ad taps never hit live
+// inventory (avoids "invalid traffic" against the real AdMob account). Must
+// be false before building the release/Play Store artifact.
+const ADMOB_TEST_MODE = false;
+const ADMOB_REWARD_AD_UNIT_ID = ADMOB_TEST_MODE
+  ? 'ca-app-pub-3940256099942544/5224354917' // Google's official sample rewarded test ad unit
+  : 'ca-app-pub-3102211971185605/2724277354';
 const AD_MOCK_DURATION_MS = 2500;
 let nativeAdMobInitialized = false;
 let nativeRewardAdReady = false;
+let admobCanRequestAds = false;
+let admobPrivacyOptionsRequired = false;
 
 function nativeAdsAvailable(){
   return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
     && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob);
 }
+function canShowNativeAds(){
+  return nativeAdsAvailable() && admobCanRequestAds;
+}
 function preloadRewardAd(){
-  if(!nativeAdsAvailable()) return;
+  if(!canShowNativeAds()) return;
   window.Capacitor.Plugins.AdMob.prepareRewardVideoAd({ adId: ADMOB_REWARD_AD_UNIT_ID }).catch(()=>{});
+}
+function showAdPrivacyOptionsForm(){
+  if(!nativeAdsAvailable()) return;
+  window.Capacitor.Plugins.AdMob.showPrivacyOptionsForm().catch(()=>{
+    showToast('No privacy options to show right now.');
+  });
 }
 function initNativeAds(){
   if(!nativeAdsAvailable() || nativeAdMobInitialized) return;
   nativeAdMobInitialized = true;
   const AdMobPlugin = window.Capacitor.Plugins.AdMob;
-  AdMobPlugin.initialize({}).then(()=>{
-    AdMobPlugin.addListener('onRewardedVideoAdLoaded', ()=>{ nativeRewardAdReady = true; });
-    AdMobPlugin.addListener('onRewardedVideoAdFailedToLoad', ()=>{ nativeRewardAdReady = false; });
-    preloadRewardAd();
+  AdMobPlugin.requestConsentInfo({}).then((info)=>{
+    admobPrivacyOptionsRequired = info.privacyOptionsRequirementStatus === 'REQUIRED';
+    const needsForm = info.isConsentFormAvailable && info.status === 'REQUIRED';
+    return needsForm ? AdMobPlugin.showConsentForm() : info;
+  }).then((info)=>{
+    admobPrivacyOptionsRequired = info.privacyOptionsRequirementStatus === 'REQUIRED';
+    admobCanRequestAds = !!info.canRequestAds;
+    renderAdsPrivacyCard();
+    if(!admobCanRequestAds) return;
+    return AdMobPlugin.initialize({
+      maxAdContentRating: 'General',
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false,
+      initializeForTesting: ADMOB_TEST_MODE
+    }).then(()=>{
+      AdMobPlugin.addListener('onRewardedVideoAdLoaded', ()=>{ nativeRewardAdReady = true; });
+      AdMobPlugin.addListener('onRewardedVideoAdFailedToLoad', ()=>{ nativeRewardAdReady = false; });
+      preloadRewardAd();
+    });
   }).catch(()=>{});
 }
 function showRewardedAd(onReward, btnEl){
   if(nativeAdsAvailable()){
+    if(!canShowNativeAds()){
+      showToast('Ads not available right now.');
+      return;
+    }
     if(!nativeRewardAdReady){
       showToast('Ad not ready yet — try again in a moment.');
       preloadRewardAd();
@@ -1853,7 +1895,7 @@ const AD_COOLDOWN_MS = 3*60*1000;
 const AD_GEM_REWARD = 5;
 function adReady(){
   if(Date.now() < (state.adCooldownUntil||0)) return false;
-  if(nativeAdsAvailable() && !nativeRewardAdReady) return false;
+  if(nativeAdsAvailable() && (!canShowNativeAds() || !nativeRewardAdReady)) return false;
   return true;
 }
 function adButtonLabel(readyLabel){
@@ -3715,6 +3757,19 @@ function renderSoundSettings(){
     + '<div><div class="toggle-row-label">Music &amp; Ambience</div><div class="toggle-row-desc">Background music, rain, wind, and garden birdsong</div></div>'
     + '<div class="toggle-switch'+(musicEnabled()?' is-on':'')+'" onclick="toggleMusicSetting()"><div class="toggle-knob"></div></div>'
     + '</div>';
+}
+function renderAdsPrivacyCard(){
+  const section = document.getElementById('adsPrivacySection');
+  const card = document.getElementById('adsPrivacyCard');
+  if(!section || !card) return;
+  if(!nativeAdsAvailable() || !admobPrivacyOptionsRequired){
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  card.innerHTML =
+    '<div class="upg-desc">Manage your ad personalization and privacy choices for this app.</div>'
+    + '<button class="btn btn-block" style="margin-top:10px;" onclick="showAdPrivacyOptionsForm()">Ad Privacy Options</button>';
 }
 
 let revealShowing = false;
@@ -5722,7 +5777,7 @@ function showScreen(name){
   if(name==='herbarium') renderHerbarium();
   if(name==='upgrades') renderUpgrades();
   if(name==='tasks') renderTasks();
-  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); renderSoundSettings(); renderCloudSave(); }
+  if(name==='achievements'){ renderPrestige(); renderLifetimeStats(); renderAchievements(); renderSoundSettings(); renderAdsPrivacyCard(); renderCloudSave(); }
   if(name==='lab'){ renderLab(); renderLabShelf(); }
 }
 const SCREEN_SWIPE_ORDER = ['greenhouse','tasks','achievements','upgrades','herbarium','lab'];

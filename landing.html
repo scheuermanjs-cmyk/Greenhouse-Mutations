@@ -13,7 +13,7 @@
   :root{
     --panel:#1A2B1D; --panel-2:#223A26; --panel-3:#152018; --outline:#0A120C;
     --accent:#7ED957; --accent-dark:#3F8C2A; --violet:#B98CE8;
-    --text:#EAF2E2; --text-muted:#8FA68C; --amber:#F2B84B; --frost:#8FD8E8;
+    --text:#EAF2E2; --text-muted:#8FA68C; --amber:#F2B84B; --frost:#8FD8E8; --coral:#FF8C7A;
   }
   *{ box-sizing:border-box; }
   html{ scroll-behavior:smooth; }
@@ -25,58 +25,75 @@
   a{ color:inherit; }
   img{ max-width:100%; display:block; image-rendering:pixelated; }
   .wrap{ max-width:960px; margin:0 auto; padding:0 24px; }
+  ::selection{ background:var(--accent); color:#0F1A12; }
+
+  /* ---------- pixel icon grid (matches in-game achievement icons) ---------- */
+  .pix{ display:grid; image-rendering:pixelated; flex-shrink:0; }
+  .pix div{ width:100%; height:100%; }
 
   /* ---------- top bar ---------- */
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:18px 24px; max-width:960px; margin:0 auto; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px; max-width:960px; margin:0 auto; }
   .topbar-brand{ display:flex; align-items:center; gap:10px; font-family:'Press Start 2P'; font-size:12px; color:var(--text); text-decoration:none; }
   .topbar-brand img{ width:28px; height:28px; }
-  .topbar nav{ display:flex; gap:22px; font-size:16px; color:var(--text-muted); }
-  .topbar nav a{ text-decoration:none; }
+  .topbar nav{ display:flex; gap:26px; font-size:17px; color:var(--text-muted); }
+  .topbar nav a{ text-decoration:none; position:relative; }
   .topbar nav a:hover{ color:var(--accent); }
   @media (max-width:640px){ .topbar nav{ display:none; } }
 
+  /* ---------- divider strip (echoes in-game XP bar stripes) ---------- */
+  .strip{ height:6px; background:repeating-linear-gradient(45deg, var(--accent) 0 5px, var(--accent-dark) 5px 10px); }
+
   /* ---------- hero ---------- */
-  .hero{ position:relative; overflow:hidden; padding:36px 0 64px; background:radial-gradient(ellipse at 50% 0%, var(--panel-2) 0%, var(--panel) 70%); border-bottom:4px solid var(--outline); }
+  .hero{ position:relative; overflow:hidden; padding:56px 0 72px; background:radial-gradient(ellipse 70% 60% at 50% 0%, var(--panel-2) 0%, var(--panel) 72%); }
   .hero-sparkle{ position:absolute; width:6px; height:6px; background:var(--amber); box-shadow:0 0 8px var(--amber); opacity:.8; animation:twinkle 2.6s ease-in-out infinite; }
-  @keyframes twinkle{ 0%,100%{ opacity:.25; transform:scale(.8);} 50%{ opacity:.9; transform:scale(1);} }
-  @media (prefers-reduced-motion: reduce){ .hero-sparkle{ animation:none; } }
-  .hero-inner{ position:relative; z-index:1; text-align:center; padding-top:8px; }
-  .hero-logo{ width:132px; height:132px; margin:0 auto 18px; filter:drop-shadow(0 8px 0 rgba(0,0,0,.35)); }
-  .hero h1{ font-size:28px; color:var(--text); margin:0 0 4px; letter-spacing:1px; }
-  .hero h1 .accent{ color:var(--accent); display:block; margin-top:10px; }
-  .hero-tagline{ font-size:22px; color:var(--text-muted); max-width:520px; margin:22px auto 0; }
-  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:34px; }
+  @keyframes twinkle{ 0%,100%{ opacity:.2; transform:scale(.8);} 50%{ opacity:.95; transform:scale(1);} }
+  @keyframes bob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-10px);} }
+  @media (prefers-reduced-motion: reduce){ .hero-sparkle, .hero-logo-glow img{ animation:none !important; } }
+  .hero-inner{ position:relative; z-index:1; text-align:center; }
+  .hero-eyebrow{ font-family:'Press Start 2P'; font-size:11px; color:var(--accent); letter-spacing:2px; margin-bottom:22px; }
+  .hero-logo-glow{ position:relative; width:150px; height:150px; margin:0 auto 22px; }
+  .hero-logo-glow::before{ content:''; position:absolute; inset:-30px; background:radial-gradient(circle, rgba(126,217,87,.35) 0%, rgba(126,217,87,0) 70%); }
+  .hero-logo-glow img{ position:relative; width:150px; height:150px; filter:drop-shadow(0 10px 0 rgba(0,0,0,.35)); animation:bob 3.6s ease-in-out infinite; }
+  .hero h1{ font-size:32px; color:var(--text); margin:0; letter-spacing:1px; }
+  .hero h1 .accent{ color:var(--accent); display:block; margin-top:12px; }
+  .hero-tagline{ font-size:23px; color:var(--text-muted); max-width:520px; margin:26px auto 0; }
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-top:38px; }
 
   /* ---------- pixel button system (matches in-game .btn) ---------- */
-  .btn{ display:inline-flex; align-items:center; gap:8px; padding:15px 22px; font-size:16px; font-family:'VT323'; text-transform:uppercase; letter-spacing:.6px; text-decoration:none; background:var(--panel-2); color:var(--text); border:3px solid var(--outline); box-shadow:4px 4px 0 var(--outline); transition:transform .08s, box-shadow .08s; cursor:pointer; }
-  .btn:hover{ transform:translate(-1px,-1px); box-shadow:5px 5px 0 var(--outline); }
+  .btn{ display:inline-flex; align-items:center; gap:9px; padding:16px 24px; font-size:16px; font-family:'VT323'; text-transform:uppercase; letter-spacing:.6px; text-decoration:none; background:var(--panel-2); color:var(--text); border:3px solid var(--outline); box-shadow:4px 4px 0 var(--outline); transition:transform .08s, box-shadow .08s; cursor:pointer; }
+  .btn:hover{ transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--outline); }
   .btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--outline); }
   .btn-primary{ background:var(--accent); color:#0F1A12; }
-  .btn-muted{ opacity:.6; cursor:default; }
-  .btn-muted:hover{ transform:none; box-shadow:4px 4px 0 var(--outline); }
+  .btn-ghost{ background:transparent; color:var(--text-muted); box-shadow:4px 4px 0 rgba(10,18,12,.5); }
+  .btn-ghost:hover{ color:var(--text); }
 
   /* ---------- sections ---------- */
-  section{ padding:64px 0; }
-  .section-title{ font-size:22px; text-align:center; margin:0 0 8px; }
-  .section-sub{ text-align:center; color:var(--text-muted); font-size:19px; max-width:520px; margin:0 auto 44px; }
+  section{ padding:76px 0; }
+  .section-eyebrow{ display:block; text-align:center; font-size:13px; color:var(--accent-dark); letter-spacing:2px; margin-bottom:12px; }
+  .section-title{ font-size:23px; text-align:center; margin:0 0 10px; }
+  .section-sub{ text-align:center; color:var(--text-muted); font-size:19px; max-width:520px; margin:0 auto 48px; }
 
   /* ---------- feature grid ---------- */
-  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  #features{ background:var(--panel-3); }
+  .feature-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
   @media (max-width:760px){ .feature-grid{ grid-template-columns:repeat(2,1fr); } }
   @media (max-width:520px){ .feature-grid{ grid-template-columns:1fr; } }
-  .feature-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:4px 4px 0 rgba(0,0,0,.35); padding:20px 18px; }
-  .feature-icon{ width:40px; height:40px; margin-bottom:14px; border:3px solid var(--outline); display:flex; align-items:center; justify-content:center; font-size:20px; background:var(--panel-3); }
-  .feature-card h3{ font-size:14px; color:var(--text); margin-bottom:10px; }
+  .feature-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:5px 5px 0 rgba(0,0,0,.4); padding:22px 20px; transition:transform .12s, box-shadow .12s; }
+  .feature-card:hover{ transform:translate(-3px,-3px); box-shadow:8px 8px 0 rgba(0,0,0,.4); }
+  .feature-icon{ width:44px; height:44px; margin-bottom:16px; border:3px solid var(--outline); display:flex; align-items:center; justify-content:center; background:var(--panel-3); }
+  .feature-icon .pix{ grid-template-columns:repeat(7,4px); grid-auto-rows:4px; }
+  .feature-card h3{ font-size:14px; color:var(--text); margin-bottom:11px; }
   .feature-card p{ margin:0; color:var(--text-muted); font-size:17px; }
 
   /* ---------- wings strip ---------- */
-  .wings{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .wings{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
   @media (max-width:700px){ .wings{ grid-template-columns:1fr; } }
-  .wing-card{ position:relative; padding:26px 18px 20px; border:3px solid var(--outline); box-shadow:4px 4px 0 rgba(0,0,0,.4); text-align:center; overflow:hidden; }
-  .wing-card.verdant{ background:linear-gradient(to bottom, #2B4A30 0%, #1A2B1D 100%); }
-  .wing-card.desert{ background:linear-gradient(to bottom, #C98A4B 0%, #8B5A2B 100%); }
-  .wing-card.frost{ background:linear-gradient(to bottom, #DCEEF5 0%, #8FB8C9 100%); }
-  .wing-card h3{ font-size:13px; margin-bottom:10px; }
+  .wing-card{ position:relative; padding:30px 20px 24px; border:3px solid var(--outline); box-shadow:5px 5px 0 rgba(0,0,0,.45); text-align:center; overflow:hidden; transition:transform .12s, box-shadow .12s; }
+  .wing-card:hover{ transform:translate(-3px,-3px); box-shadow:8px 8px 0 rgba(0,0,0,.45); }
+  .wing-card.verdant{ background:linear-gradient(160deg, #34573B 0%, #1A2B1D 100%); }
+  .wing-card.desert{ background:linear-gradient(160deg, #DDA366 0%, #8B5A2B 100%); }
+  .wing-card.frost{ background:linear-gradient(160deg, #E8F4F9 0%, #7FAABC 100%); }
+  .wing-card h3{ font-size:13px; margin-bottom:12px; }
   .wing-card.verdant h3{ color:var(--accent); }
   .wing-card.desert h3{ color:#3A2410; }
   .wing-card.frost h3{ color:#0F3040; }
@@ -84,22 +101,24 @@
   .wing-card.verdant p{ color:var(--text-muted); }
   .wing-card.desert p{ color:#4A2E12; }
   .wing-card.frost p{ color:#1B4756; }
-  .wing-lock{ display:inline-block; margin-top:12px; font-size:13px; padding:4px 9px; border:2px solid rgba(0,0,0,.35); }
-  .wing-card.verdant .wing-lock{ background:rgba(0,0,0,.25); color:var(--text-muted); }
-  .wing-card.desert .wing-lock{ background:rgba(255,255,255,.35); color:#4A2E12; }
-  .wing-card.frost .wing-lock{ background:rgba(255,255,255,.45); color:#1B4756; }
+  .wing-lock{ display:inline-block; margin-top:14px; font-size:13px; padding:5px 10px; border:2px solid rgba(0,0,0,.35); }
+  .wing-card.verdant .wing-lock{ background:rgba(0,0,0,.3); color:var(--text-muted); }
+  .wing-card.desert .wing-lock{ background:rgba(255,255,255,.4); color:#4A2E12; }
+  .wing-card.frost .wing-lock{ background:rgba(255,255,255,.5); color:#1B4756; }
 
   /* ---------- CTA band ---------- */
-  .cta-band{ background:var(--panel-2); border-top:4px solid var(--outline); border-bottom:4px solid var(--outline); text-align:center; }
-  .cta-band h2{ font-size:20px; margin-bottom:14px; }
-  .cta-band p{ color:var(--text-muted); max-width:480px; margin:0 auto 28px; }
+  .cta-band{ position:relative; background:var(--panel-2); text-align:center; overflow:hidden; }
+  .cta-band::before{ content:''; position:absolute; inset:0; background:repeating-linear-gradient(135deg, rgba(126,217,87,.05) 0 22px, transparent 22px 44px); pointer-events:none; }
+  .cta-band .wrap{ position:relative; }
+  .cta-band h2{ font-size:21px; margin-bottom:16px; }
+  .cta-band p{ color:var(--text-muted); max-width:480px; margin:0 auto 30px; }
 
   /* ---------- footer ---------- */
-  footer{ padding:40px 0 60px; text-align:center; }
-  .footer-links{ display:flex; flex-wrap:wrap; gap:22px; justify-content:center; font-size:16px; margin-bottom:18px; }
+  footer{ padding:44px 0 64px; text-align:center; }
+  .footer-links{ display:flex; flex-wrap:wrap; gap:24px; justify-content:center; font-size:16px; margin-bottom:20px; }
   .footer-links a{ text-decoration:none; color:var(--text-muted); }
   .footer-links a:hover{ color:var(--accent); }
-  .footer-fine{ color:var(--text-muted); font-size:14px; opacity:.75; }
+  .footer-fine{ color:var(--text-muted); font-size:14px; opacity:.7; }
 </style>
 </head>
 <body>
@@ -113,55 +132,60 @@
   </nav>
 </div>
 
+<div class="strip"></div>
+
 <header class="hero">
-  <div class="hero-sparkle" style="top:14%; left:10%;"></div>
-  <div class="hero-sparkle" style="top:22%; left:85%; animation-delay:.6s;"></div>
-  <div class="hero-sparkle" style="top:65%; left:6%; animation-delay:1.2s;"></div>
-  <div class="hero-sparkle" style="top:72%; left:90%; animation-delay:1.8s;"></div>
-  <div class="hero-sparkle" style="top:40%; left:94%; animation-delay:.3s;"></div>
+  <div class="hero-sparkle" style="top:12%; left:8%;"></div>
+  <div class="hero-sparkle" style="top:20%; left:88%; animation-delay:.6s;"></div>
+  <div class="hero-sparkle" style="top:62%; left:5%; animation-delay:1.2s;"></div>
+  <div class="hero-sparkle" style="top:70%; left:92%; animation-delay:1.8s;"></div>
+  <div class="hero-sparkle" style="top:38%; left:95%; animation-delay:.3s;"></div>
+  <div class="hero-sparkle" style="top:85%; left:20%; animation-delay:.9s;"></div>
   <div class="wrap hero-inner">
-    <img class="hero-logo" src="assets/icon-512.png" alt="Greenhouse: Mutations logo — a glowing potted plant">
+    <span class="hero-eyebrow">PIXEL-ART IDLE GARDEN SIM</span>
+    <div class="hero-logo-glow"><img src="assets/icon-512.png" alt="Greenhouse: Mutations logo — a glowing potted plant"></div>
     <h1>GREENHOUSE<span class="accent">MUTATIONS</span></h1>
     <p class="hero-tagline">Grow, tend, and cross-pollinate strange little plants. See what mutates.</p>
     <div class="hero-actions">
       <a class="btn btn-primary" id="play" href="index.html">▶ Play in Browser</a>
-      <a class="btn btn-muted" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
+      <a class="btn btn-ghost" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
     </div>
   </div>
 </header>
 
 <section id="features">
   <div class="wrap">
+    <span class="section-eyebrow">WHAT'S GROWING</span>
     <h2 class="section-title">A garden that keeps surprising you</h2>
     <p class="section-sub">No two greenhouses look the same. Cross-breed species, chase rare mutations, and watch your collection grow.</p>
     <div class="feature-grid">
       <div class="feature-card">
-        <div class="feature-icon">🧬</div>
+        <div class="feature-icon"><div class="pix" data-icon="dna"></div></div>
         <h3>Cross-Breeding</h3>
         <p>Pollinate two species together and see what hybrid traits emerge — every plant has its own stem pattern and color genetics.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🔬</div>
+        <div class="feature-icon"><div class="pix" data-icon="lab"></div></div>
         <h3>Research Lab</h3>
         <p>Run specimens through a three-station research machine to discover new mutated seeds and rare variants.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">♻</div>
+        <div class="feature-icon"><div class="pix" data-icon="prestige"></div></div>
         <h3>Prestige</h3>
         <p>Reset your greenhouse for permanent power upgrades on a skill tree that keeps paying off run after run.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">📖</div>
+        <div class="feature-icon"><div class="pix" data-icon="book"></div></div>
         <h3>Herbarium &amp; Sets</h3>
         <p>Catalog every species and hybrid you've grown, chase rarity tiers, and complete themed collection sets.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">🐞</div>
+        <div class="feature-icon"><div class="pix" data-icon="bug"></div></div>
         <h3>Pests &amp; Weather</h3>
         <p>Defend your plots from pests and ride out mutation storms — risk and reward baked into every growing season.</p>
       </div>
       <div class="feature-card">
-        <div class="feature-icon">☁</div>
+        <div class="feature-icon"><div class="pix" data-icon="cloud"></div></div>
         <h3>Optional Cloud Save</h3>
         <p>Sign in with Google to back up your progress and pick up your greenhouse on another device — entirely optional.</p>
       </div>
@@ -171,6 +195,7 @@
 
 <section id="wings">
   <div class="wrap">
+    <span class="section-eyebrow">THREE CLIMATES</span>
     <h2 class="section-title">Three greenhouses to unlock</h2>
     <p class="section-sub">Each wing brings its own climate, its own species, and its own way of playing.</p>
     <div class="wings">
@@ -193,12 +218,12 @@
 </section>
 
 <section class="cta-band" id="play">
-  <div class="wrap" style="padding:50px 0;">
+  <div class="wrap" style="padding:54px 0;">
     <h2>Free to play. No account required.</h2>
     <p>Jump straight into your greenhouse in the browser, or install the Android app. Your save stays on your device — sign in with Google only if you want cross-device backup.</p>
     <div class="hero-actions">
       <a class="btn btn-primary" href="index.html">▶ Play in Browser</a>
-      <a class="btn btn-muted" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
+      <a class="btn btn-ghost" href="#" aria-disabled="true" onclick="return false;">Coming soon to Google Play</a>
     </div>
   </div>
 </section>
@@ -213,6 +238,31 @@
     <div class="footer-fine">Greenhouse: Mutations — a cozy pixel-art idle game.</div>
   </div>
 </footer>
+
+<script>
+  var ICONS = {
+    dna:     {color:'#7ED957', rows:['...#...','#..#..#','.#####.','#######','.#####.','#..#..#','...#...']},
+    lab:     {color:'#8FD8E8', rows:['..#.#..','#######','#.###.#','#######','#.###.#','#######','..#.#..']},
+    prestige:{color:'#F2B84B', rows:['..#.#..','.#...#.','#.....#','#.....#','.#...#.','..#.#..','.......']},
+    book:    {color:'#F2B84B', rows:['.#####.','##...##','##.#.##','##.#.##','##.#.##','##...##','.#####.']},
+    bug:     {color:'#FF8C7A', rows:['#.###.#','.#####.','#######','.#.#.#.','#######','.#####.','.......']},
+    cloud:   {color:'#B98CE8', rows:['.......','..###..','.#####.','#######','#######','.......','.......']}
+  };
+  document.querySelectorAll('.pix').forEach(function(el){
+    var icon = ICONS[el.getAttribute('data-icon')];
+    if(!icon) return;
+    var cols = icon.rows[0].length;
+    el.style.gridTemplateColumns = 'repeat('+cols+',4px)';
+    el.style.gridAutoRows = '4px';
+    var html = '';
+    icon.rows.forEach(function(row){
+      for(var i=0;i<row.length;i++){
+        html += '<div style="background:'+(row[i]==='#' ? icon.color : 'transparent')+'"></div>';
+      }
+    });
+    el.innerHTML = html;
+  });
+</script>
 
 </body>
 </html>

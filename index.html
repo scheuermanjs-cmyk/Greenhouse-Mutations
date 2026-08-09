@@ -992,9 +992,19 @@
       <div id="prestigeSummary"></div>
       <div id="prestigeTreeList"></div>
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
+      <div class="ach-category" style="margin-top:18px;">Botanical Society Rank</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">A slow-moving rank ladder built from your lifetime totals -- prestiges, spores earned, gems earned, herbarium size and achievements. It never resets.</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="societyRankCard"></div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Companions</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Tap the same wildlife critter 5 times to befriend it for a permanent passive bonus.</div>
       <div id="companionsList" class="bestiary-grid"></div>
+      <div class="ach-category" style="margin-top:18px;">Expedition Post</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Send a companion off on a timed expedition for a batch reward. They won't provide their passive bonus while away.</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="expeditionCard"></div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Titles</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Earned automatically from select achievements. Tap one to display it next to your level.</div>
       <div id="titlesList" class="bestiary-grid"></div>
@@ -1389,6 +1399,7 @@ function doPrestige(){
   const keepSporeBank = state.sporeBank;
   const keepTitles = state.titles;
   const keepGrafting = state.grafting;
+  const keepExpeditions = state.expeditions;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1413,7 +1424,8 @@ function doPrestige(){
     foreman: keepForeman,
     sporeBank: keepSporeBank,
     titles: keepTitles,
-    grafting: keepGrafting
+    grafting: keepGrafting,
+    expeditions: keepExpeditions
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1731,6 +1743,8 @@ function renderTitles(){
 function renderAchievements(){
   renderCompanions();
   renderTitles();
+  renderSocietyRankCard();
+  renderExpeditionCard();
   const list = document.getElementById('achList');
   if(!list) return;
   const unlocked = state.achievements||{};
@@ -3762,12 +3776,150 @@ function onFeedCompanion(type){
   updateHeader();
   showToast('Fed the '+WILDLIFE_TYPES[type].name.toLowerCase()+' — now Lv.'+companionLevel(type)+'!');
 }
-function getCompanionYieldBonus(){ return ownsCompanion('bee') ? COMPANION_INFO.bee.base*companionBonusMult('bee') : 0; }
-function getCompanionSeedBonusChance(){ return ownsCompanion('butterfly') ? COMPANION_INFO.butterfly.base*companionBonusMult('butterfly') : 0; }
-function getCompanionPestFactor(){ return ownsCompanion('ladybug') ? Math.max(0.25, 1-COMPANION_INFO.ladybug.base*companionBonusMult('ladybug')) : 1; }
-function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNightHour()) ? COMPANION_INFO.firefly.base*companionBonusMult('firefly') : 0; }
-function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? Math.max(0.25, 1-COMPANION_INFO.dragonfly.base*companionBonusMult('dragonfly')) : 1; }
+function getCompanionYieldBonus(){ return (ownsCompanion('bee') && !isCompanionAway('bee')) ? COMPANION_INFO.bee.base*companionBonusMult('bee') : 0; }
+function getCompanionSeedBonusChance(){ return (ownsCompanion('butterfly') && !isCompanionAway('butterfly')) ? COMPANION_INFO.butterfly.base*companionBonusMult('butterfly') : 0; }
+function getCompanionPestFactor(){ return (ownsCompanion('ladybug') && !isCompanionAway('ladybug')) ? Math.max(0.25, 1-COMPANION_INFO.ladybug.base*companionBonusMult('ladybug')) : 1; }
+function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && !isCompanionAway('firefly') && isNightHour()) ? COMPANION_INFO.firefly.base*companionBonusMult('firefly') : 0; }
+function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly') && !isCompanionAway('dragonfly')) ? Math.max(0.25, 1-COMPANION_INFO.dragonfly.base*companionBonusMult('dragonfly')) : 1; }
 function isNightHour(){ const h = getGameHour(); return h>=20 || h<5; }
+
+/* ---------- botanical expeditions ---------- */
+const EXPEDITION_DESTINATIONS = {
+  meadow: { name:'Nearby Meadow',     durationMs:30*60*1000,      spores:[40,80],    gemChance:0.20, gems:[1,2],  seedChance:0 },
+  woods:  { name:'Deep Woods',        durationMs:2*60*60*1000,    spores:[150,280],  gemChance:0.40, gems:[2,5],  seedChance:0.5 },
+  peaks:  { name:'Frostbound Peaks',  durationMs:6*60*60*1000,    spores:[500,900],  gemChance:0.70, gems:[6,12], seedChance:0.85 }
+};
+const EXPEDITION_DESTINATION_KEYS = Object.keys(EXPEDITION_DESTINATIONS);
+function defaultExpeditionState(){ return { active:null, completedCount:0 }; }
+function isCompanionAway(type){ return !!(state.expeditions && state.expeditions.active && state.expeditions.active.companionType===type); }
+function canSendExpedition(type){ return ownsCompanion(type) && !(state.expeditions && state.expeditions.active); }
+function expeditionFinishAt(){ const a = state.expeditions.active; return a ? a.startedAt + a.durationMs : 0; }
+function expeditionReady(){ const a = state.expeditions.active; return !!a && Date.now() >= expeditionFinishAt(); }
+function sendExpedition(type, destKey){
+  if(!canSendExpedition(type) || !EXPEDITION_DESTINATIONS[destKey]) return false;
+  state.expeditions.active = { companionType:type, destination:destKey, startedAt:Date.now(), durationMs:EXPEDITION_DESTINATIONS[destKey].durationMs };
+  sfxPurchase();
+  saveState();
+  return true;
+}
+function resolveExpeditionReward(destKey){
+  const cfg = EXPEDITION_DESTINATIONS[destKey];
+  const spores = Math.round(randRange(cfg.spores[0], cfg.spores[1]));
+  const gems = Math.random()<cfg.gemChance ? Math.round(randRange(cfg.gems[0], cfg.gems[1])) : 0;
+  let seed = null;
+  if(cfg.seedChance && Math.random()<cfg.seedChance){
+    const level = getLevelFromXp(state.xp||0);
+    const keys = getUnlockedSpeciesKeys(level);
+    const speciesKey = keys[Math.floor(Math.random()*keys.length)];
+    const sp = SPECIES[speciesKey];
+    const trait = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
+    const genome = { species:speciesKey, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.15, sellMult:1, extraSeed:0, rareTrait:trait.id, rareTrait2:null, hybridWith:null };
+    seed = { speciesKey, genome, name:sp.name };
+  }
+  return { spores, gems, seed };
+}
+function collectExpedition(){
+  if(!expeditionReady()) return null;
+  const a = state.expeditions.active;
+  const reward = resolveExpeditionReward(a.destination);
+  addSpores(reward.spores);
+  if(reward.gems) addGems(reward.gems);
+  if(reward.seed) addToInventory(reward.seed.speciesKey, reward.seed.genome, 1);
+  state.expeditions.completedCount += 1;
+  state.expeditions.active = null;
+  sfxDiscovery(1);
+  checkAchievements();
+  saveState();
+  return { reward, companionType:a.companionType, destination:a.destination };
+}
+let currentExpeditionStep = null;
+function openExpeditionPicker(){
+  if(state.expeditions.active) return;
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  currentApexWing = null;
+  currentSkinCompanionType = null;
+  currentGraftSlot = null;
+  revealShowing = false;
+  currentExpeditionStep = 'companion';
+  renderExpeditionCompanionSheet();
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderExpeditionCompanionSheet(){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const owned = (state.companions && state.companions.owned) || [];
+  let rows;
+  if(!owned.length){
+    rows = '<div class="empty-state">Befriend a companion critter first — tap the same wildlife type 5 times.</div>';
+  } else {
+    rows = owned.map(type=>{
+      return '<div class="seed-row">'
+        + '<div class="seed-row-glyph">'+renderWildlife('sm', type)+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+WILDLIFE_TYPES[type].name+'</div></div>'
+        + '<button class="btn btn-small btn-primary" onclick="onPickExpeditionCompanion(\''+type+'\')">Send</button>'
+        + '</div>';
+    }).join('');
+  }
+  body.innerHTML = '<div class="sheet-head"><h3>Send Which Companion?</h3></div>' + '<div class="seed-list">'+rows+'</div>';
+}
+function onPickExpeditionCompanion(type){
+  pendingExpeditionCompanion = type;
+  currentExpeditionStep = 'destination';
+  renderExpeditionDestinationSheet();
+}
+let pendingExpeditionCompanion = null;
+function renderExpeditionDestinationSheet(){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const rows = EXPEDITION_DESTINATION_KEYS.map(key=>{
+    const cfg = EXPEDITION_DESTINATIONS[key];
+    return '<div class="seed-row">'
+      + '<div class="seed-row-info"><div class="seed-row-name">'+cfg.name+'</div>'
+      + '<div class="seed-row-sub">'+fmtHM(cfg.durationMs)+' • '+cfg.spores[0]+'-'+cfg.spores[1]+' ◆'+(cfg.seedChance?' • chance of a rare seed':'')+'</div></div>'
+      + '<button class="btn btn-small btn-primary" onclick="onPickExpeditionDestination(\''+key+'\')">Send</button>'
+      + '</div>';
+  }).join('');
+  body.innerHTML = '<div class="sheet-head"><h3>Choose a Destination</h3></div>' + '<div class="seed-list">'+rows+'</div>';
+}
+function onPickExpeditionDestination(destKey){
+  sendExpedition(pendingExpeditionCompanion, destKey);
+  pendingExpeditionCompanion = null;
+  currentExpeditionStep = null;
+  closeSheet();
+  renderExpeditionCard();
+  showToast('Sent your companion on an expedition!');
+}
+function onCollectExpedition(){
+  const result = collectExpedition();
+  if(!result) return;
+  renderExpeditionCard();
+  updateHeader();
+  const seedText = result.reward.seed ? ' +1 '+result.reward.seed.name+' seed' : '';
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderWildlife('sm', result.companionType)+'<span>Expedition complete! +'+result.reward.spores+' ◆'+(result.reward.gems?' +'+result.reward.gems+' '+renderGemIcon():'')+seedText+'</span></span>');
+}
+function renderExpeditionCard(){
+  const el = document.getElementById('expeditionCard');
+  if(!el) return;
+  const a = state.expeditions.active;
+  if(!a){
+    const owned = (state.companions && state.companions.owned) || [];
+    el.innerHTML = owned.length
+      ? '<button class="btn btn-primary btn-block" onclick="openExpeditionPicker()">Send a Companion</button>'
+      : '<div class="upg-desc">Befriend a companion critter to unlock expeditions.</div>';
+    return;
+  }
+  const cfg = EXPEDITION_DESTINATIONS[a.destination];
+  if(expeditionReady()){
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderWildlife('lg', a.companionType)
+      + '<div><div class="upg-name">'+cfg.name+'</div><div class="upg-desc">Your companion is back!</div></div></div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="onCollectExpedition()">Collect</button>';
+  } else {
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderWildlife('lg', a.companionType)
+      + '<div><div class="upg-name">'+cfg.name+'</div><div class="upg-desc">Away&hellip; back in <strong id="expeditionTimer">'+fmtHM(expeditionFinishAt()-Date.now())+'</strong></div></div></div>';
+  }
+}
 
 /* ---------- timed buffs ---------- */
 function defaultBuffState(){ return { growSpeedUntil:0, sporeMultUntil:0 }; }
@@ -3875,6 +4027,54 @@ function renderReputationCard(){
       + '<div class="upg-desc" style="margin-top:4px;">'+count+' / '+next.count+' visitors delivered — next: '+next.name+' (+'+Math.round(next.bonus*100)+'% spores)</div>';
   }
   el.innerHTML = '<div class="upg-name">'+tierName+(bonusPct?' <span class="companion-lvl">+'+bonusPct+'% spores</span>':'')+'</div>'
+    + progressHtml;
+}
+
+/* ---------- botanical society rank ---------- */
+const SOCIETY_RANKS = [
+  { points:0,    name:'Sprout Society Member', bonus:0    },
+  { points:50,   name:'Garden Apprentice',     bonus:0.01 },
+  { points:150,  name:'Field Botanist',        bonus:0.01 },
+  { points:350,  name:'Herbarium Curator',     bonus:0.01 },
+  { points:700,  name:'Cultivar Master',       bonus:0.01 },
+  { points:1300, name:'Greenhouse Laureate',   bonus:0.01 },
+  { points:2200, name:'Grand Cultivator',      bonus:0.01 }
+];
+function societyPoints(){
+  const s = state.achStats||{};
+  return Math.floor((state.prestige.count||0)*10
+    + (s.totalSporesEarned||0)/500
+    + (s.totalGemsEarned||0)/5
+    + (state.herbarium||[]).length
+    + Object.keys(state.achievements||{}).length*2);
+}
+function societyRankIndexForPoints(points){
+  let idx = 0;
+  SOCIETY_RANKS.forEach((r,i)=>{ if(points>=r.points) idx=i; });
+  return idx;
+}
+function societyRankIndex(){ return societyRankIndexForPoints(societyPoints()); }
+function getSocietyRankBonus(){
+  const idx = societyRankIndex();
+  let total = 0;
+  for(let i=0;i<=idx;i++) total += SOCIETY_RANKS[i].bonus;
+  return total;
+}
+function renderSocietyRankCard(){
+  const el = document.getElementById('societyRankCard');
+  if(!el) return;
+  const points = societyPoints();
+  const idx = societyRankIndex();
+  const rank = SOCIETY_RANKS[idx];
+  const next = SOCIETY_RANKS[idx+1];
+  const bonusPct = Math.round(getSocietyRankBonus()*100);
+  let progressHtml = '<div class="upg-desc" style="margin-top:8px;">Maximum rank reached — every tier unlocked.</div>';
+  if(next){
+    const pct = clamp(((points-rank.points)/(next.points-rank.points))*100, 0, 100);
+    progressHtml = '<div class="rep-bar" style="margin-top:8px;"><div class="rep-bar-fill" style="width:'+pct+'%;"></div></div>'
+      + '<div class="upg-desc" style="margin-top:4px;">'+points+' / '+next.points+' points — next: '+next.name+' (+'+Math.round(next.bonus*100)+'% spores)</div>';
+  }
+  el.innerHTML = '<div class="upg-name">'+rank.name+(bonusPct?' <span class="companion-lvl">+'+bonusPct+'% spores</span>':'')+'</div>'
     + progressHtml;
 }
 /* ---------- passive gem trickle ---------- */
@@ -5275,6 +5475,7 @@ function defaultState(){
     sporeBank: defaultSporeBankState(),
     titles:{ unlocked:[], equipped:null },
     grafting: defaultGraftingState(),
+    expeditions: defaultExpeditionState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -5370,6 +5571,11 @@ function normalizeState(parsed){
       }
       if(!merged.grafting || typeof merged.grafting!=='object' || typeof merged.grafting.timesGrafted!=='number'){
         merged.grafting = defaultGraftingState();
+      }
+      if(!merged.expeditions || typeof merged.expeditions!=='object' || typeof merged.expeditions.completedCount!=='number'){
+        merged.expeditions = defaultExpeditionState();
+      } else if(merged.expeditions.active && (!EXPEDITION_DESTINATIONS[merged.expeditions.active.destination] || !(merged.companions && merged.companions.owned && merged.companions.owned.includes(merged.expeditions.active.companionType)))){
+        merged.expeditions.active = null;
       }
       if(!merged.titles || typeof merged.titles!=='object' || !Array.isArray(merged.titles.unlocked)){
         merged.titles = { unlocked:[], equipped:null };
@@ -6328,7 +6534,7 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
   const buffSporeMult = sporeBuffActive() ? 2 : 1;
   const blessedMult = getBlessedYieldMult(speciesKey);
-  const companionSporeBonus = (1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus() + getReputationBonus()) * buffSporeMult * blessedMult;
+  const companionSporeBonus = (1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus() + getReputationBonus() + getSocietyRankBonus()) * buffSporeMult * blessedMult;
   let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * companionSporeBonus * randRange(0.85,1.15));
   if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
@@ -7069,6 +7275,8 @@ function closeSheet(){
   currentApexWing = null;
   currentSkinCompanionType = null;
   currentGraftSlot = null;
+  currentExpeditionStep = null;
+  pendingExpeditionCompanion = null;
   revealShowing = false;
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');
@@ -7644,6 +7852,7 @@ function tick(){
   }
   updateLabBadge();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
+  if(document.getElementById('screen-achievements').classList.contains('active')) renderExpeditionCard();
   if(currentSheetIdx!=null && !revealShowing){
     const p = plotsForWing(currentSheetWing)[currentSheetIdx];
     const ds = getDisplayStatus(p);

@@ -164,6 +164,25 @@
     50%{ transform:translate(4px,-16px); opacity:.5; }
     75%{ transform:translate(-11px,-6px); opacity:1; }
   }
+  .weather-particles{ display:none; position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:2; }
+  .weather-particles span{ position:absolute; top:-8%; width:4px; height:4px; opacity:.85; }
+  @media (prefers-reduced-motion:no-preference){
+    .weather-particles span{ animation:weatherFall 5s linear infinite; }
+  }
+  @keyframes weatherFall{
+    from{ transform:translateY(-10%) translateX(0); }
+    to{ transform:translateY(135%) translateX(14px); }
+  }
+  body.weather-overlay-petalDrift .weather-particles{ display:block; }
+  body.weather-overlay-petalDrift .weather-particles span{ background:#E86FA8; }
+  body.weather-overlay-snowFlurries .weather-particles{ display:block; }
+  body.weather-overlay-snowFlurries .weather-particles span{ background:#F4F8FF; }
+  body.weather-overlay-fireflySwarm .weather-particles{ display:block; }
+  body.weather-overlay-fireflySwarm .weather-particles span{ background:#D9F2A3; box-shadow:0 0 4px 2px rgba(217,242,163,.7); animation-name:weatherFireflyDrift; animation-duration:3.6s; animation-timing-function:ease-in-out; top:auto; bottom:15%; }
+  @keyframes weatherFireflyDrift{
+    0%,100%{ opacity:.25; transform:translate(0,0); }
+    50%{ opacity:1; transform:translate(11px,-15px); }
+  }
   .stars{ position:absolute; inset:0; opacity:0; transition:opacity 1.5s ease; }
   .window.is-night .stars{ opacity:1; }
   .stars span{ position:absolute; width:2px; height:2px; background:#fff; }
@@ -348,17 +367,17 @@
   /* ---------- pixel sprite (plants) ---------- */
   .sprite-wrap-sm{ display:flex; align-items:flex-end; justify-content:center; height:46px; }
   .sprite-wrap-lg{ display:flex; align-items:flex-end; justify-content:center; height:96px; margin:6px auto 0; }
-  .pix-sprite{ display:grid; image-rendering:pixelated; }
+  .pix-sprite{ display:grid; image-rendering:pixelated; filter:var(--bloom-filter,none); }
   .pix-sprite > div{ width:100%; height:100%; }
   .pix-sprite.is-wilt{ transform:rotate(6deg); opacity:.92; }
-  .pix-sprite.is-glow{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.6)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.35)); }
+  .pix-sprite.is-glow{ filter:var(--bloom-filter,none) drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.6)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.35)); }
   @media (prefers-reduced-motion:no-preference){
     .pix-sprite.is-glow{ animation:glowPulse 2.2s ease-in-out infinite; }
   }
   .pix-sprite.is-drift{ transition:transform 2s ease-in-out; }
   @keyframes glowPulse{
-    0%,100%{ filter:drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
-    50%{ filter:drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
+    0%,100%{ filter:var(--bloom-filter,none) drop-shadow(0 0 2px hsla(var(--hue),85%,65%,.55)) drop-shadow(0 0 5px hsla(var(--hue),85%,65%,.3)); }
+    50%{ filter:var(--bloom-filter,none) drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
   }
 
   /* ---------- bottom nav ---------- */
@@ -522,6 +541,26 @@
   @keyframes wallpaperScrollX{ from{ background-position:0 0, 0 0; } to{ background-position:-192px 0, -192px 0; } }
   body.wallpaper-scroll-y-active{ animation:wallpaperScrollY 14s linear infinite; }
   @keyframes wallpaperScrollY{ from{ background-position:0 0, 0 0; } to{ background-position:0 -96px, 0 -96px; } }
+
+  /* ---------- pot aura cosmetics ---------- */
+  .pix-pot{ position:relative; }
+  body.pot-aura-emberDrift .pix-pot::after, body.pot-aura-petalFall .pix-pot::after, body.pot-aura-frostMist .pix-pot::after{
+    content:''; position:absolute; left:50%; top:-4px; width:3px; height:3px; margin-left:-1px; opacity:0; pointer-events:none;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    body.pot-aura-emberDrift .pix-pot::after, body.pot-aura-petalFall .pix-pot::after, body.pot-aura-frostMist .pix-pot::after{
+      animation:potAuraRise 1.8s ease-in infinite;
+    }
+  }
+  @keyframes potAuraRise{ 0%{ opacity:0; transform:translateY(0); } 30%{ opacity:1; } 100%{ opacity:0; transform:translateY(-15px); } }
+  body.pot-aura-emberDrift .pix-pot::after{ background:#E8703E; box-shadow:0 0 3px 1px rgba(232,112,62,.7); }
+  body.pot-aura-petalFall .pix-pot::after{ background:#E8B8E8; }
+  body.pot-aura-frostMist .pix-pot::after{ background:#CFE3FF; box-shadow:0 0 3px 1px rgba(207,227,255,.7); }
+
+  /* ---------- herbarium frame cosmetics ---------- */
+  body.herb-frame-gilded .herb-card{ border-color:#D9A441; box-shadow:3px 3px 0 rgba(217,164,65,.5); }
+  body.herb-frame-botanical .herb-card{ border-color:#5FA35A; box-shadow:3px 3px 0 rgba(95,163,90,.5); }
+  body.herb-frame-celestial .herb-card{ border-color:#A8CFEA; box-shadow:3px 3px 0 rgba(168,207,234,.6); }
 
   /* ---------- task board ---------- */
   .task-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:12px 13px; margin-bottom:10px; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
@@ -804,6 +843,14 @@
         <div class="bird"></div>
         <div class="firefly firefly-a"></div>
         <div class="firefly firefly-b"></div>
+        <div class="weather-particles" id="weatherParticles">
+          <span style="left:8%;animation-delay:0s;"></span>
+          <span style="left:22%;animation-delay:.7s;"></span>
+          <span style="left:38%;animation-delay:1.4s;"></span>
+          <span style="left:55%;animation-delay:.35s;"></span>
+          <span style="left:70%;animation-delay:1.05s;"></span>
+          <span style="left:88%;animation-delay:1.75s;"></span>
+        </div>
         <div class="stars">
           <span style="top:10%;left:15%;"></span>
           <span style="top:22%;left:40%;"></span>
@@ -912,6 +959,16 @@
       <div id="potDecorList"></div>
       <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
       <div id="wallpaperDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Weather Overlay</div>
+      <div id="weatherOverlayDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Pot Aura</div>
+      <div id="potAuraDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Bloom Filter</div>
+      <div id="bloomFilterDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Discovery Reveal Effect</div>
+      <div id="revealEffectDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Herbarium Frame</div>
+      <div id="herbFrameDecorList"></div>
     </section>
 
     <section class="screen" id="screen-herbarium">
@@ -2327,8 +2384,45 @@ const WALLPAPER_THEMES = {
   tidalCurrent: { name:'Tidal Current', cost:0, merchantOnly:true, scrollX:true, hill:'#1E3A42', planks:{ hseam:'rgb(70,140,150)', vseam:'rgb(24,50,54)', a:'rgb(54,110,120)', b:'rgb(46,98,106)', c:'rgb(42,90,98)', d:'rgb(50,104,112)' } },
   cinderdrift: { name:'Cinderdrift', cost:0, merchantOnly:true, scrollY:true, hill:'#3A1E14', planks:{ hseam:'rgb(150,60,30)', vseam:'rgb(60,20,10)', a:'rgb(120,48,24)', b:'rgb(105,42,20)', c:'rgb(95,38,18)', d:'rgb(110,44,22)' } }
 };
+const WEATHER_OVERLAY_THEMES = {
+  clearSky:      { name:'Clear Sky',      cost:0,   previewCss:'background:#3A4550;' },
+  petalDrift:    { name:'Petal Drift',    cost:180, previewCss:'background:#E86FA8;' },
+  snowFlurries:  { name:'Snow Flurries',  cost:200, previewCss:'background:#CFE3FF;' },
+  fireflySwarm:  { name:'Firefly Swarm',  cost:0, merchantOnly:true, sparkle:true, previewCss:'background:#D9F2A3;' }
+};
+const POT_AURA_THEMES = {
+  none:       { name:'No Aura',      cost:0,   previewCss:'background:#3A4550;' },
+  emberDrift: { name:'Ember Drift',  cost:160, previewCss:'background:#E8703E;' },
+  petalFall:  { name:'Petal Fall',   cost:160, previewCss:'background:#E8B8E8;' },
+  frostMist:  { name:'Frost Mist',   cost:0, merchantOnly:true, sparkle:true, previewCss:'background:#CFE3FF;' }
+};
+const BLOOM_FILTER_THEMES = {
+  natural:    { name:'Natural',        cost:0,   filter:'none', previewCss:'background:#7ED957;' },
+  goldenHour: { name:'Golden Hour',    cost:150, filter:'sepia(.3) saturate(1.4) hue-rotate(-8deg)', previewCss:'background:#7ED957;filter:sepia(.3) saturate(1.4) hue-rotate(-8deg);' },
+  moonlit:    { name:'Moonlit',        cost:150, filter:'hue-rotate(190deg) saturate(.7) brightness(.92)', previewCss:'background:#7ED957;filter:hue-rotate(190deg) saturate(.7) brightness(.92);' },
+  vintage:    { name:'Vintage Parchment', cost:0, merchantOnly:true, sparkle:true, filter:'sepia(.45) contrast(.92) brightness(1.05)', previewCss:'background:#7ED957;filter:sepia(.45) contrast(.92) brightness(1.05);' }
+};
+const REVEAL_EFFECT_THEMES = {
+  classic:     { name:'Classic Sparkle', cost:0,   colors:['var(--warn)','var(--accent)','var(--violet)','var(--warn)','var(--accent)','var(--violet)'], previewCss:'background:var(--accent);' },
+  emberBurst:  { name:'Ember Burst',     cost:170, colors:['#E8703E','#FFC08A','#E8703E','#FFC08A','#E8703E','#FFC08A'], previewCss:'background:#E8703E;' },
+  frostBurst:  { name:'Frost Burst',     cost:170, colors:['#CFE3FF','#8FB8F0','#CFE3FF','#8FB8F0','#CFE3FF','#8FB8F0'], previewCss:'background:#8FB8F0;' },
+  auroraBurst: { name:'Aurora Burst',    cost:0, merchantOnly:true, sparkle:true, colors:['#B8F5DA','#A855C4','#5FCF9E','#E8B8E8','#B8F5DA','#A855C4'], previewCss:'background:linear-gradient(135deg,#B8F5DA,#A855C4);' }
+};
+const HERB_FRAME_THEMES = {
+  plain:     { name:'Plain Parchment', cost:0,   previewCss:'background:var(--parchment);border:2px solid var(--parchment-line);' },
+  gilded:    { name:'Gilded Frame',    cost:160, previewCss:'background:#3A2E12;border:2px solid #D9A441;' },
+  botanical: { name:'Botanical Vine',  cost:160, previewCss:'background:#1E3A22;border:2px solid #5FA35A;' },
+  celestial: { name:'Celestial Frame', cost:0, merchantOnly:true, sparkle:true, previewCss:'background:#1E2A42;border:2px solid #A8CFEA;' }
+};
 function defaultDecorState(){
-  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
+  return {
+    ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar',
+    ownedWeatherOverlays:['clearSky'], equippedWeatherOverlay:'clearSky',
+    ownedPotAuras:['none'], equippedPotAura:'none',
+    ownedBloomFilters:['natural'], equippedBloomFilter:'natural',
+    ownedRevealEffects:['classic'], equippedRevealEffect:'classic',
+    ownedHerbFrames:['plain'], equippedHerbFrame:'plain'
+  };
 }
 function buildPlankDataUri(c){
   let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
@@ -2367,12 +2461,55 @@ function applyWallpaperTheme(key){
   document.body.classList.toggle('wallpaper-scroll-x-active', !!cfg.scrollX);
   document.body.classList.toggle('wallpaper-scroll-y-active', !!cfg.scrollY);
 }
+function applyWeatherOverlayTheme(key){
+  document.body.classList.remove('weather-overlay-petalDrift','weather-overlay-snowFlurries','weather-overlay-fireflySwarm');
+  if(key && key!=='clearSky') document.body.classList.add('weather-overlay-'+key);
+}
+function applyPotAuraTheme(key){
+  document.body.classList.remove('pot-aura-emberDrift','pot-aura-petalFall','pot-aura-frostMist');
+  if(key && key!=='none') document.body.classList.add('pot-aura-'+key);
+}
+function applyBloomFilterTheme(key){
+  const cfg = BLOOM_FILTER_THEMES[key];
+  document.documentElement.style.setProperty('--bloom-filter', (cfg && cfg.filter) || 'none');
+}
+function applyHerbFrameTheme(key){
+  document.body.classList.remove('herb-frame-gilded','herb-frame-botanical','herb-frame-celestial');
+  if(key && key!=='plain') document.body.classList.add('herb-frame-'+key);
+}
 function applyEquippedDecor(){
   applyPotTheme(state.decor.equippedPot);
   applyWallpaperTheme(state.decor.equippedWallpaper);
+  applyWeatherOverlayTheme(state.decor.equippedWeatherOverlay);
+  applyPotAuraTheme(state.decor.equippedPotAura);
+  applyBloomFilterTheme(state.decor.equippedBloomFilter);
+  applyHerbFrameTheme(state.decor.equippedHerbFrame);
+  // equippedRevealEffect needs no persistent DOM state -- renderReveal() reads it directly when it fires
 }
-function decorConfig(kind){ return kind==='pot' ? POT_THEMES : WALLPAPER_THEMES; }
-function decorOwned(kind){ return kind==='pot' ? state.decor.ownedPots : state.decor.ownedWallpapers; }
+function decorConfig(kind){
+  switch(kind){
+    case 'pot': return POT_THEMES;
+    case 'wallpaper': return WALLPAPER_THEMES;
+    case 'weatherOverlay': return WEATHER_OVERLAY_THEMES;
+    case 'potAura': return POT_AURA_THEMES;
+    case 'bloomFilter': return BLOOM_FILTER_THEMES;
+    case 'revealEffect': return REVEAL_EFFECT_THEMES;
+    case 'herbFrame': return HERB_FRAME_THEMES;
+    default: return {};
+  }
+}
+function decorOwned(kind){
+  switch(kind){
+    case 'pot': return state.decor.ownedPots;
+    case 'wallpaper': return state.decor.ownedWallpapers;
+    case 'weatherOverlay': return state.decor.ownedWeatherOverlays;
+    case 'potAura': return state.decor.ownedPotAuras;
+    case 'bloomFilter': return state.decor.ownedBloomFilters;
+    case 'revealEffect': return state.decor.ownedRevealEffects;
+    case 'herbFrame': return state.decor.ownedHerbFrames;
+    default: return [];
+  }
+}
 function purchaseDecor(kind, key){
   const cfg = decorConfig(kind)[key];
   if(!cfg) return false;
@@ -2386,21 +2523,32 @@ function purchaseDecor(kind, key){
   saveState();
   return true;
 }
+const DECOR_KIND_META = {
+  pot:            { equippedKey:'equippedPot',            listId:'potDecorList',            apply:key=>applyPotTheme(key) },
+  wallpaper:      { equippedKey:'equippedWallpaper',       listId:'wallpaperDecorList',       apply:key=>applyWallpaperTheme(key) },
+  weatherOverlay: { equippedKey:'equippedWeatherOverlay',  listId:'weatherOverlayDecorList',  apply:key=>applyWeatherOverlayTheme(key) },
+  potAura:        { equippedKey:'equippedPotAura',         listId:'potAuraDecorList',         apply:key=>applyPotAuraTheme(key) },
+  bloomFilter:    { equippedKey:'equippedBloomFilter',     listId:'bloomFilterDecorList',     apply:key=>applyBloomFilterTheme(key) },
+  revealEffect:   { equippedKey:'equippedRevealEffect',    listId:'revealEffectDecorList',    apply:()=>{} },
+  herbFrame:      { equippedKey:'equippedHerbFrame',       listId:'herbFrameDecorList',       apply:key=>applyHerbFrameTheme(key) }
+};
 function equipDecor(kind, key){
   if(!decorOwned(kind).includes(key)) return false;
-  if(kind==='pot'){ state.decor.equippedPot = key; applyPotTheme(key); }
-  else { state.decor.equippedWallpaper = key; applyWallpaperTheme(key); }
+  const meta = DECOR_KIND_META[kind];
+  state.decor[meta.equippedKey] = key;
+  meta.apply(key);
   saveState();
   renderDecorShop();
   updateHeader();
   return true;
 }
 function renderDecorGallery(kind){
-  const el = document.getElementById(kind==='pot' ? 'potDecorList' : 'wallpaperDecorList');
+  const meta = DECOR_KIND_META[kind];
+  const el = document.getElementById(meta.listId);
   if(!el) return;
   const cfg = decorConfig(kind);
   const owned = decorOwned(kind);
-  const equipped = kind==='pot' ? state.decor.equippedPot : state.decor.equippedWallpaper;
+  const equipped = state.decor[meta.equippedKey];
   el.innerHTML = Object.entries(cfg).map(([key, theme])=>{
     const isOwned = owned.includes(key);
     const isEquipped = equipped===key;
@@ -2414,9 +2562,10 @@ function renderDecorGallery(kind){
         + '<button class="btn btn-small" disabled>???</button>'
         + '</div>';
     }
-    const swatchBg = kind==='pot'
-      ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
-      : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';
+    let swatchStyle;
+    if(kind==='pot') swatchStyle = 'background:linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%);';
+    else if(kind==='wallpaper') swatchStyle = 'background:linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%);';
+    else swatchStyle = theme.previewCss || '';
     let actionHtml;
     if(isEquipped) actionHtml = '<button class="btn btn-small" disabled>Equipped</button>';
     else if(isOwned) actionHtml = '<button class="btn btn-small btn-primary" onclick="equipDecor(\''+kind+'\',\''+key+'\')">Equip</button>';
@@ -2424,7 +2573,7 @@ function renderDecorGallery(kind){
     let descText = 'Cosmetic only';
     if(isOwned) descText = theme.merchantOnly ? 'Found from the traveling merchant' : 'Owned';
     return '<div class="upg-card'+(isEquipped?' is-equipped':'')+'">'
-      + '<div class="decor-swatch'+(theme.glow||theme.shimmer||theme.sparkle||theme.scrollX||theme.scrollY?' merchant-swatch-glow':'')+'" style="background:'+swatchBg+';"></div>'
+      + '<div class="decor-swatch'+(theme.glow||theme.shimmer||theme.sparkle||theme.scrollX||theme.scrollY?' merchant-swatch-glow':'')+'" style="'+swatchStyle+'"></div>'
       + '<div class="upg-info">'
       + '<div class="upg-name">'+theme.name+'</div>'
       + '<div class="upg-desc">'+descText+'</div>'
@@ -2436,6 +2585,11 @@ function renderDecorGallery(kind){
 function renderDecorShop(){
   renderDecorGallery('pot');
   renderDecorGallery('wallpaper');
+  renderDecorGallery('weatherOverlay');
+  renderDecorGallery('potAura');
+  renderDecorGallery('bloomFilter');
+  renderDecorGallery('revealEffect');
+  renderDecorGallery('herbFrame');
 }
 
 /* ===================== TRAVELING MERCHANT ===================== */
@@ -2453,7 +2607,12 @@ const MERCHANT_COSMETICS = [
   { kind:'wallpaper', key:'auroraCurtain' },
   { kind:'wallpaper', key:'goldleaf' },
   { kind:'wallpaper', key:'tidalCurrent' },
-  { kind:'wallpaper', key:'cinderdrift' }
+  { kind:'wallpaper', key:'cinderdrift' },
+  { kind:'weatherOverlay', key:'fireflySwarm' },
+  { kind:'potAura', key:'frostMist' },
+  { kind:'bloomFilter', key:'vintage' },
+  { kind:'revealEffect', key:'auroraBurst' },
+  { kind:'herbFrame', key:'celestial' }
 ];
 const MERCHANT_REROLL_COST = 12;
 function pickMerchantSeedOffer(level){
@@ -2576,14 +2735,22 @@ function renderMerchant(){
     const theme = decorConfig(m.cosmeticOffer.kind)[m.cosmeticOffer.key];
     const bought = m.cosmeticBought;
     const affordable = (state.gems||0) >= m.cosmeticOffer.cost;
-    const swatchBg = m.cosmeticOffer.kind==='pot'
-      ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
-      : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';
+    let merchantSwatchStyle, merchantDesc;
+    if(m.cosmeticOffer.kind==='pot'){
+      merchantSwatchStyle = 'background:linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%);';
+      merchantDesc = 'Glowing pot finish';
+    } else if(m.cosmeticOffer.kind==='wallpaper'){
+      merchantSwatchStyle = 'background:linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%);';
+      merchantDesc = 'Shimmering wallpaper';
+    } else {
+      merchantSwatchStyle = theme.previewCss || '';
+      merchantDesc = 'Rare cosmetic';
+    }
     html += '<div class="upg-card">'
-      + '<div class="decor-swatch merchant-swatch-glow" style="background:'+swatchBg+';"></div>'
+      + '<div class="decor-swatch merchant-swatch-glow" style="'+merchantSwatchStyle+'"></div>'
       + '<div class="upg-info">'
       + '<div class="upg-name">'+theme.name+'</div>'
-      + '<div class="upg-desc">'+(m.cosmeticOffer.kind==='pot'?'Glowing pot finish':'Shimmering wallpaper')+'</div>'
+      + '<div class="upg-desc">'+merchantDesc+'</div>'
       + '</div>'
       + '<button class="btn btn-small '+(!bought&&affordable?'btn-primary':'')+'" '+(bought||!affordable?'disabled':'')+' onclick="buyMerchantCosmetic()">'+(bought?'Owned':m.cosmeticOffer.cost+' '+renderGemIcon(2))+'</button>'
       + '</div>';
@@ -4917,6 +5084,21 @@ function normalizeState(parsed){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
+        if(!Array.isArray(merged.decor.ownedWeatherOverlays) || !merged.decor.ownedWeatherOverlays.length) merged.decor.ownedWeatherOverlays = ['clearSky'];
+        if(!merged.decor.ownedWeatherOverlays.includes('clearSky')) merged.decor.ownedWeatherOverlays.unshift('clearSky');
+        if(!WEATHER_OVERLAY_THEMES[merged.decor.equippedWeatherOverlay]) merged.decor.equippedWeatherOverlay = 'clearSky';
+        if(!Array.isArray(merged.decor.ownedPotAuras) || !merged.decor.ownedPotAuras.length) merged.decor.ownedPotAuras = ['none'];
+        if(!merged.decor.ownedPotAuras.includes('none')) merged.decor.ownedPotAuras.unshift('none');
+        if(!POT_AURA_THEMES[merged.decor.equippedPotAura]) merged.decor.equippedPotAura = 'none';
+        if(!Array.isArray(merged.decor.ownedBloomFilters) || !merged.decor.ownedBloomFilters.length) merged.decor.ownedBloomFilters = ['natural'];
+        if(!merged.decor.ownedBloomFilters.includes('natural')) merged.decor.ownedBloomFilters.unshift('natural');
+        if(!BLOOM_FILTER_THEMES[merged.decor.equippedBloomFilter]) merged.decor.equippedBloomFilter = 'natural';
+        if(!Array.isArray(merged.decor.ownedRevealEffects) || !merged.decor.ownedRevealEffects.length) merged.decor.ownedRevealEffects = ['classic'];
+        if(!merged.decor.ownedRevealEffects.includes('classic')) merged.decor.ownedRevealEffects.unshift('classic');
+        if(!REVEAL_EFFECT_THEMES[merged.decor.equippedRevealEffect]) merged.decor.equippedRevealEffect = 'classic';
+        if(!Array.isArray(merged.decor.ownedHerbFrames) || !merged.decor.ownedHerbFrames.length) merged.decor.ownedHerbFrames = ['plain'];
+        if(!merged.decor.ownedHerbFrames.includes('plain')) merged.decor.ownedHerbFrames.unshift('plain');
+        if(!HERB_FRAME_THEMES[merged.decor.equippedHerbFrame]) merged.decor.equippedHerbFrame = 'plain';
       }
       if(!merged.companions || typeof merged.companions!=='object'){
         merged.companions = defaultCompanionState();
@@ -6759,8 +6941,9 @@ function renderReveal(result, opts){
   const btnLabel = opts.buttonLabel || 'Done';
   const btnAction = opts.onButtonClick || 'closeSheet()';
   const body = document.getElementById('sheetBody');
+  const revealTheme = REVEAL_EFFECT_THEMES[state.decor.equippedRevealEffect] || REVEAL_EFFECT_THEMES.classic;
   const sparkles = result.isNew ? [0,1,2,3,4,5].map(i=>{
-    const top = [-8,10,40,70,95,30][i], left=[20,90,-6,98,40,75][i], delay=(i*70)+'ms', color=[ 'var(--warn)','var(--accent)','var(--violet)','var(--warn)','var(--accent)','var(--violet)'][i];
+    const top = [-8,10,40,70,95,30][i], left=[20,90,-6,98,40,75][i], delay=(i*70)+'ms', color=revealTheme.colors[i];
     return '<div class="sparkle" style="top:'+top+'%;left:'+left+'%;background:'+color+';animation-delay:'+delay+'"></div>';
   }).join('') : '';
   body.innerHTML = '<div class="reveal-card">'

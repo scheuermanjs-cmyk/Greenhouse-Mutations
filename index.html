@@ -439,14 +439,6 @@
   .toggle-switch.is-on .toggle-knob{ left:24px; background:var(--accent); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
-  .decor-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .decor-slot{ aspect-ratio:1/1; position:relative; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; }
-  .decor-slot-empty{ color:var(--text-muted); font-size:22px; opacity:.6; }
-  .decor-slot-filled{ background:var(--panel-2); }
-  .pix-placeable{ display:grid; image-rendering:pixelated; }
-  .pix-placeable > div{ width:100%; height:100%; }
-  .pix-placeable-glow{ filter:drop-shadow(0 0 4px rgba(244,224,77,.6)); }
-  .pix-placeable-sparkle{ filter:drop-shadow(0 0 4px rgba(201,169,78,.6)); }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
@@ -845,10 +837,6 @@
       <div id="potDecorList"></div>
       <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
       <div id="wallpaperDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Decorate Your Greenhouse</div>
-      <div class="upg-desc" style="margin:-6px 2px 8px;">Place furniture around your greenhouse. Purely cosmetic — arrange it however you like.</div>
-      <div id="decorGridList" class="decor-grid"></div>
-      <div id="placeableShopList" style="margin-top:10px;"></div>
     </section>
 
     <section class="screen" id="screen-herbarium">
@@ -2201,26 +2189,8 @@ const WALLPAPER_THEMES = {
   tidalCurrent: { name:'Tidal Current', cost:0, merchantOnly:true, scrollX:true, hill:'#1E3A42', planks:{ hseam:'rgb(70,140,150)', vseam:'rgb(24,50,54)', a:'rgb(54,110,120)', b:'rgb(46,98,106)', c:'rgb(42,90,98)', d:'rgb(50,104,112)' } },
   cinderdrift: { name:'Cinderdrift', cost:0, merchantOnly:true, scrollY:true, hill:'#3A1E14', planks:{ hseam:'rgb(150,60,30)', vseam:'rgb(60,20,10)', a:'rgb(120,48,24)', b:'rgb(105,42,20)', c:'rgb(95,38,18)', d:'rgb(110,44,22)' } }
 };
-const PLACEABLE_ITEMS = {
-  gnome:       { name:'Garden Gnome',  cost:120, rows:['..r..','.rrr.','..f..','.fwf.','.bbb.','.ggg.'], colors:{ r:'#C0453C', f:'#E8B382', w:'#F4F1E0', b:'#3A5C99', g:'#3F5F30' } },
-  lantern:     { name:'Hanging Lantern', cost:160, glow:true, rows:['..h..','.ggg.','.gyg.','.ggg.','..p..'], colors:{ h:'#2C2C28', g:'#4A4A44', y:'#F4E04D', p:'#2C2C28' } },
-  birdbath:    { name:'Stone Birdbath', cost:140, rows:['.sss.','sssss','..p..','.ppp.'], colors:{ s:'#B8C4C8', p:'#7A868A' } },
-  planterBox:  { name:'Planter Box',   cost:100, rows:['r.y.r','ggggg','bbbbb','bbbbb'], colors:{ r:'#D9433C', y:'#F4E04D', g:'#5C8A4A', b:'#8C6A3E' } },
-  windChime:   { name:'Wind Chime', cost:0, merchantOnly:true, sparkle:true, rows:['..h..','.ttt.','.t.t.','c.c.c'], colors:{ h:'#2C2C28', t:'#C9A94E', c:'#E8D9A0' } }
-};
-function renderPlaceable(size, key){
-  const cfg = PLACEABLE_ITEMS[key] || PLACEABLE_ITEMS.gnome;
-  const cell = size==='lg' ? 7 : 4;
-  let cellsHtml = '';
-  for(const row of cfg.rows){
-    for(const ch of row){
-      cellsHtml += '<div style="background:'+(cfg.colors[ch] || 'transparent')+'"></div>';
-    }
-  }
-  return '<div class="pix-placeable'+(cfg.glow?' pix-placeable-glow':'')+(cfg.sparkle?' pix-placeable-sparkle':'')+'" style="grid-template-columns:repeat('+cfg.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
-}
 function defaultDecorState(){
-  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar', ownedPlaceables:[], gridSlots:[null,null,null,null,null,null] };
+  return { ownedPots:['terracotta'], ownedWallpapers:['cedar'], equippedPot:'terracotta', equippedWallpaper:'cedar' };
 }
 function buildPlankDataUri(c){
   let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 96'>"
@@ -2263,8 +2233,8 @@ function applyEquippedDecor(){
   applyPotTheme(state.decor.equippedPot);
   applyWallpaperTheme(state.decor.equippedWallpaper);
 }
-function decorConfig(kind){ return kind==='pot' ? POT_THEMES : kind==='wallpaper' ? WALLPAPER_THEMES : PLACEABLE_ITEMS; }
-function decorOwned(kind){ return kind==='pot' ? state.decor.ownedPots : kind==='wallpaper' ? state.decor.ownedWallpapers : state.decor.ownedPlaceables; }
+function decorConfig(kind){ return kind==='pot' ? POT_THEMES : WALLPAPER_THEMES; }
+function decorOwned(kind){ return kind==='pot' ? state.decor.ownedPots : state.decor.ownedWallpapers; }
 function purchaseDecor(kind, key){
   const cfg = decorConfig(kind)[key];
   if(!cfg) return false;
@@ -2328,104 +2298,6 @@ function renderDecorGallery(kind){
 function renderDecorShop(){
   renderDecorGallery('pot');
   renderDecorGallery('wallpaper');
-  renderPlaceableShop();
-  renderDecorGrid();
-}
-function purchasePlaceable(key){
-  const cfg = PLACEABLE_ITEMS[key];
-  if(!cfg || cfg.merchantOnly) return false;
-  const owned = state.decor.ownedPlaceables;
-  if(owned.includes(key)) return false;
-  if(state.spores < cfg.cost) return false;
-  state.spores -= cfg.cost;
-  sfxPurchase();
-  owned.push(key);
-  saveState();
-  return true;
-}
-function onBuyPlaceable(key){
-  if(!purchasePlaceable(key)) return;
-  renderPlaceableShop();
-  updateHeader();
-  showToast('Bought '+PLACEABLE_ITEMS[key].name+'!');
-}
-function renderPlaceableShop(){
-  const el = document.getElementById('placeableShopList');
-  if(!el) return;
-  el.innerHTML = Object.entries(PLACEABLE_ITEMS).filter(([key,cfg])=>!cfg.merchantOnly).map(([key,cfg])=>{
-    const isOwned = state.decor.ownedPlaceables.includes(key);
-    const actionHtml = isOwned
-      ? '<button class="btn btn-small" disabled>Owned</button>'
-      : '<button class="btn btn-small '+(state.spores>=cfg.cost?'btn-primary':'')+'" '+(state.spores>=cfg.cost?'':'disabled')+' onclick="onBuyPlaceable(\''+key+'\')">'+cfg.cost+' ◆</button>';
-    return '<div class="upg-card">'
-      + '<div class="decor-swatch" style="display:flex;align-items:center;justify-content:center;">'+renderPlaceable('sm', key)+'</div>'
-      + '<div class="upg-info">'
-      + '<div class="upg-name">'+cfg.name+'</div>'
-      + '<div class="upg-desc">'+(isOwned?'Tap a slot above to place it':'Furniture for your greenhouse')+'</div>'
-      + '</div>'
-      + actionHtml
-      + '</div>';
-  }).join('');
-}
-function renderDecorGrid(){
-  const el = document.getElementById('decorGridList');
-  if(!el) return;
-  el.innerHTML = state.decor.gridSlots.map((key, idx)=>{
-    if(key){
-      const cfg = PLACEABLE_ITEMS[key];
-      return '<div class="decor-slot decor-slot-filled" onclick="openDecorSlotPicker('+idx+')" title="'+cfg.name+'">'+renderPlaceable('lg', key)+'</div>';
-    }
-    return '<div class="decor-slot decor-slot-empty" onclick="openDecorSlotPicker('+idx+')">+</div>';
-  }).join('');
-}
-let currentDecorSlotIdx = null;
-function openDecorSlotPicker(slotIdx){
-  currentSheetIdx = null;
-  currentLabSlot = null;
-  revealShowing = false;
-  currentDecorSlotIdx = slotIdx;
-  renderDecorSlotSheet(slotIdx);
-  document.getElementById('sheet').classList.add('open');
-  document.getElementById('sheetBackdrop').classList.add('open');
-}
-function renderDecorSlotSheet(slotIdx){
-  const body = document.getElementById('sheetBody');
-  if(!body) return;
-  const owned = state.decor.ownedPlaceables;
-  const current = state.decor.gridSlots[slotIdx];
-  let rows;
-  if(!owned.length){
-    rows = '<div class="empty-state">No furniture owned yet.<br>Buy some from the shop below.</div>';
-  } else {
-    rows = owned.map(key=>{
-      const cfg = PLACEABLE_ITEMS[key];
-      const isHere = current===key;
-      return '<div class="seed-row">'
-        + '<div class="seed-row-glyph">'+renderPlaceable('sm', key)+'</div>'
-        + '<div class="seed-row-info"><div class="seed-row-name">'+cfg.name+'</div></div>'
-        + '<button class="btn btn-small '+(isHere?'':'btn-primary')+'" '+(isHere?'disabled':'')+' onclick="placeItemInSlot('+slotIdx+',\''+key+'\')">'+(isHere?'Placed':'Place')+'</button>'
-        + '</div>';
-    }).join('');
-  }
-  const clearBtn = current ? '<button class="btn btn-small btn-block" style="margin-top:10px;" onclick="clearDecorSlot('+slotIdx+')">Remove from slot</button>' : '';
-  body.innerHTML = '<div class="sheet-head"><h3>Decor Slot</h3></div>' + '<div class="seed-list">'+rows+'</div>' + clearBtn;
-}
-function placeItemInSlot(slotIdx, key){
-  if(!state.decor.ownedPlaceables.includes(key)) return false;
-  if(slotIdx<0 || slotIdx>=state.decor.gridSlots.length) return false;
-  state.decor.gridSlots[slotIdx] = key;
-  saveState();
-  renderDecorGrid();
-  if(currentDecorSlotIdx===slotIdx) renderDecorSlotSheet(slotIdx);
-  return true;
-}
-function clearDecorSlot(slotIdx){
-  if(slotIdx<0 || slotIdx>=state.decor.gridSlots.length) return false;
-  state.decor.gridSlots[slotIdx] = null;
-  saveState();
-  renderDecorGrid();
-  if(currentDecorSlotIdx===slotIdx) renderDecorSlotSheet(slotIdx);
-  return true;
 }
 
 /* ===================== TRAVELING MERCHANT ===================== */
@@ -2443,8 +2315,7 @@ const MERCHANT_COSMETICS = [
   { kind:'wallpaper', key:'auroraCurtain' },
   { kind:'wallpaper', key:'goldleaf' },
   { kind:'wallpaper', key:'tidalCurrent' },
-  { kind:'wallpaper', key:'cinderdrift' },
-  { kind:'placeable', key:'windChime' }
+  { kind:'wallpaper', key:'cinderdrift' }
 ];
 const MERCHANT_REROLL_COST = 12;
 function pickMerchantSeedOffer(level){
@@ -2567,22 +2438,14 @@ function renderMerchant(){
     const theme = decorConfig(m.cosmeticOffer.kind)[m.cosmeticOffer.key];
     const bought = m.cosmeticBought;
     const affordable = (state.gems||0) >= m.cosmeticOffer.cost;
-    let previewHtml, descText;
-    if(m.cosmeticOffer.kind==='placeable'){
-      previewHtml = '<div class="decor-swatch merchant-swatch-glow" style="display:flex;align-items:center;justify-content:center;">'+renderPlaceable('sm', m.cosmeticOffer.key)+'</div>';
-      descText = 'Rare furniture piece';
-    } else {
-      const swatchBg = m.cosmeticOffer.kind==='pot'
-        ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
-        : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';
-      previewHtml = '<div class="decor-swatch merchant-swatch-glow" style="background:'+swatchBg+';"></div>';
-      descText = m.cosmeticOffer.kind==='pot' ? 'Glowing pot finish' : 'Shimmering wallpaper';
-    }
+    const swatchBg = m.cosmeticOffer.kind==='pot'
+      ? 'linear-gradient(to bottom, '+theme.colors.light+' 0% 35%, '+theme.colors.mid+' 35% 70%, '+theme.colors.dark+' 70% 100%)'
+      : 'linear-gradient(135deg, '+theme.planks.a+' 0% 50%, '+theme.planks.b+' 50% 100%)';
     html += '<div class="upg-card">'
-      + previewHtml
+      + '<div class="decor-swatch merchant-swatch-glow" style="background:'+swatchBg+';"></div>'
       + '<div class="upg-info">'
       + '<div class="upg-name">'+theme.name+'</div>'
-      + '<div class="upg-desc">'+descText+'</div>'
+      + '<div class="upg-desc">'+(m.cosmeticOffer.kind==='pot'?'Glowing pot finish':'Shimmering wallpaper')+'</div>'
       + '</div>'
       + '<button class="btn btn-small '+(!bought&&affordable?'btn-primary':'')+'" '+(bought||!affordable?'disabled':'')+' onclick="buyMerchantCosmetic()">'+(bought?'Owned':m.cosmeticOffer.cost+' '+renderGemIcon(2))+'</button>'
       + '</div>';
@@ -4104,9 +3967,6 @@ function normalizeState(parsed){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
-        if(!Array.isArray(merged.decor.ownedPlaceables)) merged.decor.ownedPlaceables = [];
-        if(!Array.isArray(merged.decor.gridSlots) || merged.decor.gridSlots.length!==6) merged.decor.gridSlots = [null,null,null,null,null,null];
-        merged.decor.gridSlots = merged.decor.gridSlots.map(k => (k && PLACEABLE_ITEMS[k] && merged.decor.ownedPlaceables.includes(k)) ? k : null);
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -5754,7 +5614,6 @@ function openSheet(idx, wing='verdant'){
 function closeSheet(){
   currentSheetIdx = null;
   currentLabSlot = null;
-  currentDecorSlotIdx = null;
   revealShowing = false;
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');

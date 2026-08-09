@@ -353,7 +353,10 @@
   }
 
   /* ---------- bottom nav ---------- */
-  .bottom-bar{ position:fixed; left:0; right:0; bottom:0; z-index:10; }
+  /* transform forces its own compositor layer -- without it, iOS Safari can visually
+     detach position:fixed elements mid-scroll on tall pages and render them inline
+     with the content instead of pinned to the viewport. */
+  .bottom-bar{ position:fixed; left:0; right:0; bottom:0; z-index:10; transform:translateZ(0); -webkit-transform:translateZ(0); }
   nav{ display:flex; background:var(--panel); border-top:4px solid var(--outline); padding:6px 6px; padding-bottom:calc(6px + env(safe-area-inset-bottom)); gap:5px; }
   .nav-btn{ position:relative; flex:1; background:transparent; color:var(--text-muted); padding:13px 2px; font-family:'Press Start 2P'; font-size:9px; }
   .nav-btn.active{ color:var(--accent); box-shadow:inset 0 4px 0 var(--accent); background:var(--panel-2); }

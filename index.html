@@ -485,6 +485,7 @@
   .pix-apex{ display:grid; image-rendering:pixelated; filter:drop-shadow(0 0 6px rgba(244,197,66,.7)); }
   .pix-apex > div{ width:100%; height:100%; }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .companion-lvl{ color:#F4C542; font-size:10px; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
   .bestiary-icon-wrap.is-mystery{ font-family:'Press Start 2P'; font-size:15px; color:var(--text-muted); }
@@ -1554,10 +1555,19 @@ function renderCompanions(){
         + '<div class="bestiary-count">'+progress+' / '+COMPANION_UNLOCK_TAPS+' tapped</div>'
         + '</div>';
     }
-    return '<div class="bestiary-card" title="'+COMPANION_INFO[key].desc+'">'
+    const lvl = companionLevel(key);
+    const info = COMPANION_INFO[key];
+    const bonusText = info.fmt(info.base*companionBonusMult(key));
+    const maxed = lvl>=COMPANION_MAX_LEVEL;
+    const cost = companionFeedCost(key);
+    const feedBtn = maxed
+      ? '<button class="btn btn-small" disabled>MAX</button>'
+      : '<button class="btn btn-small '+(state.spores>=cost?'btn-primary':'')+'" '+(state.spores>=cost?'':'disabled')+' onclick="onFeedCompanion(\''+key+'\')">Feed '+cost+' ◆</button>';
+    return '<div class="bestiary-card" title="'+bonusText+'">'
       + '<div class="bestiary-icon-wrap">'+renderWildlife('sm', key)+'</div>'
-      + '<div class="bestiary-name">'+cfg.name+'</div>'
-      + '<div class="bestiary-count">'+COMPANION_INFO[key].desc+'</div>'
+      + '<div class="bestiary-name">'+cfg.name+' <span class="companion-lvl">Lv.'+lvl+'</span></div>'
+      + '<div class="bestiary-count">'+bonusText+'</div>'
+      + feedBtn
       + '</div>';
   }).join('');
 }
@@ -3402,22 +3412,48 @@ function renderWildlife(size, type){
   return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
 const COMPANION_UNLOCK_TAPS = 5;
+const COMPANION_MAX_LEVEL = 5;
+const COMPANION_FEED_BASE_COST = 40;
+const COMPANION_FEED_SCALE = 1.5;
 const COMPANION_INFO = {
-  butterfly: { desc:'+10% chance of a bonus seed on every harvest' },
-  bee:       { desc:'+4% spores from every harvest' },
-  ladybug:   { desc:'-20% chance of pest infestations' },
-  firefly:   { desc:'+15% spores from harvests made at night' },
-  dragonfly: { desc:'-20% wilt risk in the Frostbound wing' }
+  butterfly: { desc:'chance of a bonus seed on every harvest', base:0.10, fmt:v=>'+'+Math.round(v*100)+'% chance of a bonus seed on every harvest' },
+  bee:       { desc:'spores from every harvest', base:0.04, fmt:v=>'+'+Math.round(v*100)+'% spores from every harvest' },
+  ladybug:   { desc:'chance of pest infestations', base:0.20, fmt:v=>'-'+Math.round(v*100)+'% chance of pest infestations' },
+  firefly:   { desc:'spores from harvests made at night', base:0.15, fmt:v=>'+'+Math.round(v*100)+'% spores from harvests made at night' },
+  dragonfly: { desc:'wilt risk in the Frostbound wing', base:0.20, fmt:v=>'-'+Math.round(v*100)+'% wilt risk in the Frostbound wing' }
 };
 function defaultCompanionState(){
-  return { tapCounts:{ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, owned:[] };
+  return { tapCounts:{ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, owned:[], levels:{} };
 }
 function ownsCompanion(type){ return state.companions && state.companions.owned.includes(type); }
-function getCompanionYieldBonus(){ return ownsCompanion('bee') ? 0.04 : 0; }
-function getCompanionSeedBonusChance(){ return ownsCompanion('butterfly') ? 0.10 : 0; }
-function getCompanionPestFactor(){ return ownsCompanion('ladybug') ? 0.8 : 1; }
-function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNightHour()) ? 0.15 : 0; }
-function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? 0.8 : 1; }
+function companionLevel(type){
+  if(!ownsCompanion(type)) return 0;
+  return (state.companions.levels && state.companions.levels[type]) || 1;
+}
+function companionBonusMult(type){ return 1 + (companionLevel(type)-1)*0.5; }
+function companionFeedCost(type){ return Math.round(COMPANION_FEED_BASE_COST * Math.pow(COMPANION_FEED_SCALE, companionLevel(type)-1)); }
+function feedCompanion(type){
+  const lvl = companionLevel(type);
+  if(lvl<=0 || lvl>=COMPANION_MAX_LEVEL) return false;
+  const cost = companionFeedCost(type);
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  state.companions.levels[type] = lvl + 1;
+  sfxPurchase();
+  saveState();
+  return true;
+}
+function onFeedCompanion(type){
+  if(!feedCompanion(type)) return;
+  renderCompanions();
+  updateHeader();
+  showToast('Fed the '+WILDLIFE_TYPES[type].name.toLowerCase()+' — now Lv.'+companionLevel(type)+'!');
+}
+function getCompanionYieldBonus(){ return ownsCompanion('bee') ? COMPANION_INFO.bee.base*companionBonusMult('bee') : 0; }
+function getCompanionSeedBonusChance(){ return ownsCompanion('butterfly') ? COMPANION_INFO.butterfly.base*companionBonusMult('butterfly') : 0; }
+function getCompanionPestFactor(){ return ownsCompanion('ladybug') ? Math.max(0.25, 1-COMPANION_INFO.ladybug.base*companionBonusMult('ladybug')) : 1; }
+function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNightHour()) ? COMPANION_INFO.firefly.base*companionBonusMult('firefly') : 0; }
+function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? Math.max(0.25, 1-COMPANION_INFO.dragonfly.base*companionBonusMult('dragonfly')) : 1; }
 function isNightHour(){ const h = getGameHour(); return h>=20 || h<5; }
 
 /* ---------- timed buffs ---------- */
@@ -4308,7 +4344,7 @@ function onWildlifeTap(typeKey){
   updateHeader();
   renderCompanions();
   if(unlockedCompanion){
-    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderWildlife('sm', typeKey)+'<span>New companion: '+cfg.name+'! '+COMPANION_INFO[typeKey].desc+'</span></span>');
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderWildlife('sm', typeKey)+'<span>New companion: '+cfg.name+'! '+COMPANION_INFO[typeKey].fmt(COMPANION_INFO[typeKey].base)+'</span></span>');
   } else {
     showToastHtml('+'+sporeAmt+' '+renderSporeIcon()+gemText);
   }
@@ -4470,6 +4506,11 @@ function normalizeState(parsed){
         merged.companions.tapCounts = Object.assign({ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, merged.companions.tapCounts||{});
         if(!Array.isArray(merged.companions.owned)) merged.companions.owned = [];
         merged.companions.owned = merged.companions.owned.filter(k => !!WILDLIFE_TYPES[k]);
+        if(!merged.companions.levels || typeof merged.companions.levels!=='object') merged.companions.levels = {};
+        merged.companions.owned.forEach(k=>{
+          const lvl = merged.companions.levels[k];
+          merged.companions.levels[k] = (typeof lvl==='number' && lvl>=1 && lvl<=COMPANION_MAX_LEVEL) ? lvl : 1;
+        });
       }
       if(!merged.pollinator || typeof merged.pollinator!=='object' || typeof merged.pollinator.lastPlayedAt!=='number'){
         merged.pollinator = { lastPlayedAt:0 };

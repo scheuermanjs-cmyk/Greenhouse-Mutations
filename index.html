@@ -448,18 +448,18 @@
   .pollinator-timerbar-fill.is-low{ background:var(--danger); }
   .pollinator-arena{
     position:relative; height:230px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); overflow:hidden;
-    background:linear-gradient(to bottom, #2B1F45 0%, #6B4A6E 45%, #C9577A 72%, #FFB072 100%);
+    background:linear-gradient(to bottom, #2B1F45 0% 28%, #6B4A6E 28% 52%, #C9577A 52% 74%, #FFB072 74% 100%);
   }
   .pollinator-arena::after{
     content:''; position:absolute; left:-4px; right:-4px; bottom:-2px; height:34px; background:var(--hill);
     clip-path:polygon(0% 65%, 10% 45%, 22% 58%, 35% 32%, 50% 52%, 65% 28%, 80% 48%, 92% 22%, 100% 42%, 100% 100%, 0% 100%);
   }
   .pollinator-slot{ position:absolute; width:44px; height:44px; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1; }
-  .pollinator-mound{ width:26px; height:12px; background:rgba(0,0,0,.28); border-radius:50%; }
+  .pollinator-mound{ width:22px; height:12px; background:rgba(0,0,0,.28); }
   .pollinator-slot.is-blooming .pollinator-mound{ display:none; }
   .pollinator-slot.is-blooming{ animation:pollinatorBloomIn .18s ease both; }
   .pollinator-slot.is-blooming::after{
-    content:''; position:absolute; inset:-6px; border:2px solid rgba(255,255,255,.75); border-radius:50%;
+    content:''; position:absolute; inset:-6px; border:2px solid rgba(255,255,255,.75);
     animation:pollinatorWiltRing linear forwards; animation-duration:var(--bloom-ms, 1000ms);
   }
   .pollinator-slot.is-hit{ animation:pollinatorHitPop .26s ease both; }
@@ -472,12 +472,9 @@
   @keyframes pollinatorFloatUp{ from{ opacity:1; transform:translate(-50%,-50%); } to{ opacity:0; transform:translate(-50%,-140%); } }
   .pix-flower{ display:grid; image-rendering:pixelated; }
   .pix-flower > div{ width:100%; height:100%; }
-  .pollinator-medal{ width:64px; height:64px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:26px; border:4px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); color:#fff; text-shadow:1px 1px 0 rgba(0,0,0,.4); }
-  .pollinator-medal.tier-none{ background:var(--panel-2); color:var(--text-muted); font-size:32px; }
-  .pollinator-medal.tier-bronze{ background:radial-gradient(circle at 35% 30%, #E8B382, #A85D2E); }
-  .pollinator-medal.tier-silver{ background:radial-gradient(circle at 35% 30%, #F0F0F0, #9AA0A6); }
-  .pollinator-medal.tier-gold{ background:radial-gradient(circle at 35% 30%, #FFE9A8, #D9A441); }
-  .pollinator-medal.tier-perfect{ background:radial-gradient(circle at 35% 30%, #FFD1F0, #C77DFF); box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 16px 4px rgba(199,125,255,.6); }
+  .pix-medal{ display:grid; image-rendering:pixelated; margin:0 auto 10px; }
+  .pix-medal > div{ width:100%; height:100%; }
+  .pix-medal.tier-perfect{ filter:drop-shadow(0 0 6px rgba(199,125,255,.7)); }
   .pollinator-buff-banner{ margin-top:10px; background:var(--panel-2); border:3px solid #F4C542; color:#F4C542; padding:8px 10px; font-size:13px; text-align:center; box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .apex-slots{ display:flex; gap:10px; justify-content:center; }
   .apex-slot{ flex:1; aspect-ratio:1/1; max-width:110px; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; padding:6px; text-align:center; }
@@ -3631,12 +3628,32 @@ function pollinatorTier(hits){
   return 'perfect';
 }
 const POLLINATOR_TIER_INFO = {
-  none:    { label:'No Luck',  medal:'·', cls:'tier-none' },
-  bronze:  { label:'Bronze',   medal:'★', cls:'tier-bronze' },
-  silver:  { label:'Silver',   medal:'★', cls:'tier-silver' },
-  gold:    { label:'Gold',     medal:'★', cls:'tier-gold' },
-  perfect: { label:'Perfect!', medal:'★', cls:'tier-perfect' }
+  none:    { label:'No Luck' },
+  bronze:  { label:'Bronze' },
+  silver:  { label:'Silver' },
+  gold:    { label:'Gold' },
+  perfect: { label:'Perfect!' }
 };
+const POLLINATOR_MEDAL_ROWS = ['.ooo.','ooioo','oiiio','ooioo','.ooo.','.r.r.'];
+const POLLINATOR_MEDAL_COLORS = {
+  none:    { o:'#3A4540', i:'#2A322E', r:'#242A26' },
+  bronze:  { o:'#A85D2E', i:'#E8B382', r:'#6B3A1C' },
+  silver:  { o:'#9AA0A6', i:'#F0F0F0', r:'#5C6268' },
+  gold:    { o:'#D9A441', i:'#FFE9A8', r:'#8C6A1E' },
+  perfect: { o:'#C77DFF', i:'#FFD1F0', r:'#5C2E70' }
+};
+function renderPollinatorMedal(tier){
+  const cfg = POLLINATOR_MEDAL_COLORS[tier] || POLLINATOR_MEDAL_COLORS.none;
+  const cell = 9;
+  let cellsHtml = '';
+  for(const row of POLLINATOR_MEDAL_ROWS){
+    for(const ch of row){
+      const color = ch==='o' ? cfg.o : ch==='i' ? cfg.i : ch==='r' ? cfg.r : 'transparent';
+      cellsHtml += '<div style="background:'+color+'"></div>';
+    }
+  }
+  return '<div class="pix-medal tier-'+tier+'" style="grid-template-columns:repeat(5,'+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
 let pollinatorRound = null;
 function openPollinatorGame(){
   if(!pollinatorReady()) return;
@@ -3814,7 +3831,7 @@ function renderPollinatorResult(hits, bestCombo, reward){
     buffHtml = '<div class="pollinator-buff-banner"><span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('bolt', true, 2)+'<span>'+parts.join(' + ')+' for 5 minutes!</span></span></div>';
   }
   card.innerHTML = '<div class="welcome-hero">'
-    + '<div class="pollinator-medal '+info.cls+'">'+info.medal+'</div>'
+    + renderPollinatorMedal(reward.tier)
     + '<h1>'+info.label+'</h1>'
     + '<p>'+hits+' flowers pollinated'+(bestCombo>=3?' · best combo x'+bestCombo:'')+'</p>'
     + '</div>'

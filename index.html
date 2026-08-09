@@ -86,6 +86,8 @@
   .xp-bar-fill{ height:100%; background:repeating-linear-gradient(45deg, var(--accent) 0 3px, var(--accent-dark) 3px 6px); transition:width .5s ease; }
   .xp-bar-level{ position:absolute; left:0; top:0; bottom:0; display:flex; align-items:center; padding:0 7px; font-family:'VT323',monospace; font-size:14px; color:var(--text); background:var(--accent-dark); border-right:2px solid var(--outline); white-space:nowrap; z-index:1; }
   .xp-bar-label{ position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); }
+  .title-badge{ position:absolute; left:64px; top:50%; transform:translateY(-50%); font-size:11px; color:#F4C542; text-transform:uppercase; letter-spacing:.3px; cursor:pointer; display:none; z-index:1; }
+  .title-badge.has-title{ display:block; }
   .spore-icon{ display:inline-flex; align-items:center; }
 
   /* ---------- hint banner ---------- */
@@ -812,7 +814,7 @@
   <div class="intro-overlay" id="introOverlay"><div class="intro-bg" id="introBg"></div><div class="intro-card" id="introCard"></div></div>
 
   <header>
-    <div class="xp-bar-wrap" onclick="openLevelTree()"><div class="xp-bar-fill" id="xpBarFill"></div><span class="xp-bar-level" id="farmLevel">LV 1</span><span class="xp-bar-label" id="xpBarLabel"></span></div>
+    <div class="xp-bar-wrap" onclick="openLevelTree()"><div class="xp-bar-fill" id="xpBarFill"></div><span class="xp-bar-level" id="farmLevel">LV 1</span><span class="title-badge" id="titleBadge" onclick="event.stopPropagation();openTitlesPicker()"></span><span class="xp-bar-label" id="xpBarLabel"></span></div>
     <div class="header-inner">
       <div class="spore-counter"><span class="spore-icon" id="sporeIcon"></span><span id="sporeCount">0</span></div>
       <div class="gem-counter"><span class="gem-icon" id="gemIcon"></span><span id="gemCount">0</span></div>
@@ -993,6 +995,9 @@
       <div class="ach-category" style="margin-top:18px;">Companions</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Tap the same wildlife critter 5 times to befriend it for a permanent passive bonus.</div>
       <div id="companionsList" class="bestiary-grid"></div>
+      <div class="ach-category" style="margin-top:18px;">Titles</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Earned automatically from select achievements. Tap one to display it next to your level.</div>
+      <div id="titlesList" class="bestiary-grid"></div>
       <div class="ach-category" style="margin-top:18px;">Trophies</div>
       <div id="achList"></div>
       <div class="ach-category" style="margin-top:18px;">Sound</div>
@@ -1459,6 +1464,16 @@ const ACHIEVEMENTS = [
   { id:'pest_bestiary',   cat:'Pests',       name:'Pest Bestiary',        desc:'Identify every pest species',           reward:{spores:120, xp:60} },
 ];
 const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+const TITLES = {
+  first_mutation:     'Mutation Whisperer',
+  double_mutation:    'Double Trouble',
+  herbarium_25:       'Master Botanist',
+  research_legendary: 'Legendary Breakthrough',
+  unlock_all_frost:   'Frostbound Botanist',
+  prestige_5:         'Old Growth',
+  pest_bestiary:      'Pest Whisperer',
+  all_decor:          'Interior Designer'
+};
 
 /* ---- Achievement pixel icons ---- */
 const ACH_PIX = {
@@ -1579,10 +1594,14 @@ function checkAchievements(){
         if(ach.reward.xp) grantXp(ach.reward.xp);
         showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderAchIcon(id, true)+'<span>Achievement: '+ach.name+(ach.reward.spores ? '  +'+ach.reward.spores+'\u25C6' : '')+'</span></span>');
       }
+      if(TITLES[id] && state.titles){
+        if(!state.titles.unlocked.includes(id)) state.titles.unlocked.push(id);
+        if(!state.titles.equipped) state.titles.equipped = id;
+      }
       anyNew = true;
     }
   }
-  if(anyNew) scheduleSave();
+  if(anyNew){ scheduleSave(); updateHeader(); }
 }
 function getRarestFind(){
   if(!state.herbarium.length) return null;
@@ -1669,8 +1688,40 @@ function renderCompanions(){
       + '</div>';
   }).join('');
 }
+function equipTitle(id){
+  if(id!==null && !state.titles.unlocked.includes(id)) return;
+  state.titles.equipped = id;
+  saveState();
+  renderTitles();
+  updateHeader();
+}
+function openTitlesPicker(){
+  showScreen('achievements');
+  const el = document.getElementById('titlesList');
+  if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function renderTitles(){
+  const el = document.getElementById('titlesList');
+  if(!el) return;
+  const unlocked = (state.titles && state.titles.unlocked) || [];
+  const equipped = state.titles && state.titles.equipped;
+  if(!unlocked.length){
+    el.innerHTML = '<div class="empty-state">No titles earned yet — keep playing to unlock flavorful achievements.</div>';
+    return;
+  }
+  el.innerHTML = unlocked.map(id=>{
+    const isEquipped = equipped===id;
+    const onclickArg = isEquipped ? 'null' : ('\''+id+'\'');
+    return '<div class="bestiary-card'+(isEquipped?' is-equipped':'')+'" style="cursor:pointer;" onclick="equipTitle('+onclickArg+')">'
+      + '<div class="bestiary-icon-wrap">'+renderAchIcon(id, true)+'</div>'
+      + '<div class="bestiary-name">'+TITLES[id]+'</div>'
+      + '<div class="bestiary-count">'+(isEquipped?'Equipped':'Tap to equip')+'</div>'
+      + '</div>';
+  }).join('');
+}
 function renderAchievements(){
   renderCompanions();
+  renderTitles();
   const list = document.getElementById('achList');
   if(!list) return;
   const unlocked = state.achievements||{};
@@ -5112,6 +5163,7 @@ function defaultState(){
     gemTrickle: defaultGemTrickleState(),
     foreman: defaultForemanState(),
     sporeBank: defaultSporeBankState(),
+    titles:{ unlocked:[], equipped:null },
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -5204,6 +5256,12 @@ function normalizeState(parsed){
           const eq = merged.companions.skins[k];
           merged.companions.skins[k] = (eq==='default' || merged.companions.ownedSkins[k].includes(eq)) ? eq : 'default';
         });
+      }
+      if(!merged.titles || typeof merged.titles!=='object' || !Array.isArray(merged.titles.unlocked)){
+        merged.titles = { unlocked:[], equipped:null };
+      } else {
+        merged.titles.unlocked = merged.titles.unlocked.filter(id => !!TITLES[id]);
+        if(merged.titles.equipped && !merged.titles.unlocked.includes(merged.titles.equipped)) merged.titles.equipped = null;
       }
       if(!merged.pollinator || typeof merged.pollinator!=='object' || typeof merged.pollinator.lastPlayedAt!=='number'){
         merged.pollinator = { lastPlayedAt:0 };
@@ -6640,6 +6698,12 @@ function updateHeader(){
   if(barEl) barEl.style.width = prog.pct+'%';
   const labelEl = document.getElementById('xpBarLabel');
   if(labelEl) labelEl.textContent = prog.level>=MAX_LEVEL ? 'MAX' : prog.current+' / '+prog.needed+' XP';
+  const titleEl = document.getElementById('titleBadge');
+  if(titleEl){
+    const equipped = state.titles && state.titles.equipped;
+    titleEl.textContent = equipped ? TITLES[equipped] : '';
+    titleEl.classList.toggle('has-title', !!equipped);
+  }
   updateLabNavLock();
   updateDesertToggleLock();
   updateFrostToggleLock();

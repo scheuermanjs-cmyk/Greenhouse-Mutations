@@ -439,13 +439,46 @@
   .toggle-switch.is-on .toggle-knob{ left:24px; background:var(--accent); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
-  .pollinator-hud{ display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); margin-bottom:10px; font-variant-numeric:tabular-nums; }
-  .pollinator-arena{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .pollinator-slot{ aspect-ratio:1/1; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; }
-  .pollinator-slot.is-blooming{ background:var(--panel-2); animation:pollinatorPulse .5s ease infinite alternate; }
-  @keyframes pollinatorPulse{ from{box-shadow:3px 3px 0 rgba(0,0,0,.4);} to{box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 10px 2px rgba(232,111,168,.6);} }
+  .pollinator-hud{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .pollinator-hud-stat{ display:flex; align-items:center; gap:6px; font-size:14px; font-variant-numeric:tabular-nums; }
+  .pollinator-combo{ font-size:12px; color:var(--accent); font-weight:bold; opacity:0; transform:scale(.85); transition:opacity .15s, transform .15s; text-transform:uppercase; letter-spacing:.4px; }
+  .pollinator-combo.is-active{ opacity:1; transform:scale(1); }
+  .pollinator-timerbar{ height:8px; background:var(--panel); border:2px solid var(--outline); margin-bottom:12px; overflow:hidden; }
+  .pollinator-timerbar-fill{ height:100%; background:var(--accent); transition:width .1s linear, background .3s; }
+  .pollinator-timerbar-fill.is-low{ background:var(--danger); }
+  .pollinator-arena{
+    position:relative; height:230px; border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); overflow:hidden;
+    background:linear-gradient(to bottom, #2B1F45 0%, #6B4A6E 45%, #C9577A 72%, #FFB072 100%);
+  }
+  .pollinator-arena::after{
+    content:''; position:absolute; left:-4px; right:-4px; bottom:-2px; height:34px; background:var(--hill);
+    clip-path:polygon(0% 65%, 10% 45%, 22% 58%, 35% 32%, 50% 52%, 65% 28%, 80% 48%, 92% 22%, 100% 42%, 100% 100%, 0% 100%);
+  }
+  .pollinator-slot{ position:absolute; width:44px; height:44px; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:1; }
+  .pollinator-mound{ width:26px; height:12px; background:rgba(0,0,0,.28); border-radius:50%; }
+  .pollinator-slot.is-blooming .pollinator-mound{ display:none; }
+  .pollinator-slot.is-blooming{ animation:pollinatorBloomIn .18s ease both; }
+  .pollinator-slot.is-blooming::after{
+    content:''; position:absolute; inset:-6px; border:2px solid rgba(255,255,255,.75); border-radius:50%;
+    animation:pollinatorWiltRing linear forwards; animation-duration:var(--bloom-ms, 1000ms);
+  }
+  .pollinator-slot.is-hit{ animation:pollinatorHitPop .26s ease both; }
+  .pollinator-slot.is-missed{ animation:pollinatorMissShake .26s ease both; }
+  @keyframes pollinatorBloomIn{ from{ transform:translate(-50%,-50%) scale(.3); opacity:0; } to{ transform:translate(-50%,-50%) scale(1); opacity:1; } }
+  @keyframes pollinatorHitPop{ 0%{ transform:translate(-50%,-50%) scale(1); } 50%{ transform:translate(-50%,-50%) scale(1.5); opacity:1; } 100%{ transform:translate(-50%,-50%) scale(.2); opacity:0; } }
+  @keyframes pollinatorMissShake{ 0%,100%{ transform:translate(-50%,-50%) rotate(0deg); opacity:1; } 25%{ transform:translate(-50%,-50%) rotate(-8deg); } 75%{ transform:translate(-50%,-50%) rotate(8deg); } 100%{ transform:translate(-50%,-50%) scale(.6); opacity:0; } }
+  @keyframes pollinatorWiltRing{ from{ opacity:.9; transform:scale(.7); } to{ opacity:0; transform:scale(1.6); } }
+  .pollinator-float{ position:absolute; transform:translate(-50%,-50%); color:var(--accent); font-size:14px; font-weight:bold; pointer-events:none; animation:pollinatorFloatUp .7s ease-out forwards; z-index:2; }
+  @keyframes pollinatorFloatUp{ from{ opacity:1; transform:translate(-50%,-50%); } to{ opacity:0; transform:translate(-50%,-140%); } }
   .pix-flower{ display:grid; image-rendering:pixelated; }
   .pix-flower > div{ width:100%; height:100%; }
+  .pollinator-medal{ width:64px; height:64px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-size:26px; border:4px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); color:#fff; text-shadow:1px 1px 0 rgba(0,0,0,.4); }
+  .pollinator-medal.tier-none{ background:var(--panel-2); color:var(--text-muted); font-size:32px; }
+  .pollinator-medal.tier-bronze{ background:radial-gradient(circle at 35% 30%, #E8B382, #A85D2E); }
+  .pollinator-medal.tier-silver{ background:radial-gradient(circle at 35% 30%, #F0F0F0, #9AA0A6); }
+  .pollinator-medal.tier-gold{ background:radial-gradient(circle at 35% 30%, #FFE9A8, #D9A441); }
+  .pollinator-medal.tier-perfect{ background:radial-gradient(circle at 35% 30%, #FFD1F0, #C77DFF); box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 16px 4px rgba(199,125,255,.6); }
+  .pollinator-buff-banner{ margin-top:10px; background:var(--panel-2); border:3px solid #F4C542; color:#F4C542; padding:8px 10px; font-size:13px; text-align:center; box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .apex-slots{ display:flex; gap:10px; justify-content:center; }
   .apex-slot{ flex:1; aspect-ratio:1/1; max-width:110px; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; padding:6px; text-align:center; }
   .apex-slot-filled{ background:var(--panel-2); cursor:default; }
@@ -584,6 +617,8 @@
   .storm-badge{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:3px solid var(--violet); color:var(--violet); font-size:12px; text-transform:uppercase; letter-spacing:.3px; padding:6px 10px; margin:0 0 8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); animation:stormBadgePulse 1.6s ease-in-out infinite; }
   @keyframes stormBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(199,125,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(199,125,255,.6); } }
   .storm-badge.pest-swarm-badge{ border-color:var(--danger); color:var(--danger); animation-name:pestSwarmBadgePulse; }
+  .storm-badge.grow-buff-badge{ border-color:#F4C542; color:#F4C542; animation-name:pestSwarmBadgePulse; }
+  .storm-badge.spore-buff-badge{ border-color:var(--accent); color:var(--accent); animation-name:pestSwarmBadgePulse; }
   @keyframes pestSwarmBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(255,92,92,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(255,92,92,.6); } }
 
 
@@ -802,6 +837,8 @@
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;"><span id="stormBadgeIcon"></span> Mutation Storm — mutation odds up</div>
       <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;"><span id="pestSwarmBadgeIcon"></span> Pest Swarm — infestations more likely</div>
+      <div class="storm-badge grow-buff-badge" id="growBuffBadge" style="display:none;"><span id="growBuffIcon"></span> 2x Growth — <span id="growBuffTimer">5:00</span></div>
+      <div class="storm-badge spore-buff-badge" id="sporeBuffBadge" style="display:none;"><span id="sporeBuffIcon"></span> 2x Spores — <span id="sporeBuffTimer">5:00</span></div>
       <div class="plot-grid" id="plotGrid"></div>
       <div class="desert-wing-panel" id="desertWingPanel" style="display:none;">
         <div class="plot-grid" id="plotGridDesert"></div>
@@ -3383,15 +3420,42 @@ function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNi
 function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? 0.8 : 1; }
 function isNightHour(){ const h = getGameHour(); return h>=20 || h<5; }
 
+/* ---------- timed buffs ---------- */
+function defaultBuffState(){ return { growSpeedUntil:0, sporeMultUntil:0 }; }
+function growSpeedBuffActive(){ return Date.now() < ((state.buffs&&state.buffs.growSpeedUntil)||0); }
+function sporeBuffActive(){ return Date.now() < ((state.buffs&&state.buffs.sporeMultUntil)||0); }
+function grantGrowSpeedBuff(ms){ state.buffs.growSpeedUntil = Math.max(state.buffs.growSpeedUntil||0, Date.now()) + ms; }
+function grantSporeBuff(ms){ state.buffs.sporeMultUntil = Math.max(state.buffs.sporeMultUntil||0, Date.now()) + ms; }
+function updateBuffBadges(){
+  const g = document.getElementById('growBuffBadge');
+  if(g){
+    const active = growSpeedBuffActive();
+    g.style.display = active ? '' : 'none';
+    if(active){ const t = document.getElementById('growBuffTimer'); if(t) t.textContent = fmtTime(state.buffs.growSpeedUntil - Date.now()); }
+  }
+  const s = document.getElementById('sporeBuffBadge');
+  if(s){
+    const active = sporeBuffActive();
+    s.style.display = active ? '' : 'none';
+    if(active){ const t = document.getElementById('sporeBuffTimer'); if(t) t.textContent = fmtTime(state.buffs.sporeMultUntil - Date.now()); }
+  }
+}
+
 /* ---------- pollinator mini-game ---------- */
 const POLLINATOR_COOLDOWN_MS = 10*60*1000;
-const POLLINATOR_ROUND_MS = 12000;
-const POLLINATOR_SLOTS = 6;
-const POLLINATOR_BLOOM_MS_START = 1300;
-const POLLINATOR_BLOOM_MS_MIN = 700;
+const POLLINATOR_ROUND_MS = 14000;
+const POLLINATOR_SLOTS = 7;
+const POLLINATOR_BLOOM_MS_START = 1150;
+const POLLINATOR_BLOOM_MS_MIN = 500;
+const POLLINATOR_BUFF_MS = 5*60*1000;
+const POLLINATOR_POSITIONS = [
+  {left:'12%', top:'60%'}, {left:'27%', top:'25%'}, {left:'46%', top:'70%'},
+  {left:'62%', top:'20%'}, {left:'82%', top:'55%'}, {left:'38%', top:'45%'},
+  {left:'70%', top:'80%'}
+];
 const POLLINATOR_FLOWER = { rows:['.r.r.','rryrr','.ryr.','..g..'], colors:{ r:'#E86FA8', y:'#F4E04D', g:'#5C8A4A' } };
 function renderPollinatorFlower(size){
-  const cell = size==='lg' ? 7 : 5;
+  const cell = size==='lg' ? 7 : 6;
   let cellsHtml = '';
   for(const row of POLLINATOR_FLOWER.rows){
     for(const ch of row){
@@ -3416,10 +3480,24 @@ function updatePollinateBtn(){
   btn.className = 'btn btn-small'+(ready?' btn-accent':'');
   btn.textContent = pollinatorButtonLabel();
 }
+function pollinatorTier(hits){
+  if(hits<=0) return 'none';
+  if(hits<5) return 'bronze';
+  if(hits<10) return 'silver';
+  if(hits<16) return 'gold';
+  return 'perfect';
+}
+const POLLINATOR_TIER_INFO = {
+  none:    { label:'No Luck',  medal:'·', cls:'tier-none' },
+  bronze:  { label:'Bronze',   medal:'★', cls:'tier-bronze' },
+  silver:  { label:'Silver',   medal:'★', cls:'tier-silver' },
+  gold:    { label:'Gold',     medal:'★', cls:'tier-gold' },
+  perfect: { label:'Perfect!', medal:'★', cls:'tier-perfect' }
+};
 let pollinatorRound = null;
 function openPollinatorGame(){
   if(!pollinatorReady()) return;
-  pollinatorRound = { hits:0, misses:0, combo:0, bloomState:new Array(POLLINATOR_SLOTS).fill(false), slotTimers:new Array(POLLINATOR_SLOTS).fill(null), endAt: Date.now()+POLLINATOR_ROUND_MS };
+  pollinatorRound = { hits:0, misses:0, combo:0, bestCombo:0, bloomState:new Array(POLLINATOR_SLOTS).fill(false), slotTimers:new Array(POLLINATOR_SLOTS).fill(null), endAt: Date.now()+POLLINATOR_ROUND_MS };
   renderPollinatorArena();
   document.getElementById('pollinatorOverlay').classList.add('open');
   schedulePollinatorSpawn();
@@ -3431,18 +3509,24 @@ function renderPollinatorArena(){
   if(!card) return;
   let slotsHtml = '';
   for(let i=0;i<POLLINATOR_SLOTS;i++){
-    slotsHtml += '<div class="pollinator-slot" id="pollinatorSlot'+i+'" onclick="tapPollinatorSlot('+i+')"></div>';
+    const pos = POLLINATOR_POSITIONS[i];
+    slotsHtml += '<div class="pollinator-slot" id="pollinatorSlot'+i+'" style="left:'+pos.left+';top:'+pos.top+';" onclick="tapPollinatorSlot('+i+')"><div class="pollinator-mound"></div></div>';
   }
   card.innerHTML = '<div class="welcome-hero"><h1>Pollinate the Garden</h1><p>Tap each flower the moment it blooms.</p></div>'
-    + '<div class="pollinator-hud"><span id="pollinatorScore">0 hits</span><span id="pollinatorTimeLeft">'+(POLLINATOR_ROUND_MS/1000).toFixed(1)+'s</span></div>'
-    + '<div class="pollinator-arena">'+slotsHtml+'</div>'
+    + '<div class="pollinator-hud">'
+    +   '<div class="pollinator-hud-stat">'+renderWildlife('sm','bee')+'<span id="pollinatorScore">0</span></div>'
+    +   '<div class="pollinator-combo" id="pollinatorCombo">Combo x0</div>'
+    +   '<div class="pollinator-hud-stat" id="pollinatorTimeLeft">'+(POLLINATOR_ROUND_MS/1000).toFixed(1)+'s</div>'
+    + '</div>'
+    + '<div class="pollinator-timerbar"><div class="pollinator-timerbar-fill" id="pollinatorTimerFill" style="width:100%;"></div></div>'
+    + '<div class="pollinator-arena" id="pollinatorArena">'+slotsHtml+'</div>'
     + '<button class="btn btn-block" style="margin-top:16px;" onclick="closePollinatorGame()">Skip</button>';
 }
 function schedulePollinatorSpawn(){
   if(!pollinatorRound) return;
   const remaining = pollinatorRound.endAt - Date.now();
-  if(remaining < 400) return;
-  const delay = 300 + Math.random()*400;
+  if(remaining < 350) return;
+  const delay = 250 + Math.random()*350;
   setTimeout(()=>{
     if(!pollinatorRound) return;
     if(Date.now() >= pollinatorRound.endAt) return;
@@ -3459,23 +3543,38 @@ function bloomSlot(i){
   pollinatorRound.bloomState[i] = true;
   const el = document.getElementById('pollinatorSlot'+i);
   if(el){
+    const windowMs = Math.max(POLLINATOR_BLOOM_MS_MIN, POLLINATOR_BLOOM_MS_START - pollinatorRound.combo*25);
+    el.style.setProperty('--bloom-ms', windowMs+'ms');
     el.innerHTML = renderPollinatorFlower('sm');
+    el.classList.remove('is-hit','is-missed');
     el.classList.add('is-blooming');
+    pollinatorRound.slotTimers[i] = setTimeout(()=>{ missSlot(i); }, windowMs);
   }
-  const windowMs = Math.max(POLLINATOR_BLOOM_MS_MIN, POLLINATOR_BLOOM_MS_START - pollinatorRound.combo*30);
-  pollinatorRound.slotTimers[i] = setTimeout(()=>{ missSlot(i); }, windowMs);
 }
-function clearSlotVisual(i){
-  const el = document.getElementById('pollinatorSlot'+i);
-  if(el){ el.innerHTML=''; el.classList.remove('is-blooming'); }
+function spawnFloatingScore(anchorEl, text){
+  const arena = document.getElementById('pollinatorArena');
+  if(!arena || !anchorEl) return;
+  const span = document.createElement('div');
+  span.className = 'pollinator-float';
+  span.textContent = text;
+  span.style.left = anchorEl.style.left;
+  span.style.top = anchorEl.style.top;
+  arena.appendChild(span);
+  setTimeout(()=>{ span.remove(); }, 700);
 }
 function missSlot(i){
   if(!pollinatorRound || !pollinatorRound.bloomState[i]) return;
   pollinatorRound.bloomState[i] = false;
   pollinatorRound.combo = 0;
   pollinatorRound.misses++;
-  clearSlotVisual(i);
   sfxFlowerMiss();
+  const el = document.getElementById('pollinatorSlot'+i);
+  if(el){
+    el.classList.remove('is-blooming');
+    el.classList.add('is-missed');
+    setTimeout(()=>{ if(el){ el.innerHTML=''; el.classList.remove('is-missed'); } }, 260);
+  }
+  updatePollinatorHud();
 }
 function tapPollinatorSlot(i){
   if(!pollinatorRound || !pollinatorRound.bloomState[i]) return;
@@ -3483,23 +3582,51 @@ function tapPollinatorSlot(i){
   pollinatorRound.bloomState[i] = false;
   pollinatorRound.hits++;
   pollinatorRound.combo++;
-  clearSlotVisual(i);
+  pollinatorRound.bestCombo = Math.max(pollinatorRound.bestCombo, pollinatorRound.combo);
   sfxFlowerHit();
+  const el = document.getElementById('pollinatorSlot'+i);
+  if(el){
+    el.classList.remove('is-blooming');
+    el.classList.add('is-hit');
+    spawnFloatingScore(el, '+1');
+    setTimeout(()=>{ if(el){ el.innerHTML=''; el.classList.remove('is-hit'); } }, 260);
+  }
+  updatePollinatorHud();
+}
+function updatePollinatorHud(){
+  if(!pollinatorRound) return;
   const scoreEl = document.getElementById('pollinatorScore');
-  if(scoreEl) scoreEl.textContent = pollinatorRound.hits+' hits';
+  if(scoreEl) scoreEl.textContent = pollinatorRound.hits;
+  const comboEl = document.getElementById('pollinatorCombo');
+  if(comboEl){
+    if(pollinatorRound.combo>=3){
+      comboEl.textContent = 'Combo x'+pollinatorRound.combo+'!';
+      comboEl.classList.add('is-active');
+    } else {
+      comboEl.classList.remove('is-active');
+    }
+  }
 }
 function updatePollinatorTimerDisplay(){
   if(!pollinatorRound) return;
   const remaining = Math.max(0, pollinatorRound.endAt - Date.now());
   const el = document.getElementById('pollinatorTimeLeft');
   if(el) el.textContent = (remaining/1000).toFixed(1)+'s';
+  const fill = document.getElementById('pollinatorTimerFill');
+  if(fill){
+    const pct = clamp((remaining/POLLINATOR_ROUND_MS)*100, 0, 100);
+    fill.style.width = pct+'%';
+    fill.classList.toggle('is-low', pct<25);
+  }
 }
 function pollinatorReward(hits){
-  const spores = Math.round(hits * 4 * (0.9+Math.random()*0.3));
-  let seeds = 0, gems = 0;
-  if(hits>=3) seeds = 1;
-  if(hits>=6){ seeds = 2; if(Math.random()<0.25) gems = 1; }
-  return { spores, seeds, gems };
+  const tier = pollinatorTier(hits);
+  const spores = Math.round(hits * 5 * (0.9+Math.random()*0.3));
+  let seeds = 0, gems = 0, growBuff = false, sporeBuff = false;
+  if(tier==='silver'){ seeds = 1; sporeBuff = true; }
+  else if(tier==='gold'){ seeds = 2; growBuff = true; if(Math.random()<0.3) gems = 1; }
+  else if(tier==='perfect'){ seeds = 3; growBuff = true; sporeBuff = true; gems = 2; }
+  return { tier, spores, seeds, gems, growBuff, sporeBuff };
 }
 function grantPlainSeeds(count){
   const level = getLevelFromXp(state.xp||0);
@@ -3516,23 +3643,40 @@ function endPollinatorRound(){
   clearInterval(pollinatorRound.tickTimer);
   pollinatorRound.slotTimers.forEach(t=>clearTimeout(t));
   const hits = pollinatorRound.hits;
+  const bestCombo = pollinatorRound.bestCombo;
   pollinatorRound = null;
   const reward = pollinatorReward(hits);
   addSpores(reward.spores);
   if(reward.seeds) grantPlainSeeds(reward.seeds);
   if(reward.gems) addGems(reward.gems);
+  if(reward.growBuff) grantGrowSpeedBuff(POLLINATOR_BUFF_MS);
+  if(reward.sporeBuff) grantSporeBuff(POLLINATOR_BUFF_MS);
   state.pollinator.lastPlayedAt = Date.now();
   saveState();
   updateHeader();
   updatePollinateBtn();
-  renderPollinatorResult(hits, reward);
+  updateBuffBadges();
+  if(hits>=5) sfxAchievement();
+  renderPollinatorResult(hits, bestCombo, reward);
 }
-function renderPollinatorResult(hits, reward){
+function renderPollinatorResult(hits, bestCombo, reward){
   const card = document.getElementById('pollinatorCard');
   if(!card) return;
-  const tier = hits>=6 ? 'Gold' : hits>=3 ? 'Silver' : hits>0 ? 'Bronze' : 'No luck this time';
-  card.innerHTML = '<div class="welcome-hero"><h1>'+tier+'</h1><p>'+hits+' flowers pollinated</p></div>'
+  const info = POLLINATOR_TIER_INFO[reward.tier];
+  let buffHtml = '';
+  if(reward.sporeBuff || reward.growBuff){
+    const parts = [];
+    if(reward.sporeBuff) parts.push('2x Spores');
+    if(reward.growBuff) parts.push('2x Growth');
+    buffHtml = '<div class="pollinator-buff-banner"><span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('bolt', true, 2)+'<span>'+parts.join(' + ')+' for 5 minutes!</span></span></div>';
+  }
+  card.innerHTML = '<div class="welcome-hero">'
+    + '<div class="pollinator-medal '+info.cls+'">'+info.medal+'</div>'
+    + '<h1>'+info.label+'</h1>'
+    + '<p>'+hits+' flowers pollinated'+(bestCombo>=3?' · best combo x'+bestCombo:'')+'</p>'
+    + '</div>'
     + '<div class="reveal-rewards">+'+reward.spores+' ◆'+(reward.seeds?' &nbsp; +'+reward.seeds+' seed'+(reward.seeds>1?'s':''):'')+(reward.gems?' &nbsp; +'+reward.gems+' '+renderGemIcon(2):'')+'</div>'
+    + buffHtml
     + '<button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="closePollinatorGame()">Nice!</button>';
 }
 function closePollinatorGame(){
@@ -4261,6 +4405,7 @@ function defaultState(){
     companions: defaultCompanionState(),
     pollinator:{ lastPlayedAt:0 },
     apex: defaultApexState(),
+    buffs: defaultBuffState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -4335,6 +4480,7 @@ function normalizeState(parsed){
         APEX_WINGS.forEach(w=>{ if(merged.apex.donated[w] && !SPECIES[merged.apex.donated[w].species]) merged.apex.donated[w] = null; });
         if(typeof merged.apex.unlocked!=='boolean') merged.apex.unlocked = false;
       }
+      merged.buffs = Object.assign(defaultBuffState(), merged.buffs||{});
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
       }
@@ -5253,7 +5399,8 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   const precisionBonus = Math.min(precisionLight, precisionWater) * (getLevelBonus('wellTended') || 0.25);
   const speciesKey = plot.genome.species;
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
-  const companionSporeBonus = 1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus();
+  const buffSporeMult = sporeBuffActive() ? 2 : 1;
+  const companionSporeBonus = (1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus()) * buffSporeMult;
   let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * companionSporeBonus * randRange(0.85,1.15));
   if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
@@ -6517,6 +6664,12 @@ function updateDriftSprites(){
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
+  if(growSpeedBuffActive()){
+    const pull = p=>{ if(p.status==='growing') p.plantedAt -= 1000; };
+    state.plots.forEach(pull);
+    state.desertPlots.forEach(pull);
+    state.frostPlots.forEach(pull);
+  }
   state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'verdant'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   state.desertPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'desert'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   state.frostPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'frost'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
@@ -6525,7 +6678,7 @@ function tick(){
   updateAllFrostTiles();
   updateHeader();
   applyWindowPhase();
-  if(document.getElementById('screen-greenhouse').classList.contains('active')) updatePollinateBtn();
+  if(document.getElementById('screen-greenhouse').classList.contains('active')){ updatePollinateBtn(); updateBuffBadges(); }
   autoPestTick();
   autoHarvestTick();
   autoPlantTick();
@@ -6654,6 +6807,7 @@ async function init(){
   buildDesertPlotTiles();
   buildFrostPlotTiles();
   updatePollinateBtn();
+  updateBuffBadges();
   runAwayCatchup();
   if(!state.everPlanted) document.body.classList.add('show-hint');
   if(!state.tutorialSeen) openIntro();

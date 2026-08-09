@@ -858,6 +858,9 @@
       <div id="prestigeSummary"></div>
       <div id="prestigeTreeList"></div>
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
+      <div class="ach-category" style="margin-top:18px;">Companions</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Tap the same wildlife critter 5 times to befriend it for a permanent passive bonus.</div>
+      <div id="companionsList" class="bestiary-grid"></div>
       <div class="ach-category" style="margin-top:18px;">Trophies</div>
       <div id="achList"></div>
       <div class="ach-category" style="margin-top:18px;">Sound</div>
@@ -1477,7 +1480,31 @@ function renderLifetimeStats(){
     + statRow('Pot Finishes Owned', state.decor.ownedPots.length+' / '+Object.keys(POT_THEMES).length)
     + statRow('Wallpapers Owned', state.decor.ownedWallpapers.length+' / '+Object.keys(WALLPAPER_THEMES).length);
 }
+function renderCompanions(){
+  const el = document.getElementById('companionsList');
+  if(!el) return;
+  const owned = (state.companions && state.companions.owned) || [];
+  const counts = (state.companions && state.companions.tapCounts) || {};
+  el.innerHTML = Object.keys(WILDLIFE_TYPES).map(key=>{
+    const cfg = WILDLIFE_TYPES[key];
+    const isOwned = owned.includes(key);
+    if(!isOwned){
+      const progress = Math.min(counts[key]||0, COMPANION_UNLOCK_TAPS);
+      return '<div class="bestiary-card">'
+        + '<div class="bestiary-icon-wrap is-mystery">?</div>'
+        + '<div class="bestiary-name is-mystery">???</div>'
+        + '<div class="bestiary-count">'+progress+' / '+COMPANION_UNLOCK_TAPS+' tapped</div>'
+        + '</div>';
+    }
+    return '<div class="bestiary-card" title="'+COMPANION_INFO[key].desc+'">'
+      + '<div class="bestiary-icon-wrap">'+renderWildlife('sm', key)+'</div>'
+      + '<div class="bestiary-name">'+cfg.name+'</div>'
+      + '<div class="bestiary-count">'+COMPANION_INFO[key].desc+'</div>'
+      + '</div>';
+  }).join('');
+}
 function renderAchievements(){
+  renderCompanions();
   const list = document.getElementById('achList');
   if(!list) return;
   const unlocked = state.achievements||{};
@@ -3315,6 +3342,24 @@ function renderWildlife(size, type){
   }
   return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
 }
+const COMPANION_UNLOCK_TAPS = 5;
+const COMPANION_INFO = {
+  butterfly: { desc:'+10% chance of a bonus seed on every harvest' },
+  bee:       { desc:'+4% spores from every harvest' },
+  ladybug:   { desc:'-20% chance of pest infestations' },
+  firefly:   { desc:'+15% spores from harvests made at night' },
+  dragonfly: { desc:'-20% wilt risk in the Frostbound wing' }
+};
+function defaultCompanionState(){
+  return { tapCounts:{ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, owned:[] };
+}
+function ownsCompanion(type){ return state.companions && state.companions.owned.includes(type); }
+function getCompanionYieldBonus(){ return ownsCompanion('bee') ? 0.04 : 0; }
+function getCompanionSeedBonusChance(){ return ownsCompanion('butterfly') ? 0.10 : 0; }
+function getCompanionPestFactor(){ return ownsCompanion('ladybug') ? 0.8 : 1; }
+function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNightHour()) ? 0.15 : 0; }
+function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? 0.8 : 1; }
+function isNightHour(){ const h = getGameHour(); return h>=20 || h<5; }
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -3817,9 +3862,22 @@ function onWildlifeTap(typeKey){
     gemText = ' +1 '+renderGemIcon();
   }
   state.achStats.crittersTapped = (state.achStats.crittersTapped||0)+1;
+  let unlockedCompanion = false;
+  if(!ownsCompanion(typeKey)){
+    state.companions.tapCounts[typeKey] = (state.companions.tapCounts[typeKey]||0)+1;
+    if(state.companions.tapCounts[typeKey] >= COMPANION_UNLOCK_TAPS){
+      state.companions.owned.push(typeKey);
+      unlockedCompanion = true;
+    }
+  }
   saveState();
   updateHeader();
-  showToastHtml('+'+sporeAmt+' '+renderSporeIcon()+gemText);
+  renderCompanions();
+  if(unlockedCompanion){
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderWildlife('sm', typeKey)+'<span>New companion: '+cfg.name+'! '+COMPANION_INFO[typeKey].desc+'</span></span>');
+  } else {
+    showToastHtml('+'+sporeAmt+' '+renderSporeIcon()+gemText);
+  }
 }
 function scheduleWildlifeSpawns(){
   if(wildlifeTimer) return;
@@ -3910,6 +3968,7 @@ function defaultState(){
     achStats:{ harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0, totalGemsEarned:0, totalSkillPointsEarned:0, crittersTapped:0 },
     prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
     decor: defaultDecorState(),
+    companions: defaultCompanionState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -3967,6 +4026,13 @@ function normalizeState(parsed){
         if(!merged.decor.ownedWallpapers.includes('cedar')) merged.decor.ownedWallpapers.unshift('cedar');
         if(!POT_THEMES[merged.decor.equippedPot]) merged.decor.equippedPot = 'terracotta';
         if(!WALLPAPER_THEMES[merged.decor.equippedWallpaper]) merged.decor.equippedWallpaper = 'cedar';
+      }
+      if(!merged.companions || typeof merged.companions!=='object'){
+        merged.companions = defaultCompanionState();
+      } else {
+        merged.companions.tapCounts = Object.assign({ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, merged.companions.tapCounts||{});
+        if(!Array.isArray(merged.companions.owned)) merged.companions.owned = [];
+        merged.companions.owned = merged.companions.owned.filter(k => !!WILDLIFE_TYPES[k]);
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -4456,7 +4522,7 @@ function rollMutation(plot, idx, wing='verdant'){
   }
   return { genome, mutated, crossInfo };
 }
-function applyDeathRisk(plot, nowMs){
+function applyDeathRisk(plot, nowMs, wing='verdant'){
   if(plot.status!=='growing') return;
   if(plot.genome && (plot.genome.rareTrait==='ironroot' || plot.genome.rareTrait2==='ironroot')) { plot.lastDeathCheck = nowMs; return; }
   const finishAt = plot.plantedAt + plot.growthDurationMs;
@@ -4472,7 +4538,8 @@ function applyDeathRisk(plot, nowMs){
     const resistLevel = (state.upgrades && state.upgrades.resist) || 0;
     const upgradeFactor = Math.max(0, 1 - resistLevel*(UPGRADES.resist.perLevel/100));
     const levelFactor = Math.max(0, 1 - getLevelBonus('wiltResist'));
-    const perSec = baseChancePerSec*(1-resist)*upgradeFactor*levelFactor;
+    const companionFactor = getCompanionFrostFactor(wing);
+    const perSec = baseChancePerSec*(1-resist)*upgradeFactor*levelFactor*companionFactor;
     const survival = Math.pow(1-perSec, elapsedSec);
     if(Math.random() > survival){ plot.status = 'wilted'; }
   }
@@ -4491,7 +4558,8 @@ function applyPestRisk(plot, nowMs){
   const ladybugLevel = (state.upgrades && state.upgrades.ladybugs) || 0;
   const ladybugFactor = Math.max(0, 1 - ladybugLevel*(UPGRADES.ladybugs.perLevel/100));
   const levelPestFactor = Math.max(0, 1 - getLevelBonus('pestResist'));
-  const noInfestProb = Math.pow(1-(basePerSec*ladybugFactor*levelPestFactor), elapsedSec);
+  const companionPestFactor = getCompanionPestFactor();
+  const noInfestProb = Math.pow(1-(basePerSec*ladybugFactor*levelPestFactor*companionPestFactor), elapsedSec);
   if(Math.random() > noInfestProb){ plot.pest = { startedAt: periodEnd, type: pickRandomPestType() }; }
 }
 function pestSeverity(plot){
@@ -4884,10 +4952,12 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   const precisionBonus = Math.min(precisionLight, precisionWater) * (getLevelBonus('wellTended') || 0.25);
   const speciesKey = plot.genome.species;
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
-  let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * randRange(0.85,1.15));
+  const companionSporeBonus = 1 + getCompanionYieldBonus() + getCompanionNightSporeBonus();
+  let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * companionSporeBonus * randRange(0.85,1.15));
   if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
-  const seedQty = 1 + (finalGenome.extraSeed||0);
+  let seedQty = 1 + (finalGenome.extraSeed||0);
+  if(Math.random() < getCompanionSeedBonusChance()) seedQty += 1;
   addToInventory(plot.genome.species, finalGenome, seedQty);
   const { isNew, name } = logHerbarium(plot.genome.species, finalGenome);
   bumpTaskProgress('harvest_any', 1);
@@ -5034,7 +5104,7 @@ function simulateOfflinePlot(idx, wing, awayStart, realNow, cappedEnd, hasHarves
     // offline stress instead of only taking effect after the wilt roll already used stale levels
     applySprinkler(plot, evalAt);
     applyGardenLight(plot, evalAt);
-    applyDeathRisk(plot, evalAt);
+    applyDeathRisk(plot, evalAt, wing);
     if(plot.status==='wilted') break;
     applyPestRisk(plot, evalAt);
     if(plot.pest && hasPest) squashPestOffline(plot, summary);
@@ -6145,9 +6215,9 @@ function updateDriftSprites(){
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
-  state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
-  state.desertPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
-  state.frostPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  state.plots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'verdant'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  state.desertPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'desert'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
+  state.frostPlots.forEach(p=>{ if(p.status==='growing'){ applyDeathRisk(p, now, 'frost'); applyPestRisk(p, now); applySprinkler(p, now); applyGardenLight(p, now); } });
   updateAllTiles();
   updateAllDesertTiles();
   updateAllFrostTiles();

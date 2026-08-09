@@ -560,8 +560,52 @@
   body.pot-aura-frostMist .pix-pot::after{ background:#CFE3FF; box-shadow:0 0 3px 1px rgba(207,227,255,.7); }
 
   /* ---------- herbarium frame cosmetics ---------- */
-  body.herb-frame-gilded .herb-card{ border-color:#D9A441; box-shadow:3px 3px 0 rgba(217,164,65,.5); }
-  body.herb-frame-botanical .herb-card{ border-color:#5FA35A; box-shadow:3px 3px 0 rgba(95,163,90,.5); }
+  body.herb-frame-gilded .herb-card{
+    border-width:4px;
+    border-image: linear-gradient(135deg, #3D2A08 0% 8%, #FFF6D2 8% 22%, #E8C555 22% 48%, #3D2A08 48% 58%, #FFF6D2 58% 74%, #E8C555 74% 100%) 4;
+    box-shadow:3px 3px 0 rgba(61,42,8,.55), 0 0 0 1px rgba(232,197,85,.6), 0 0 7px rgba(232,197,85,.3);
+  }
+  body.herb-frame-gilded .herb-card::before{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(115deg, transparent 35%, rgba(255,246,210,.55) 50%, transparent 65%);
+    background-size:260% 260%;
+    mix-blend-mode:overlay;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    body.herb-frame-gilded .herb-card::before{ animation:goldShimmerSweep 3.4s linear infinite; }
+    body.herb-frame-gilded .herb-card::after{ animation:potSparkleTwinkle 1.9s ease-in-out infinite; }
+  }
+  body.herb-frame-gilded .herb-card::after{
+    content:''; position:absolute; top:10%; right:9%; width:3px; height:3px; background:#FFF6D2;
+    box-shadow:0 0 4px 1px rgba(255,246,210,.9); opacity:0; pointer-events:none;
+  }
+  @keyframes goldShimmerSweep{ 0%{ background-position:180% 180%; } 100%{ background-position:-60% -60%; } }
+
+  body.herb-frame-botanical .herb-card{ border-color:#6B4A2E; box-shadow:3px 3px 0 rgba(95,163,90,.35); }
+  body.herb-frame-botanical .herb-card::before,
+  body.herb-frame-botanical .herb-card::after{
+    content:''; position:absolute; width:3px; height:3px; background:#5C8A4A; pointer-events:none;
+  }
+  body.herb-frame-botanical .herb-card::before{
+    top:6px; left:-4px;
+    box-shadow:
+      0 3px #5C8A4A, 3px 6px #5C8A4A, 3px 9px #5C8A4A,
+      0 12px #5C8A4A, 0 15px #5C8A4A,
+      3px 18px #5C8A4A, 3px 21px #5C8A4A,
+      0 24px #5C8A4A, 0 27px #5C8A4A,
+      6px 6px #8FD15C, 6px 18px #8FD15C,
+      6px 24px #E86FA8;
+  }
+  body.herb-frame-botanical .herb-card::after{
+    top:6px; right:-4px;
+    box-shadow:
+      0 3px #5C8A4A, -3px 6px #5C8A4A, -3px 9px #5C8A4A,
+      0 12px #5C8A4A, 0 15px #5C8A4A,
+      -3px 18px #5C8A4A, -3px 21px #5C8A4A,
+      0 24px #5C8A4A, 0 27px #5C8A4A,
+      -6px 6px #8FD15C, -6px 18px #8FD15C,
+      -6px 24px #E86FA8;
+  }
   body.herb-frame-celestial .herb-card{ border-color:#A8CFEA; box-shadow:3px 3px 0 rgba(168,207,234,.6); }
 
   /* ---------- task board ---------- */

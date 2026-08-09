@@ -486,6 +486,10 @@
   .blessed-tag{ color:#C77DFF; font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
   .rep-bar{ height:8px; background:var(--panel); border:2px solid var(--outline); margin-top:8px; overflow:hidden; }
   .rep-bar-fill{ height:100%; background:#F4C542; transition:width .3s; }
+  .pix-century{ display:grid; image-rendering:pixelated; flex-shrink:0; }
+  .pix-century > div{ width:100%; height:100%; }
+  .pix-foreman{ display:grid; image-rendering:pixelated; flex-shrink:0; }
+  .pix-foreman > div{ width:100%; height:100%; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
   .bestiary-icon-wrap.is-mystery{ font-family:'Press Start 2P'; font-size:15px; color:var(--text-muted); }
@@ -861,6 +865,7 @@
       <div class="frost-wing-panel" id="frostWingPanel" style="display:none;">
         <div class="plot-grid" id="plotGridFrost"></div>
       </div>
+      <div class="upg-card" id="centuryPlantCard" style="flex-direction:column;align-items:stretch;margin-top:14px;"></div>
     </section>
 
     <section class="screen" id="screen-tasks">
@@ -870,6 +875,7 @@
       </div>
       <div class="farmer-row" id="farmerRow"></div>
       <div class="upg-card" id="reputationCard" style="flex-direction:column;align-items:stretch;margin-bottom:14px;"></div>
+      <div class="upg-card" id="foremanCard" style="flex-direction:column;align-items:stretch;margin-bottom:14px;"></div>
       <div class="ledge"></div>
       <div class="screen-title-row">
         <div class="screen-title">Refreshes in <span id="taskRefreshTimer">--:--</span></div>
@@ -897,6 +903,9 @@
       <div class="ach-category" style="margin-top:18px;">Greenhouse Skylight</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Widen the skylight to coax extra vigor out of every harvest. Feed it spores forever — it never stops growing, and never resets, even after Prestige.</div>
       <div id="skylightCard"></div>
+      <div class="ach-category" style="margin-top:18px;">Spore Bank</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Deposit spores to earn slow compounding interest over real time — even while you're away, with no offline cap.</div>
+      <div class="upg-card" id="sporeBankCard" style="flex-direction:column;align-items:stretch;"></div>
       <div class="ach-category" style="margin-top:18px;">Gem Shop</div>
       <div id="gemShopList"></div>
       <div class="ach-category" style="margin-top:18px;">Pot &amp; Furniture Finish</div>
@@ -1303,6 +1312,14 @@ function doPrestige(){
   const keepOfflineCapLevel = state.offlineCapLevel;
   const keepIap = state.iap;
   const keepCloud = state.cloud;
+  const keepCompanions = state.companions;
+  const keepApex = state.apex;
+  const keepReputation = state.reputation;
+  const keepBlessedSpecies = state.blessedSpecies;
+  const keepPollinator = state.pollinator;
+  const keepCenturyPlant = state.centuryPlant;
+  const keepForeman = state.foreman;
+  const keepSporeBank = state.sporeBank;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1317,7 +1334,15 @@ function doPrestige(){
     gems: keepGems,
     offlineCapLevel: keepOfflineCapLevel,
     iap: keepIap,
-    cloud: keepCloud
+    cloud: keepCloud,
+    companions: keepCompanions,
+    apex: keepApex,
+    reputation: keepReputation,
+    blessedSpecies: keepBlessedSpecies,
+    pollinator: keepPollinator,
+    centuryPlant: keepCenturyPlant,
+    foreman: keepForeman,
+    sporeBank: keepSporeBank
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -1762,6 +1787,7 @@ function renderTasks(){
   ensureVisitorCurrent();
   renderFarmerRow();
   renderReputationCard();
+  renderForemanCard();
   pruneImpossibleTasks();
   updateTasksBadge();
   const tasks = getCurrentTasks();
@@ -1858,6 +1884,7 @@ function renderUpgrades(){
   renderMerchant();
   renderMonument();
   renderSkylight();
+  renderSporeBankCard();
   renderGemShop();
 }
 function renderMonument(){
@@ -2751,6 +2778,7 @@ function renderPrestigeSummary(){
     const spBonus = Math.round(getPrestigePowerBonus('harvestSpores')*100);
     const mutBonus = Math.round(getPrestigePowerBonus('mutationBonus')*1000)/10;
     html += '<div class="upg-desc">Prestige Power (from '+count+' prestige'+(count===1?'':'s')+'): <strong>+'+spBonus+'% spores, +'+mutBonus+'% mutation chance</strong></div>';
+    html += '<div class="upg-desc">Gem Trickle: <strong>+'+gemTrickleRatePerHour().toFixed(2)+' gems/hour</strong></div>';
   }
   if(unlocked){
     html += '<div class="upg-current">Prestige now to earn <strong>'+preview+' \u2605</strong>. Resets spores, plots, upgrades, level and research \u2014 achievements, herbarium and Skill Points stay.</div>'
@@ -2822,7 +2850,7 @@ function openPrestigeConfirm(){
   const body = document.getElementById('sheetBody');
   body.innerHTML = '<div class="sheet-head"><h3>Confirm Prestige</h3></div>'
     + '<p class="sheet-blurb">You are Level '+lvl+'. Prestiging will earn <strong>'+preview+' Skill Point'+(preview===1?'':'s')+'</strong> and reset your spores, plots, upgrades, level/XP, seed bank, task board and research slots back to the start.</p>'
-    + '<p class="sheet-blurb">Your achievements, herbarium collection, lifetime stats and Skill Tree stay exactly as they are.</p>'
+    + '<p class="sheet-blurb">Your achievements, herbarium collection, lifetime stats, Skill Tree, companions, reputation, and any Foreman or Century Plant progress stay exactly as they are.</p>'
     + '<button class="btn btn-primary btn-block" onclick="confirmPrestige()">Confirm Prestige</button>'
     + '<button class="btn btn-block" style="margin-top:8px;" onclick="closeSheet()">Cancel</button>';
   document.getElementById('sheet').classList.add('open');
@@ -3582,6 +3610,266 @@ function renderReputationCard(){
   el.innerHTML = '<div class="upg-name">'+tierName+(bonusPct?' <span class="companion-lvl">+'+bonusPct+'% spores</span>':'')+'</div>'
     + progressHtml;
 }
+/* ---------- passive gem trickle ---------- */
+const GEM_TRICKLE_PER_HOUR_PER_PRESTIGE = 0.25;
+function defaultGemTrickleState(){ return { accrued:0, lastTickAt:Date.now() }; }
+function gemTrickleRatePerHour(){ return (state.prestige.count||0) * GEM_TRICKLE_PER_HOUR_PER_PRESTIGE; }
+function tickGemTrickle(elapsedMs){
+  if((state.prestige.count||0) <= 0 || elapsedMs<=0) return;
+  state.gemTrickle.accrued += elapsedMs * (gemTrickleRatePerHour()/3600000);
+  if(state.gemTrickle.accrued >= 1){
+    const whole = Math.floor(state.gemTrickle.accrued);
+    addGems(whole);
+    state.gemTrickle.accrued -= whole;
+  }
+}
+
+/* ---------- spore bank ---------- */
+const SPORE_BANK_RATE_PER_HOUR = 0.001;
+function defaultSporeBankState(){ return { balance:0, lastTickAt:Date.now() }; }
+function tickSporeBank(elapsedMs){
+  if(elapsedMs<=0 || state.sporeBank.balance<=0) return;
+  const ratePerMs = SPORE_BANK_RATE_PER_HOUR/3600000;
+  state.sporeBank.balance *= (1 + ratePerMs*elapsedMs);
+}
+function depositToSporeBank(amount){
+  amount = Math.floor(amount);
+  if(amount<=0 || amount>state.spores) return false;
+  state.spores -= amount;
+  state.sporeBank.balance += amount;
+  saveState();
+  return true;
+}
+function withdrawFromSporeBank(amount){
+  amount = Math.floor(amount);
+  if(amount<=0 || amount>state.sporeBank.balance) return false;
+  state.sporeBank.balance -= amount;
+  state.spores += amount;
+  saveState();
+  return true;
+}
+function renderSporeBankCard(){
+  const el = document.getElementById('sporeBankCard');
+  if(!el) return;
+  const balance = Math.floor(state.sporeBank.balance);
+  el.innerHTML = '<div class="upg-name">Banked: '+balance+' ◆</div>'
+    + '<div class="upg-desc">Rate: '+(SPORE_BANK_RATE_PER_HOUR*100).toFixed(2)+'% / hour, compounding</div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;">'
+    + '<button class="btn btn-small btn-block" '+(state.spores<=0?'disabled':'')+' onclick="onDepositSporeBank(0.25)">Deposit 25%</button>'
+    + '<button class="btn btn-small btn-block" '+(state.spores<=0?'disabled':'')+' onclick="onDepositSporeBank(1)">Deposit All</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px;">'
+    + '<button class="btn btn-small btn-block" '+(balance<=0?'disabled':'')+' onclick="onWithdrawSporeBank(0.25)">Withdraw 25%</button>'
+    + '<button class="btn btn-small btn-block" '+(balance<=0?'disabled':'')+' onclick="onWithdrawSporeBank(1)">Withdraw All</button>'
+    + '</div>';
+}
+function onDepositSporeBank(frac){
+  if(depositToSporeBank(Math.floor(state.spores*frac))){ renderSporeBankCard(); updateHeader(); }
+}
+function onWithdrawSporeBank(frac){
+  if(withdrawFromSporeBank(Math.floor(state.sporeBank.balance*frac))){ renderSporeBankCard(); updateHeader(); }
+}
+
+/* ---------- foreman hire ---------- */
+const FOREMAN_HIRE_COST = 150;
+const FOREMAN_FEED_BASE_COST = 80;
+const FOREMAN_FEED_SCALE = 1.6;
+const FOREMAN_MAX_LEVEL = 5;
+const FOREMAN_VISITOR_CHECK_MS = 60000;
+const FOREMAN_RESEARCH_CHECK_MS = 60000;
+const FOREMAN_SPRITE = { rows:['.hhh.','hhhhh','.fff.','.e.e.','.fff.','ooooo','.ooo.','b...b'], colors:{ h:'#8C6A3E', f:'#E8B382', e:'#2C2C28', o:'#4A6B8C', b:'#2E3340' } };
+const FOREMAN_CHORE_DESC = {
+  1: 'Squashes pests automatically',
+  2: 'Replants empty plots automatically',
+  3: 'Harvests ready plots automatically',
+  4: 'Delivers matching visitor requests automatically',
+  5: 'Collects finished research automatically'
+};
+function renderForeman(size){
+  const cell = size==='lg' ? 8 : 5;
+  let cellsHtml = '';
+  for(const row of FOREMAN_SPRITE.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(FOREMAN_SPRITE.colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-foreman" style="grid-template-columns:repeat('+FOREMAN_SPRITE.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function defaultForemanState(){ return { hired:false, level:0, lastActionAt:{ visitor:0, research:0 } }; }
+function foremanHasChore(n){ return !!(state.foreman && state.foreman.hired && state.foreman.level>=n); }
+function foremanFeedCost(){ return Math.round(FOREMAN_FEED_BASE_COST * Math.pow(FOREMAN_FEED_SCALE, state.foreman.level-1)); }
+function hireForeman(){
+  if(state.foreman.hired) return false;
+  if((state.gems||0) < FOREMAN_HIRE_COST) return false;
+  state.gems -= FOREMAN_HIRE_COST;
+  state.foreman.hired = true;
+  state.foreman.level = 1;
+  sfxPurchase();
+  saveState();
+  return true;
+}
+function feedForeman(){
+  if(!state.foreman.hired || state.foreman.level>=FOREMAN_MAX_LEVEL) return false;
+  const cost = foremanFeedCost();
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  state.foreman.level += 1;
+  sfxPurchase();
+  saveState();
+  return true;
+}
+function renderForemanCard(){
+  const el = document.getElementById('foremanCard');
+  if(!el) return;
+  if(!state.foreman.hired){
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderForeman('lg')
+      + '<div><div class="upg-name">Hire a Foreman</div><div class="upg-desc">A permanent helper who takes on chores around the greenhouse -- no prestige required.</div></div></div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:10px;" '+((state.gems||0)<FOREMAN_HIRE_COST?'disabled':'')+' onclick="onHireForeman()">Hire for '+FOREMAN_HIRE_COST+' '+renderGemIcon(2)+'</button>';
+    return;
+  }
+  const lvl = state.foreman.level;
+  const maxed = lvl>=FOREMAN_MAX_LEVEL;
+  const cost = foremanFeedCost();
+  const choresText = Object.keys(FOREMAN_CHORE_DESC).filter(n=>lvl>=Number(n)).map(n=>FOREMAN_CHORE_DESC[n]).join(', ');
+  const feedBtn = maxed
+    ? '<button class="btn btn-small" disabled>MAX</button>'
+    : '<button class="btn btn-small '+(state.spores>=cost?'btn-primary':'')+'" '+(state.spores>=cost?'':'disabled')+' onclick="onFeedForeman()">Promote '+cost+' ◆</button>';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderForeman('lg')
+    + '<div><div class="upg-name">Foreman <span class="companion-lvl">Lv.'+lvl+'</span></div><div class="upg-desc">'+choresText+'</div></div></div>'
+    + feedBtn;
+}
+function onHireForeman(){
+  if(!hireForeman()) return;
+  renderForemanCard();
+  updateHeader();
+  showToast('Hired a Foreman!');
+}
+function onFeedForeman(){
+  if(!feedForeman()) return;
+  renderForemanCard();
+  updateHeader();
+  showToast('Promoted the Foreman to Lv.'+state.foreman.level+'!');
+}
+function foremanTick(){
+  if(!state.foreman.hired) return;
+  const now = Date.now();
+  if(foremanHasChore(4) && now - state.foreman.lastActionAt.visitor > FOREMAN_VISITOR_CHECK_MS){
+    state.foreman.lastActionAt.visitor = now;
+    if(state.visitor && !state.visitor.fulfilled && fulfillVisitorRequest()){
+      showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderForeman('sm')+'<span>The Foreman delivered a visitor request</span></span>');
+    }
+  }
+  if(foremanHasChore(5) && now - state.foreman.lastActionAt.research > FOREMAN_RESEARCH_CHECK_MS){
+    state.foreman.lastActionAt.research = now;
+    [0,1,2].forEach(slot=>{
+      if(isLabSlotUnlocked(slot) && getResearchStatus(slot)==='done'){
+        const result = collectResearch(slot);
+        if(result){
+          renderLab(); renderLabShelf(); updateHeader(); renderHerbarium(); updateLabBadge();
+          showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderForeman('sm')+'<span>The Foreman collected finished research</span></span>');
+        }
+      }
+    });
+  }
+}
+
+/* ---------- century plant ---------- */
+const CENTURY_PLANT_BASE_COST = 500;
+const CENTURY_PLANT_COST_SCALE = 1.4;
+const CENTURY_PLANT_BASE_HOURS = 24;
+const CENTURY_PLANT_HOURS_PER_HARVEST = 2;
+const CENTURY_PLANT_MAX_HOURS = 72;
+const CENTURY_PLANT_SPRITE = { rows:['.y.y.','yybyy','.bbb.','..g..','.ggg.','..g..','.ggg.'], colors:{ y:'#FFE9A8', b:'#FFB072', g:'#5C8A4A' } };
+function renderCenturyPlant(size){
+  const cell = size==='lg' ? 10 : 6;
+  let cellsHtml = '';
+  for(const row of CENTURY_PLANT_SPRITE.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(CENTURY_PLANT_SPRITE.colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-century" style="grid-template-columns:repeat('+CENTURY_PLANT_SPRITE.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function defaultCenturyPlantState(){ return { plantedAt:null, readyAt:null, timesHarvested:0 }; }
+function centuryPlantCost(){ return Math.round(CENTURY_PLANT_BASE_COST * Math.pow(CENTURY_PLANT_COST_SCALE, state.centuryPlant.timesHarvested)); }
+function centuryPlantDurationMs(){
+  const hours = Math.min(CENTURY_PLANT_MAX_HOURS, CENTURY_PLANT_BASE_HOURS + state.centuryPlant.timesHarvested*CENTURY_PLANT_HOURS_PER_HARVEST);
+  return hours*3600000;
+}
+function centuryPlantStatus(){
+  const cp = state.centuryPlant;
+  if(!cp.plantedAt) return 'empty';
+  if(Date.now() >= cp.readyAt) return 'ready';
+  return 'growing';
+}
+function plantCenturyPlant(){
+  if(centuryPlantStatus()!=='empty') return false;
+  const cost = centuryPlantCost();
+  if(state.spores < cost) return false;
+  state.spores -= cost;
+  sfxPlant();
+  const now = Date.now();
+  state.centuryPlant.plantedAt = now;
+  state.centuryPlant.readyAt = now + centuryPlantDurationMs();
+  saveState();
+  return true;
+}
+function centuryPlantReward(){
+  const n = state.centuryPlant.timesHarvested;
+  return { spores: Math.round(800 * Math.pow(1.3, n)), gems: 15 + n*5 };
+}
+function collectCenturyPlant(){
+  if(centuryPlantStatus()!=='ready') return null;
+  const reward = centuryPlantReward();
+  addSpores(reward.spores);
+  addGems(reward.gems);
+  const level = getLevelFromXp(state.xp||0);
+  const keys = getUnlockedSpeciesKeys(level);
+  const key = keys[Math.floor(Math.random()*keys.length)];
+  const sp = SPECIES[key];
+  const trait = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
+  const genome = { species:key, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.15, sellMult:1, extraSeed:0, rareTrait:trait.id, rareTrait2:null, hybridWith:null };
+  addToInventory(key, genome, 1);
+  state.centuryPlant.timesHarvested += 1;
+  state.centuryPlant.plantedAt = null;
+  state.centuryPlant.readyAt = null;
+  saveState();
+  sfxDiscovery(2);
+  return { reward, seedName: sp.name };
+}
+function renderCenturyPlantCard(){
+  const el = document.getElementById('centuryPlantCard');
+  if(!el) return;
+  const status = centuryPlantStatus();
+  const cp = state.centuryPlant;
+  if(status==='empty'){
+    const cost = centuryPlantCost();
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderCenturyPlant('lg')
+      + '<div><div class="upg-name">Century Plant</div><div class="upg-desc">A rare, slow-growing bloom. Takes '+Math.round(centuryPlantDurationMs()/3600000)+'h to mature, but pays off big.</div></div></div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:10px;" '+(state.spores<cost?'disabled':'')+' onclick="onPlantCenturyPlant()">Plant for '+cost+' ◆</button>';
+  } else if(status==='growing'){
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderCenturyPlant('lg')
+      + '<div><div class="upg-name">Century Plant</div><div class="upg-desc">Growing&hellip; ready in <strong id="centuryPlantTimer">'+fmtHM(cp.readyAt-Date.now())+'</strong></div></div></div>';
+  } else {
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderCenturyPlant('lg')
+      + '<div><div class="upg-name">Century Plant</div><div class="upg-desc">Ready to harvest!</div></div></div>'
+      + '<button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="onCollectCenturyPlant()">Collect</button>';
+  }
+}
+function onPlantCenturyPlant(){
+  if(!plantCenturyPlant()) return;
+  renderCenturyPlantCard();
+  updateHeader();
+}
+function onCollectCenturyPlant(){
+  const result = collectCenturyPlant();
+  if(!result) return;
+  renderCenturyPlantCard();
+  updateHeader();
+  showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderCenturyPlant('sm')+'<span>The Century Plant bloomed! +'+result.reward.spores+' ◆ +'+result.reward.gems+' '+renderGemIcon()+' +1 '+result.seedName+' seed</span></span>');
+}
+
+/* ---------- pollinator mini-game ---------- */
 const POLLINATOR_COOLDOWN_MS = 10*60*1000;
 const POLLINATOR_ROUND_MS = 14000;
 const POLLINATOR_SLOTS = 7;
@@ -4568,6 +4856,10 @@ function defaultState(){
     buffs: defaultBuffState(),
     blessedSpecies: defaultBlessedState(),
     reputation: defaultReputationState(),
+    centuryPlant: defaultCenturyPlantState(),
+    gemTrickle: defaultGemTrickleState(),
+    foreman: defaultForemanState(),
+    sporeBank: defaultSporeBankState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -4653,6 +4945,20 @@ function normalizeState(parsed){
       }
       if(!merged.reputation || typeof merged.reputation!=='object' || typeof merged.reputation.count!=='number'){
         merged.reputation = defaultReputationState();
+      }
+      if(!merged.centuryPlant || typeof merged.centuryPlant!=='object' || typeof merged.centuryPlant.timesHarvested!=='number'){
+        merged.centuryPlant = defaultCenturyPlantState();
+      }
+      if(!merged.gemTrickle || typeof merged.gemTrickle!=='object' || typeof merged.gemTrickle.accrued!=='number'){
+        merged.gemTrickle = defaultGemTrickleState();
+      }
+      if(!merged.foreman || typeof merged.foreman!=='object' || typeof merged.foreman.level!=='number'){
+        merged.foreman = defaultForemanState();
+      } else if(!merged.foreman.lastActionAt || typeof merged.foreman.lastActionAt!=='object'){
+        merged.foreman.lastActionAt = { visitor:0, research:0 };
+      }
+      if(!merged.sporeBank || typeof merged.sporeBank!=='object' || typeof merged.sporeBank.balance!=='number'){
+        merged.sporeBank = defaultSporeBankState();
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -5636,7 +5942,7 @@ function autoHarvestOnce(wing){
   return null;
 }
 function autoHarvestTick(){
-  if(getPrestigeBonus('autoHarvest') <= 0) return;
+  if(getPrestigeBonus('autoHarvest') <= 0 && !foremanHasChore(3)) return;
   ['verdant','desert','frost'].forEach(wing=>{
     if(Date.now() - lastAutoHarvestAt[wing] < autoHarvestIntervalMs()) return;
     lastAutoHarvestAt[wing] = Date.now();
@@ -5661,7 +5967,7 @@ function autoPlantOnce(wing){
   return false;
 }
 function autoPlantTick(){
-  if(getPrestigeBonus('autoPlant') <= 0) return;
+  if(getPrestigeBonus('autoPlant') <= 0 && !foremanHasChore(2)) return;
   ['verdant','desert','frost'].forEach(wing=>{
     if(Date.now() - lastAutoPlantAt[wing] < autoPlantIntervalMs()) return;
     lastAutoPlantAt[wing] = Date.now();
@@ -5679,7 +5985,7 @@ function autoPestWing(wing){
   return squashed;
 }
 function autoPestTick(){
-  if(getPrestigeBonus('autoPest') <= 0) return;
+  if(getPrestigeBonus('autoPest') <= 0 && !foremanHasChore(1)) return;
   const squashed = autoPestWing('verdant').concat(autoPestWing('desert')).concat(autoPestWing('frost'));
   if(!squashed.length) return;
   showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('broom', true)+'<span>Exterminator squashed '+squashed.length+' pest'+(squashed.length===1?'':'s')+'</span></span>');
@@ -6839,6 +7145,10 @@ function updateDriftSprites(){
 /* ===================== TICK ===================== */
 function tick(){
   const now = Date.now();
+  tickGemTrickle(now - (state.gemTrickle.lastTickAt||now));
+  state.gemTrickle.lastTickAt = now;
+  tickSporeBank(now - (state.sporeBank.lastTickAt||now));
+  state.sporeBank.lastTickAt = now;
   if(growSpeedBuffActive()){
     const pull = p=>{ if(p.status==='growing') p.plantedAt -= 1000; };
     state.plots.forEach(pull);
@@ -6858,10 +7168,12 @@ function tick(){
     const blessedRefreshed = ensureBlessedSpeciesCurrent();
     if(blessedRefreshed) showToast('A new species is blessed today: '+SPECIES[state.blessedSpecies.species].name+'!');
     updateBlessedBadge();
+    renderCenturyPlantCard();
   }
   autoPestTick();
   autoHarvestTick();
   autoPlantTick();
+  foremanTick();
   if(document.getElementById('screen-tasks').classList.contains('active')){
     const refreshed = ensureTaskBoardCurrent();
     if(refreshed){ renderTasks(); showToast('The task board refreshed with new tasks!'); }
@@ -6872,6 +7184,7 @@ function tick(){
     if(merchantRefreshed){ renderMerchant(); showToast('The traveling merchant has new stock!'); }
     else updateMerchantTimer();
     updateAdCooldownDisplay();
+    renderSporeBankCard();
   }
   updateLabBadge();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
@@ -6898,10 +7211,16 @@ function runAwayCatchup(awayStartOverride){
   ensureMerchantCurrent();
   ensureVisitorCurrent();
   ensureBlessedSpeciesCurrent();
-  const hasAutoHarvest = getPrestigeBonus('autoHarvest') > 0;
-  const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
-  const hasAutoPest = getPrestigeBonus('autoPest') > 0;
+  const hasAutoHarvest = getPrestigeBonus('autoHarvest') > 0 || foremanHasChore(3);
+  const hasAutoPlant = getPrestigeBonus('autoPlant') > 0 || foremanHasChore(2);
+  const hasAutoPest = getPrestigeBonus('autoPest') > 0 || foremanHasChore(1);
   const cappedEnd = Math.min(now, awayStart + offlineCapMs());
+  tickGemTrickle(cappedEnd - awayStart);
+  state.gemTrickle.lastTickAt = now;
+  // deliberately uncapped -- unlike the auto-action budget above, the Spore Bank's whole
+  // purpose is rewarding long uninterrupted absences, so it uses the full away span
+  tickSporeBank(now - awayStart);
+  state.sporeBank.lastTickAt = now;
   // the same 30s (or upgraded) cooldown that gates auto-harvest/auto-plant live also caps how many
   // total auto actions can happen across the away period -- each wing gets its OWN independent
   // budget now that the greenhouse and desert wing run separate auto-harvesters/auto-farmers,
@@ -6946,6 +7265,14 @@ function runAwayCatchup(awayStartOverride){
   checkAchievements();
   checkHerbSets();
   updateLabBadge();
+  if(foremanHasChore(4) && state.visitor && !state.visitor.fulfilled){
+    fulfillVisitorRequest();
+  }
+  if(foremanHasChore(5)){
+    [0,1,2].forEach(slot=>{
+      if(isLabSlotUnlocked(slot) && getResearchStatus(slot)==='done') collectResearch(slot);
+    });
+  }
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   if(state.tutorialSeen){
     const showWelcomeBack = away>120000;
@@ -6991,6 +7318,7 @@ async function init(){
   updateBuffBadges();
   runAwayCatchup();
   updateBlessedBadge();
+  renderCenturyPlantCard();
   if(!state.everPlanted) document.body.classList.add('show-hint');
   if(!state.tutorialSeen) openIntro();
   saveState();

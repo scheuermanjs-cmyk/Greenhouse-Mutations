@@ -439,6 +439,13 @@
   .toggle-switch.is-on .toggle-knob{ left:24px; background:var(--accent); }
   .decor-swatch{ width:38px; height:38px; flex-shrink:0; border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); }
   .decor-swatch-mystery{ background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:'Press Start 2P'; font-size:16px; color:var(--text-muted); }
+  .pollinator-hud{ display:flex; justify-content:space-between; font-size:13px; color:var(--text-muted); margin-bottom:10px; font-variant-numeric:tabular-nums; }
+  .pollinator-arena{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .pollinator-slot{ aspect-ratio:1/1; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .pollinator-slot.is-blooming{ background:var(--panel-2); animation:pollinatorPulse .5s ease infinite alternate; }
+  @keyframes pollinatorPulse{ from{box-shadow:3px 3px 0 rgba(0,0,0,.4);} to{box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 10px 2px rgba(232,111,168,.6);} }
+  .pix-flower{ display:grid; image-rendering:pixelated; }
+  .pix-flower > div{ width:100%; height:100%; }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
@@ -783,6 +790,7 @@
       <div class="screen-title-row">
         <div class="screen-title" id="greenhouseScreenTitle">Place a seed, tend the pot, see what grows</div>
         <div class="grow-action-btns">
+          <button class="btn btn-small" id="pollinateBtn" onclick="openPollinatorGame()">Pollinate</button>
           <button class="btn btn-small" id="quickReplantBtn" style="display:none;" onclick="onQuickReplantClick()">Replant</button>
           <button class="btn btn-small btn-primary" id="harvestAllBtn" style="display:none;" onclick="onHarvestAllClick()">Harvest All</button>
         </div>
@@ -954,6 +962,10 @@
 
   <div class="welcome-overlay" id="welcomeOverlay">
     <div class="welcome-card" id="welcomeCard"></div>
+  </div>
+
+  <div class="welcome-overlay" id="pollinatorOverlay">
+    <div class="welcome-card" id="pollinatorCard"></div>
   </div>
 
 <script>
@@ -3360,6 +3372,169 @@ function getCompanionPestFactor(){ return ownsCompanion('ladybug') ? 0.8 : 1; }
 function getCompanionNightSporeBonus(){ return (ownsCompanion('firefly') && isNightHour()) ? 0.15 : 0; }
 function getCompanionFrostFactor(wing){ return (wing==='frost' && ownsCompanion('dragonfly')) ? 0.8 : 1; }
 function isNightHour(){ const h = getGameHour(); return h>=20 || h<5; }
+
+/* ---------- pollinator mini-game ---------- */
+const POLLINATOR_COOLDOWN_MS = 10*60*1000;
+const POLLINATOR_ROUND_MS = 12000;
+const POLLINATOR_SLOTS = 6;
+const POLLINATOR_BLOOM_MS_START = 1300;
+const POLLINATOR_BLOOM_MS_MIN = 700;
+const POLLINATOR_FLOWER = { rows:['.r.r.','rryrr','.ryr.','..g..'], colors:{ r:'#E86FA8', y:'#F4E04D', g:'#5C8A4A' } };
+function renderPollinatorFlower(size){
+  const cell = size==='lg' ? 7 : 5;
+  let cellsHtml = '';
+  for(const row of POLLINATOR_FLOWER.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(POLLINATOR_FLOWER.colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-flower" style="grid-template-columns:repeat('+POLLINATOR_FLOWER.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function pollinatorReady(){ return Date.now() >= ((state.pollinator&&state.pollinator.lastPlayedAt)||0) + POLLINATOR_COOLDOWN_MS; }
+function pollinatorButtonLabel(){
+  if(pollinatorReady()) return 'Pollinate';
+  const remaining = ((state.pollinator.lastPlayedAt||0) + POLLINATOR_COOLDOWN_MS) - Date.now();
+  const totalSec = Math.max(0, Math.ceil(remaining/1000));
+  const m = Math.floor(totalSec/60), s = totalSec%60;
+  return m+':'+String(s).padStart(2,'0');
+}
+function updatePollinateBtn(){
+  const btn = document.getElementById('pollinateBtn');
+  if(!btn) return;
+  const ready = pollinatorReady();
+  btn.disabled = !ready;
+  btn.className = 'btn btn-small'+(ready?' btn-accent':'');
+  btn.textContent = pollinatorButtonLabel();
+}
+let pollinatorRound = null;
+function openPollinatorGame(){
+  if(!pollinatorReady()) return;
+  pollinatorRound = { hits:0, misses:0, combo:0, bloomState:new Array(POLLINATOR_SLOTS).fill(false), slotTimers:new Array(POLLINATOR_SLOTS).fill(null), endAt: Date.now()+POLLINATOR_ROUND_MS };
+  renderPollinatorArena();
+  document.getElementById('pollinatorOverlay').classList.add('open');
+  schedulePollinatorSpawn();
+  pollinatorRound.tickTimer = setInterval(updatePollinatorTimerDisplay, 100);
+  pollinatorRound.endTimer = setTimeout(endPollinatorRound, POLLINATOR_ROUND_MS);
+}
+function renderPollinatorArena(){
+  const card = document.getElementById('pollinatorCard');
+  if(!card) return;
+  let slotsHtml = '';
+  for(let i=0;i<POLLINATOR_SLOTS;i++){
+    slotsHtml += '<div class="pollinator-slot" id="pollinatorSlot'+i+'" onclick="tapPollinatorSlot('+i+')"></div>';
+  }
+  card.innerHTML = '<div class="welcome-hero"><h1>Pollinate the Garden</h1><p>Tap each flower the moment it blooms.</p></div>'
+    + '<div class="pollinator-hud"><span id="pollinatorScore">0 hits</span><span id="pollinatorTimeLeft">'+(POLLINATOR_ROUND_MS/1000).toFixed(1)+'s</span></div>'
+    + '<div class="pollinator-arena">'+slotsHtml+'</div>'
+    + '<button class="btn btn-block" style="margin-top:16px;" onclick="closePollinatorGame()">Skip</button>';
+}
+function schedulePollinatorSpawn(){
+  if(!pollinatorRound) return;
+  const remaining = pollinatorRound.endAt - Date.now();
+  if(remaining < 400) return;
+  const delay = 300 + Math.random()*400;
+  setTimeout(()=>{
+    if(!pollinatorRound) return;
+    if(Date.now() >= pollinatorRound.endAt) return;
+    const freeSlots = pollinatorRound.bloomState.map((b,i)=>b?-1:i).filter(i=>i>=0);
+    if(freeSlots.length){
+      const idx = freeSlots[Math.floor(Math.random()*freeSlots.length)];
+      bloomSlot(idx);
+    }
+    schedulePollinatorSpawn();
+  }, delay);
+}
+function bloomSlot(i){
+  if(!pollinatorRound) return;
+  pollinatorRound.bloomState[i] = true;
+  const el = document.getElementById('pollinatorSlot'+i);
+  if(el){
+    el.innerHTML = renderPollinatorFlower('sm');
+    el.classList.add('is-blooming');
+  }
+  const windowMs = Math.max(POLLINATOR_BLOOM_MS_MIN, POLLINATOR_BLOOM_MS_START - pollinatorRound.combo*30);
+  pollinatorRound.slotTimers[i] = setTimeout(()=>{ missSlot(i); }, windowMs);
+}
+function clearSlotVisual(i){
+  const el = document.getElementById('pollinatorSlot'+i);
+  if(el){ el.innerHTML=''; el.classList.remove('is-blooming'); }
+}
+function missSlot(i){
+  if(!pollinatorRound || !pollinatorRound.bloomState[i]) return;
+  pollinatorRound.bloomState[i] = false;
+  pollinatorRound.combo = 0;
+  pollinatorRound.misses++;
+  clearSlotVisual(i);
+  sfxFlowerMiss();
+}
+function tapPollinatorSlot(i){
+  if(!pollinatorRound || !pollinatorRound.bloomState[i]) return;
+  clearTimeout(pollinatorRound.slotTimers[i]);
+  pollinatorRound.bloomState[i] = false;
+  pollinatorRound.hits++;
+  pollinatorRound.combo++;
+  clearSlotVisual(i);
+  sfxFlowerHit();
+  const scoreEl = document.getElementById('pollinatorScore');
+  if(scoreEl) scoreEl.textContent = pollinatorRound.hits+' hits';
+}
+function updatePollinatorTimerDisplay(){
+  if(!pollinatorRound) return;
+  const remaining = Math.max(0, pollinatorRound.endAt - Date.now());
+  const el = document.getElementById('pollinatorTimeLeft');
+  if(el) el.textContent = (remaining/1000).toFixed(1)+'s';
+}
+function pollinatorReward(hits){
+  const spores = Math.round(hits * 4 * (0.9+Math.random()*0.3));
+  let seeds = 0, gems = 0;
+  if(hits>=3) seeds = 1;
+  if(hits>=6){ seeds = 2; if(Math.random()<0.25) gems = 1; }
+  return { spores, seeds, gems };
+}
+function grantPlainSeeds(count){
+  const level = getLevelFromXp(state.xp||0);
+  const keys = getUnlockedSpeciesKeys(level);
+  for(let i=0;i<count;i++){
+    const key = keys[Math.floor(Math.random()*keys.length)];
+    const sp = SPECIES[key];
+    const genome = { species:key, hue:(sp.hue+randRange(-10,10)+360)%360, glow:false, growthMult:1, yieldMult:1, sellMult:1, extraSeed:0, rareTrait:null, rareTrait2:null, hybridWith:null };
+    addToInventory(key, genome, 1);
+  }
+}
+function endPollinatorRound(){
+  if(!pollinatorRound) return;
+  clearInterval(pollinatorRound.tickTimer);
+  pollinatorRound.slotTimers.forEach(t=>clearTimeout(t));
+  const hits = pollinatorRound.hits;
+  pollinatorRound = null;
+  const reward = pollinatorReward(hits);
+  addSpores(reward.spores);
+  if(reward.seeds) grantPlainSeeds(reward.seeds);
+  if(reward.gems) addGems(reward.gems);
+  state.pollinator.lastPlayedAt = Date.now();
+  saveState();
+  updateHeader();
+  updatePollinateBtn();
+  renderPollinatorResult(hits, reward);
+}
+function renderPollinatorResult(hits, reward){
+  const card = document.getElementById('pollinatorCard');
+  if(!card) return;
+  const tier = hits>=6 ? 'Gold' : hits>=3 ? 'Silver' : hits>0 ? 'Bronze' : 'No luck this time';
+  card.innerHTML = '<div class="welcome-hero"><h1>'+tier+'</h1><p>'+hits+' flowers pollinated</p></div>'
+    + '<div class="reveal-rewards">+'+reward.spores+' ◆'+(reward.seeds?' &nbsp; +'+reward.seeds+' seed'+(reward.seeds>1?'s':''):'')+(reward.gems?' &nbsp; +'+reward.gems+' '+renderGemIcon(2):'')+'</div>'
+    + '<button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="closePollinatorGame()">Nice!</button>';
+}
+function closePollinatorGame(){
+  if(pollinatorRound){
+    clearInterval(pollinatorRound.tickTimer);
+    clearTimeout(pollinatorRound.endTimer);
+    pollinatorRound.slotTimers.forEach(t=>clearTimeout(t));
+    pollinatorRound = null;
+  }
+  document.getElementById('pollinatorOverlay').classList.remove('open');
+}
+
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -3650,6 +3825,8 @@ function sfxPrestige(){
 function sfxUnlockPlot(){ playTone(392,0.08,{type:'square',gain:0.14}); playTone(523,0.12,{type:'square',gain:0.14,delay:0.06}); }
 function sfxClaim(){ playTone(660,0.09,{type:'triangle',gain:0.15}); playTone(880,0.13,{type:'triangle',gain:0.15,delay:0.06}); }
 function sfxPurchase(){ playTone(320,0.06,{type:'square',gain:0.12}); playTone(220,0.09,{type:'square',gain:0.1,delay:0.04}); }
+function sfxFlowerHit(){ playTone(660,0.07,{type:'triangle',gain:0.14}); }
+function sfxFlowerMiss(){ playTone(180,0.08,{type:'sawtooth',gain:0.1}); }
 
 /* ---- Ambient background music (procedural loop) ---- */
 const MUSIC_CHORDS = [ [130.81,196.00], [174.61,261.63], [196.00,293.66], [146.83,220.00] ];
@@ -3969,6 +4146,7 @@ function defaultState(){
     prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
     decor: defaultDecorState(),
     companions: defaultCompanionState(),
+    pollinator:{ lastPlayedAt:0 },
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -4033,6 +4211,9 @@ function normalizeState(parsed){
         merged.companions.tapCounts = Object.assign({ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, merged.companions.tapCounts||{});
         if(!Array.isArray(merged.companions.owned)) merged.companions.owned = [];
         merged.companions.owned = merged.companions.owned.filter(k => !!WILDLIFE_TYPES[k]);
+      }
+      if(!merged.pollinator || typeof merged.pollinator!=='object' || typeof merged.pollinator.lastPlayedAt!=='number'){
+        merged.pollinator = { lastPlayedAt:0 };
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -6223,6 +6404,7 @@ function tick(){
   updateAllFrostTiles();
   updateHeader();
   applyWindowPhase();
+  if(document.getElementById('screen-greenhouse').classList.contains('active')) updatePollinateBtn();
   autoPestTick();
   autoHarvestTick();
   autoPlantTick();
@@ -6350,6 +6532,7 @@ async function init(){
   buildPlotTiles();
   buildDesertPlotTiles();
   buildFrostPlotTiles();
+  updatePollinateBtn();
   runAwayCatchup();
   if(!state.everPlanted) document.body.classList.add('show-hint');
   if(!state.tutorialSeen) openIntro();

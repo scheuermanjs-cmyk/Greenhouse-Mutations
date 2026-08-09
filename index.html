@@ -240,6 +240,15 @@
   .lightning-flash.flash{ animation:lightningFlash .5s ease-out; }
   @keyframes lightningFlash{ 0%{opacity:0;} 6%{opacity:.9;} 14%{opacity:.15;} 22%{opacity:.7;} 38%{opacity:0;} 100%{opacity:0;} }
 
+  /* ---------- wandering wildlife ---------- */
+  .wildlife-critter{ position:absolute; z-index:3; cursor:pointer; touch-action:manipulation; }
+  .pix-wildlife{ display:grid; image-rendering:pixelated; }
+  .pix-wildlife > div{ width:100%; height:100%; }
+  .wildlife-critter[data-wildlife-type="firefly"] .pix-wildlife > div{ box-shadow:0 0 3px 1px rgba(217,242,163,.7); }
+  @media (prefers-reduced-motion:reduce){
+    .wildlife-critter{ display:none; }
+  }
+
   .mullion{ position:absolute; background:var(--outline); z-index:3; }
   .mullion-v{ left:50%; top:0; bottom:0; width:4px; margin-left:-2px; }
   .mullion-h{ left:0; right:0; top:50%; height:4px; margin-top:-2px; }
@@ -3276,6 +3285,36 @@ Object.assign(VISITOR_TYPES, {
 function pickRandomVisitorType(){
   return VISITOR_TYPE_KEYS[Math.floor(Math.random()*VISITOR_TYPE_KEYS.length)];
 }
+const WILDLIFE_TYPES = {
+  butterfly: { name:'Butterfly',  rows:['w.b.w','wwbww','.bbb.','..b..'], colors:{ w:'#F2A72E', b:'#2C2C28' }, reward:{ spores:[1,3] } },
+  bee:       { name:'Bumblebee',  rows:['.www.','bybyb','.byb.','.....'], colors:{ w:'#EAF2E2', y:'#F4E04D', b:'#2C2C28' }, reward:{ spores:[2,4] } },
+  ladybug:   { name:'Ladybug',    rows:['.rrr.','rbrbr','rrrrr','..b..'], colors:{ r:'#D9433C', b:'#2C2C28' }, reward:{ spores:[1,2], gemChance:0.12 } },
+  firefly:   { name:'Firefly',    rows:['..g..','.ggg.','..g..','.....'], colors:{ g:'#D9F2A3' }, reward:{ spores:[2,3], gemChance:0.15 }, nightOnly:true },
+  dragonfly: { name:'Dragonfly',  rows:['w.b.w','.bbb.','..b..','..b..'], colors:{ w:'#7EE8D9', b:'#2C4A4A' }, reward:{ spores:[3,5], gemChance:0.2 }, wings:['frost'] }
+};
+function pickRandomWildlifeType(){
+  const h = getGameHour();
+  const isNight = h>=20 || h<5;
+  const keys = Object.keys(WILDLIFE_TYPES).filter(k=>{
+    const cfg = WILDLIFE_TYPES[k];
+    if(cfg.nightOnly && !isNight) return false;
+    if(cfg.wings && !cfg.wings.includes(currentWing)) return false;
+    return true;
+  });
+  if(!keys.length) return null;
+  return keys[Math.floor(Math.random()*keys.length)];
+}
+function renderWildlife(size, type){
+  const cfg = WILDLIFE_TYPES[type] || WILDLIFE_TYPES.butterfly;
+  const cell = size==='lg' ? 6 : 4;
+  let cellsHtml = '';
+  for(const row of cfg.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(cfg.colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -3402,6 +3441,7 @@ document.addEventListener('pointerdown', ()=>{
   if(currentWeather==='storm') startWind();
   if(musicEnabled()) startMusic();
   scheduleBirdChirps();
+  scheduleWildlifeSpawns();
 }, {once:true});
 
 function applyWeather(weather){
@@ -3730,6 +3770,67 @@ function scheduleBirdChirps(){
   };
   birdTimer = setTimeout(step, 4000+Math.random()*6000);
 }
+let wildlifeTimer = null;
+function spawnWildlifeCritter(){
+  if(document.querySelector('.wildlife-critter')) return;
+  const screenEl = document.getElementById('screen-greenhouse');
+  if(!screenEl || !screenEl.classList.contains('active')) return;
+  const scene = document.getElementById('windowScene');
+  if(!scene) return;
+  const typeKey = pickRandomWildlifeType();
+  if(!typeKey) return;
+  const el = document.createElement('div');
+  el.className = 'wildlife-critter';
+  el.dataset.wildlifeType = typeKey;
+  el.innerHTML = renderWildlife('sm', typeKey);
+  const startY = 15 + Math.random()*55;
+  const endY = clamp(startY + randRange(-18,18), 8, 78);
+  const goingRight = Math.random()<0.5;
+  const fromX = goingRight ? '-24px' : 'calc(100% + 24px)';
+  const toX = goingRight ? 'calc(100% + 24px)' : '-24px';
+  el.style.top = startY+'%';
+  el.style.left = fromX;
+  scene.appendChild(el);
+  const duration = 6000 + Math.random()*4000;
+  const anim = el.animate([
+    { left:fromX, top:startY+'%', opacity:0 },
+    { opacity:1, offset:0.08 },
+    { left:toX, top:endY+'%', opacity:1, offset:0.92 },
+    { opacity:0 }
+  ], { duration, easing:'ease-in-out' });
+  anim.onfinish = ()=>{ el.remove(); };
+  el.addEventListener('click', function onTap(e){
+    e.stopPropagation();
+    el.removeEventListener('click', onTap);
+    anim.cancel();
+    onWildlifeTap(typeKey);
+    el.remove();
+  });
+}
+function onWildlifeTap(typeKey){
+  const cfg = WILDLIFE_TYPES[typeKey] || WILDLIFE_TYPES.butterfly;
+  const sporeAmt = Math.floor(randRange(cfg.reward.spores[0], cfg.reward.spores[1]+1));
+  addSpores(sporeAmt);
+  let gemText = '';
+  if(cfg.reward.gemChance && Math.random()<cfg.reward.gemChance){
+    addGems(1);
+    gemText = ' +1 '+renderGemIcon();
+  }
+  state.achStats.crittersTapped = (state.achStats.crittersTapped||0)+1;
+  saveState();
+  updateHeader();
+  showToastHtml('+'+sporeAmt+' '+renderSporeIcon()+gemText);
+}
+function scheduleWildlifeSpawns(){
+  if(wildlifeTimer) return;
+  const step = ()=>{
+    if(currentWeather!=='storm'){
+      spawnWildlifeCritter();
+    }
+    wildlifeTimer = setTimeout(step, 25000+Math.random()*35000);
+  };
+  wildlifeTimer = setTimeout(step, 15000+Math.random()*20000);
+}
 document.addEventListener('click', function(e){
   const el = e.target.closest('.btn, .nav-btn, .wing-toggle-btn');
   if(!el || el.disabled) return;
@@ -3806,7 +3907,7 @@ function defaultState(){
     upgrades:{ growth:0, yield:0, resist:0, luck:0, ladybugs:0, sprinkler:0, gardenLight:0, labSpeed:0 },
     taskBoard:{ slot:getBoardSlot(), tasks:rollNewTasks(), progress:{}, claimed:{} }, nextMutationBoost:0,
     achievements:{}, herbSets:{}, researchSlots:[null,null,null], labSlotUnlocked:[false,true,false],
-    achStats:{ harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0, totalGemsEarned:0, totalSkillPointsEarned:0 },
+    achStats:{ harvests:0, wellTended:0, speciesSeen:{}, mutations:0, hybrids:0, rareTraits:0, pestsSquashed:0, pestFreeHarvests:0, bestPestFreeStreak:0, tasksClaimed:0, upgradesBought:0, totalSpores:0, totalSporesEarned:0, researchCompleted:0, bestResearchTier:-1, doubleMutations:0, totalGemsEarned:0, totalSkillPointsEarned:0, crittersTapped:0 },
     prestige:{ count:0, skillPoints:0, skillTree: defaultSkillTree() },
     decor: defaultDecorState(),
     dailyStreak:{ count:0, lastClaimDay:null },
@@ -3848,6 +3949,7 @@ function normalizeState(parsed){
       if(typeof merged.achStats.bestResearchTier!=='number') merged.achStats.bestResearchTier = -1;
       if(typeof merged.achStats.doubleMutations!=='number') merged.achStats.doubleMutations = 0;
       if(typeof merged.achStats.totalGemsEarned!=='number') merged.achStats.totalGemsEarned = 0;
+      if(typeof merged.achStats.crittersTapped!=='number') merged.achStats.crittersTapped = 0;
       if(typeof merged.achStats.totalSkillPointsEarned!=='number') merged.achStats.totalSkillPointsEarned = 0;
       if(!merged.prestige || typeof merged.prestige!=='object'){
         merged.prestige = { count:0, skillPoints:0, skillTree: defaultSkillTree() };

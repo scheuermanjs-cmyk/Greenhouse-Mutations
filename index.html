@@ -621,10 +621,20 @@
   .storm-badge{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:3px solid var(--violet); color:var(--violet); font-size:12px; text-transform:uppercase; letter-spacing:.3px; padding:6px 10px; margin:0 0 8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); animation:stormBadgePulse 1.6s ease-in-out infinite; }
   @keyframes stormBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(199,125,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(199,125,255,.6); } }
   .storm-badge.pest-swarm-badge{ border-color:var(--danger); color:var(--danger); animation-name:pestSwarmBadgePulse; }
-  .storm-badge.blessed-badge{ border-color:#C77DFF; color:#C77DFF; animation-name:pestSwarmBadgePulse; }
-  .storm-badge.grow-buff-badge{ border-color:#F4C542; color:#F4C542; animation-name:pestSwarmBadgePulse; }
-  .storm-badge.spore-buff-badge{ border-color:var(--accent); color:var(--accent); animation-name:pestSwarmBadgePulse; }
   @keyframes pestSwarmBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(255,92,92,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(255,92,92,.6); } }
+
+  /* ---------- compact status chips (blessed species / timed buffs) ---------- */
+  .status-chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; }
+  .status-chip{
+    display:inline-flex; align-items:center; gap:5px; background:var(--panel-2); border:2px solid var(--outline);
+    box-shadow:2px 2px 0 rgba(0,0,0,.3); padding:4px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.3px;
+    font-variant-numeric:tabular-nums; cursor:pointer; animation:statusChipPulse 1.6s ease-in-out infinite;
+  }
+  .status-chip .ach-pix{ flex-shrink:0; }
+  @keyframes statusChipPulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px currentColor; } }
+  .status-chip.chip-blessed{ border-color:#C77DFF; color:#C77DFF; }
+  .status-chip.chip-grow{ border-color:#F4C542; color:#F4C542; }
+  .status-chip.chip-spore{ border-color:var(--accent); color:var(--accent); }
 
 
   /* ---------- pests ---------- */
@@ -842,9 +852,11 @@
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;"><span id="stormBadgeIcon"></span> Mutation Storm — mutation odds up</div>
       <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;"><span id="pestSwarmBadgeIcon"></span> Pest Swarm — infestations more likely</div>
-      <div class="storm-badge blessed-badge" id="blessedBadge" style="display:none;"><span id="blessedBadgeLabel"></span></div>
-      <div class="storm-badge grow-buff-badge" id="growBuffBadge" style="display:none;"><span id="growBuffIcon"></span> 2x Growth — <span id="growBuffTimer">5:00</span></div>
-      <div class="storm-badge spore-buff-badge" id="sporeBuffBadge" style="display:none;"><span id="sporeBuffIcon"></span> 2x Spores — <span id="sporeBuffTimer">5:00</span></div>
+      <div class="status-chip-row" id="statusChipRow">
+        <div class="status-chip chip-blessed" id="blessedBadge" style="display:none;" onclick="onStatusChipTap('blessed')"></div>
+        <div class="status-chip chip-grow" id="growBuffBadge" style="display:none;" onclick="onStatusChipTap('grow')"></div>
+        <div class="status-chip chip-spore" id="sporeBuffBadge" style="display:none;" onclick="onStatusChipTap('spore')"></div>
+      </div>
       <div class="plot-grid" id="plotGrid"></div>
       <div class="desert-wing-panel" id="desertWingPanel" style="display:none;">
         <div class="plot-grid" id="plotGridDesert"></div>
@@ -3476,13 +3488,23 @@ function updateBuffBadges(){
   if(g){
     const active = growSpeedBuffActive();
     g.style.display = active ? '' : 'none';
-    if(active){ const t = document.getElementById('growBuffTimer'); if(t) t.textContent = fmtTime(state.buffs.growSpeedUntil - Date.now()); }
+    if(active) g.innerHTML = renderPixIcon('bolt', true, 2)+'<span>2× '+fmtTime(state.buffs.growSpeedUntil - Date.now())+'</span>';
   }
   const s = document.getElementById('sporeBuffBadge');
   if(s){
     const active = sporeBuffActive();
     s.style.display = active ? '' : 'none';
-    if(active){ const t = document.getElementById('sporeBuffTimer'); if(t) t.textContent = fmtTime(state.buffs.sporeMultUntil - Date.now()); }
+    if(active) s.innerHTML = renderPixIcon('wheat', true, 2)+'<span>2× '+fmtTime(state.buffs.sporeMultUntil - Date.now())+'</span>';
+  }
+}
+function onStatusChipTap(kind){
+  if(kind==='grow'){
+    showToast('2x Growth Speed active for '+fmtTime(state.buffs.growSpeedUntil - Date.now())+'.');
+  } else if(kind==='spore'){
+    showToast('2x Spores active for '+fmtTime(state.buffs.sporeMultUntil - Date.now())+'.');
+  } else if(kind==='blessed'){
+    const sp = state.blessedSpecies && SPECIES[state.blessedSpecies.species];
+    if(sp) showToast('Blessed today: '+sp.name+' — +25% spores, +mutation chance.');
   }
 }
 
@@ -3511,8 +3533,7 @@ function updateBlessedBadge(){
   const sp = state.blessedSpecies && SPECIES[state.blessedSpecies.species];
   if(!sp){ badge.style.display = 'none'; return; }
   badge.style.display = '';
-  const label = document.getElementById('blessedBadgeLabel');
-  if(label) label.textContent = 'Blessed today: '+sp.name+' — +25% spores, +mutation chance';
+  badge.innerHTML = renderPixIcon('sparkle', true, 2)+'<span>'+sp.name+'</span>';
 }
 
 /* ---------- visitor reputation ---------- */

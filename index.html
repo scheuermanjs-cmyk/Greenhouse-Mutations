@@ -1068,6 +1068,11 @@
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div id="apexCard"></div>
       </div>
+      <div class="ach-category" style="margin-top:18px;">Grafting Bench</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Graft two Rare-tier+ seeds from different wings into a guaranteed Legendary specimen.</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="graftBenchCard"></div>
+      </div>
     </section>
   </main>
 
@@ -1382,6 +1387,8 @@ function doPrestige(){
   const keepCenturyPlant = state.centuryPlant;
   const keepForeman = state.foreman;
   const keepSporeBank = state.sporeBank;
+  const keepTitles = state.titles;
+  const keepGrafting = state.grafting;
   state = Object.assign(defaultState(), {
     prestige: keepPrestige,
     achievements: keepAchievements,
@@ -1404,7 +1411,9 @@ function doPrestige(){
     pollinator: keepPollinator,
     centuryPlant: keepCenturyPlant,
     foreman: keepForeman,
-    sporeBank: keepSporeBank
+    sporeBank: keepSporeBank,
+    titles: keepTitles,
+    grafting: keepGrafting
   });
   state.spores += getPrestigeBonus('startingSpores');
   saveState();
@@ -3208,6 +3217,7 @@ function renderLab(){
   row.innerHTML = [0,1,2].map(renderLabStationPreview).join('');
   updateNotifyPromptVisibility();
   renderApexCard();
+  renderGraftBenchCard();
 }
 function renderLabShelf(){
   const container = document.getElementById('labShelf');
@@ -4543,6 +4553,106 @@ function renderWildlifeSkinPreview(type, skinKey){
   }
   return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+',4px);grid-auto-rows:4px;">'+cellsHtml+'</div>';
 }
+const GRAFT_BASE_COST = 200;
+const GRAFT_SCALE = 1.6;
+function defaultGraftingState(){ return { timesGrafted:0 }; }
+function graftCost(){ return Math.round(GRAFT_BASE_COST * Math.pow(GRAFT_SCALE, state.grafting.timesGrafted)); }
+function eligibleGraftStacks(excludeWing, excludeStackId){
+  return state.inventory.filter(s => s.qty>0 && getSeedRarityTier(s.genome)>=2 && (!excludeWing || speciesWing(s.species)!==excludeWing) && s.id!==excludeStackId);
+}
+let pendingGraft = { a:null, b:null };
+let currentGraftSlot = null;
+function openGraftPicker(slot){
+  if(slot==='b' && !pendingGraft.a) return;
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  currentApexWing = null;
+  currentSkinCompanionType = null;
+  revealShowing = false;
+  currentGraftSlot = slot;
+  renderGraftPickerSheet(slot);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderGraftPickerSheet(slot){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const excludeWing = slot==='b' && pendingGraft.a ? speciesWing(pendingGraft.a.species) : null;
+  const excludeStackId = slot==='a' ? (pendingGraft.b && pendingGraft.b.stackId) : (pendingGraft.a && pendingGraft.a.stackId);
+  const stacks = eligibleGraftStacks(excludeWing, excludeStackId);
+  let rows;
+  if(!stacks.length){
+    rows = '<div class="empty-state">No eligible Rare-tier+ specimens'+(excludeWing?' outside the '+APEX_WING_LABELS[excludeWing]+' wing':'')+' in your seed bank yet.</div>';
+  } else {
+    rows = stacks.map(stack=>{
+      return '<div class="seed-row">'
+        + '<div class="seed-row-glyph">'+renderSprite(stack.genome,'sm','bloom')+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+buildSpecimenName(stack.species, stack.genome)+'</div>'
+        + '<div class="seed-row-sub">'+APEX_WING_LABELS[speciesWing(stack.species)]+' • ×'+stack.qty+' in stock</div></div>'
+        + '<button class="btn btn-small btn-primary" onclick="onSelectGraftParent(\''+slot+'\',\''+stack.id+'\')">Select</button>'
+        + '</div>';
+    }).join('');
+  }
+  body.innerHTML = '<div class="sheet-head"><h3>Select Parent '+(slot==='a'?'A':'B')+'</h3></div>' + '<div class="seed-list">'+rows+'</div>';
+}
+function onSelectGraftParent(slot, stackId){
+  const stack = state.inventory.find(s=>s.id===stackId);
+  if(!stack) return;
+  pendingGraft[slot] = { stackId: stack.id, species: stack.species, genome: Object.assign({}, stack.genome) };
+  if(slot==='a') pendingGraft.b = null;
+  closeSheet();
+  renderGraftBenchCard();
+}
+function canGraft(){
+  return !!(pendingGraft.a && pendingGraft.b
+    && speciesWing(pendingGraft.a.species) !== speciesWing(pendingGraft.b.species)
+    && state.gems >= graftCost());
+}
+function doGraft(){
+  if(!canGraft()) return false;
+  const stackA = state.inventory.find(s=>s.id===pendingGraft.a.stackId);
+  const stackB = state.inventory.find(s=>s.id===pendingGraft.b.stackId);
+  if(!stackA || stackA.qty<=0 || !stackB || stackB.qty<=0) return false;
+  state.gems -= graftCost();
+  stackA.qty -= 1;
+  stackB.qty -= 1;
+  state.inventory = state.inventory.filter(s=>s.qty>0);
+  const sp = SPECIES[stackA.species];
+  const trait1 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
+  let trait2 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
+  while(trait2.id===trait1.id) trait2 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
+  const genome = { species:stackA.species, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.35, sellMult:1, extraSeed:0, rareTrait:trait1.id, rareTrait2:trait2.id, hybridWith:stackB.species };
+  addToInventory(stackA.species, genome, 1);
+  state.grafting.timesGrafted += 1;
+  sfxPurchase();
+  pendingGraft = { a:null, b:null };
+  checkAchievements();
+  saveState();
+  return true;
+}
+function onDoGraft(){
+  const ok = doGraft();
+  renderGraftBenchCard();
+  updateHeader();
+  if(ok) showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">✨<span>Grafted a Legendary specimen! Ready to donate to the Apex Synthesis.</span></span>');
+}
+function renderGraftSlot(slot){
+  const parent = pendingGraft[slot];
+  if(!parent){
+    return '<div class="apex-slot" onclick="openGraftPicker(\''+slot+'\')"><div class="bestiary-name is-mystery" style="font-size:11px;">Parent '+(slot==='a'?'A':'B')+'</div><div style="font-size:20px;color:var(--text-muted);">+</div></div>';
+  }
+  return '<div class="apex-slot apex-slot-filled" title="'+buildSpecimenName(parent.species, parent.genome)+'" onclick="openGraftPicker(\''+slot+'\')"><div class="seed-row-glyph">'+renderSprite(parent.genome,'sm','bloom')+'</div><div class="bestiary-name" style="font-size:11px;">'+APEX_WING_LABELS[speciesWing(parent.species)]+'</div></div>';
+}
+function renderGraftBenchCard(){
+  const el = document.getElementById('graftBenchCard');
+  if(!el) return;
+  const cost = graftCost();
+  const ready = canGraft();
+  const sameWingWarning = pendingGraft.a && pendingGraft.b && speciesWing(pendingGraft.a.species)===speciesWing(pendingGraft.b.species);
+  el.innerHTML = '<div class="apex-slots">'+renderGraftSlot('a')+renderGraftSlot('b')+'</div>'
+    + (sameWingWarning ? '<div class="upg-desc" style="margin-top:8px;color:var(--warn);">Parents must be from different wings.</div>' : '')
+    + '<button class="btn btn-block '+(ready?'btn-primary':'')+'" style="margin-top:10px;" '+(ready?'':'disabled')+' onclick="onDoGraft()">Graft for '+cost+' '+renderGemIcon(2)+'</button>';
+}
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -5164,6 +5274,7 @@ function defaultState(){
     foreman: defaultForemanState(),
     sporeBank: defaultSporeBankState(),
     titles:{ unlocked:[], equipped:null },
+    grafting: defaultGraftingState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -5256,6 +5367,9 @@ function normalizeState(parsed){
           const eq = merged.companions.skins[k];
           merged.companions.skins[k] = (eq==='default' || merged.companions.ownedSkins[k].includes(eq)) ? eq : 'default';
         });
+      }
+      if(!merged.grafting || typeof merged.grafting!=='object' || typeof merged.grafting.timesGrafted!=='number'){
+        merged.grafting = defaultGraftingState();
       }
       if(!merged.titles || typeof merged.titles!=='object' || !Array.isArray(merged.titles.unlocked)){
         merged.titles = { unlocked:[], equipped:null };
@@ -6954,6 +7068,7 @@ function closeSheet(){
   currentLabSlot = null;
   currentApexWing = null;
   currentSkinCompanionType = null;
+  currentGraftSlot = null;
   revealShowing = false;
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');

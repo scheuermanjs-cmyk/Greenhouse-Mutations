@@ -486,6 +486,9 @@
   .pix-apex > div{ width:100%; height:100%; }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .companion-lvl{ color:#F4C542; font-size:10px; }
+  .blessed-tag{ color:#C77DFF; font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
+  .rep-bar{ height:8px; background:var(--panel); border:2px solid var(--outline); margin-top:8px; overflow:hidden; }
+  .rep-bar-fill{ height:100%; background:#F4C542; transition:width .3s; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
   .bestiary-icon-wrap.is-mystery{ font-family:'Press Start 2P'; font-size:15px; color:var(--text-muted); }
@@ -618,6 +621,7 @@
   .storm-badge{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--panel-2); border:3px solid var(--violet); color:var(--violet); font-size:12px; text-transform:uppercase; letter-spacing:.3px; padding:6px 10px; margin:0 0 8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); animation:stormBadgePulse 1.6s ease-in-out infinite; }
   @keyframes stormBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(199,125,255,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(199,125,255,.6); } }
   .storm-badge.pest-swarm-badge{ border-color:var(--danger); color:var(--danger); animation-name:pestSwarmBadgePulse; }
+  .storm-badge.blessed-badge{ border-color:#C77DFF; color:#C77DFF; animation-name:pestSwarmBadgePulse; }
   .storm-badge.grow-buff-badge{ border-color:#F4C542; color:#F4C542; animation-name:pestSwarmBadgePulse; }
   .storm-badge.spore-buff-badge{ border-color:var(--accent); color:var(--accent); animation-name:pestSwarmBadgePulse; }
   @keyframes pestSwarmBadgePulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px 1px rgba(255,92,92,.35); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 12px 4px rgba(255,92,92,.6); } }
@@ -838,6 +842,7 @@
       </div>
       <div class="storm-badge" id="mutationStormBadge" style="display:none;"><span id="stormBadgeIcon"></span> Mutation Storm — mutation odds up</div>
       <div class="storm-badge pest-swarm-badge" id="pestSwarmBadge" style="display:none;"><span id="pestSwarmBadgeIcon"></span> Pest Swarm — infestations more likely</div>
+      <div class="storm-badge blessed-badge" id="blessedBadge" style="display:none;"><span id="blessedBadgeLabel"></span></div>
       <div class="storm-badge grow-buff-badge" id="growBuffBadge" style="display:none;"><span id="growBuffIcon"></span> 2x Growth — <span id="growBuffTimer">5:00</span></div>
       <div class="storm-badge spore-buff-badge" id="sporeBuffBadge" style="display:none;"><span id="sporeBuffIcon"></span> 2x Spores — <span id="sporeBuffTimer">5:00</span></div>
       <div class="plot-grid" id="plotGrid"></div>
@@ -855,6 +860,7 @@
         <div class="upg-desc">New visitor in <span id="visitorRefreshTimer">--:--</span></div>
       </div>
       <div class="farmer-row" id="farmerRow"></div>
+      <div class="upg-card" id="reputationCard" style="flex-direction:column;align-items:stretch;margin-bottom:14px;"></div>
       <div class="ledge"></div>
       <div class="screen-title-row">
         <div class="screen-title">Refreshes in <span id="taskRefreshTimer">--:--</span></div>
@@ -1747,6 +1753,7 @@ function renderTasks(){
   ensureTaskBoardCurrent();
   ensureVisitorCurrent();
   renderFarmerRow();
+  renderReputationCard();
   pruneImpossibleTasks();
   updateTasksBadge();
   const tasks = getCurrentTasks();
@@ -2619,6 +2626,7 @@ function fulfillVisitorRequest(){
     addSpores(special.sporeReward);
     addGems(special.gemReward);
     v.fulfilled = true;
+    bumpReputation();
     state.specialVisitorsClaimed[special.id] = Date.now();
     saveState();
     renderFarmerRow();
@@ -2635,6 +2643,7 @@ function fulfillVisitorRequest(){
   addSpores(v.request.sporeReward);
   addGems(v.request.gemReward);
   v.fulfilled = true;
+  bumpReputation();
   saveState();
   renderFarmerRow();
   updateHeader();
@@ -3477,7 +3486,84 @@ function updateBuffBadges(){
   }
 }
 
-/* ---------- pollinator mini-game ---------- */
+/* ---------- blessed species of the day ---------- */
+const BLESSED_YIELD_MULT = 1.25;
+const BLESSED_MUTATION_BONUS = 0.12;
+function defaultBlessedState(){ return { day:null, species:null }; }
+function rollBlessedSpecies(){
+  const keys = Object.keys(SPECIES);
+  const key = keys[Math.floor(Math.random()*keys.length)];
+  state.blessedSpecies = { day: todayDateString(), species: key };
+}
+function ensureBlessedSpeciesCurrent(){
+  if(!state.blessedSpecies || state.blessedSpecies.day !== todayDateString()){
+    rollBlessedSpecies();
+    saveState();
+    return true;
+  }
+  return false;
+}
+function isBlessedSpecies(key){ return !!(state.blessedSpecies && state.blessedSpecies.species===key); }
+function getBlessedYieldMult(speciesKey){ return isBlessedSpecies(speciesKey) ? BLESSED_YIELD_MULT : 1; }
+function updateBlessedBadge(){
+  const badge = document.getElementById('blessedBadge');
+  if(!badge) return;
+  const sp = state.blessedSpecies && SPECIES[state.blessedSpecies.species];
+  if(!sp){ badge.style.display = 'none'; return; }
+  badge.style.display = '';
+  const label = document.getElementById('blessedBadgeLabel');
+  if(label) label.textContent = 'Blessed today: '+sp.name+' — +25% spores, +mutation chance';
+}
+
+/* ---------- visitor reputation ---------- */
+const REPUTATION_TIERS = [
+  { count:5,  bonus:0.02, name:'Familiar Face' },
+  { count:15, bonus:0.02, name:'Trusted Supplier' },
+  { count:30, bonus:0.03, name:'Local Legend' },
+  { count:50, bonus:0.03, name:'Renowned Grower' },
+  { count:80, bonus:0.04, name:'Greenhouse Icon' }
+];
+function defaultReputationState(){ return { count:0 }; }
+function reputationTierIndexForCount(count){
+  let idx = -1;
+  REPUTATION_TIERS.forEach((t,i)=>{ if(count>=t.count) idx=i; });
+  return idx;
+}
+function reputationTierIndex(){ return reputationTierIndexForCount((state.reputation&&state.reputation.count)||0); }
+function getReputationBonus(){
+  const idx = reputationTierIndex();
+  let total = 0;
+  for(let i=0;i<=idx;i++) total += REPUTATION_TIERS[i].bonus;
+  return total;
+}
+function bumpReputation(){
+  const before = reputationTierIndex();
+  state.reputation.count = (state.reputation.count||0)+1;
+  const after = reputationTierIndex();
+  if(after>before){
+    const tier = REPUTATION_TIERS[after];
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderPixIcon('trophy', true, 2)+'<span>Reputation up: '+tier.name+'! +'+Math.round(getReputationBonus()*100)+'% spores from every harvest, permanently</span></span>');
+  }
+  renderReputationCard();
+}
+function renderReputationCard(){
+  const el = document.getElementById('reputationCard');
+  if(!el) return;
+  const count = (state.reputation&&state.reputation.count)||0;
+  const idx = reputationTierIndex();
+  const tierName = idx>=0 ? REPUTATION_TIERS[idx].name : 'Newcomer';
+  const bonusPct = Math.round(getReputationBonus()*100);
+  const next = REPUTATION_TIERS[idx+1];
+  let progressHtml = '<div class="upg-desc">Max reputation reached — every tier unlocked.</div>';
+  if(next){
+    const prevCount = idx>=0 ? REPUTATION_TIERS[idx].count : 0;
+    const pct = clamp(((count-prevCount)/(next.count-prevCount))*100, 0, 100);
+    progressHtml = '<div class="rep-bar"><div class="rep-bar-fill" style="width:'+pct+'%;"></div></div>'
+      + '<div class="upg-desc" style="margin-top:4px;">'+count+' / '+next.count+' visitors delivered — next: '+next.name+' (+'+Math.round(next.bonus*100)+'% spores)</div>';
+  }
+  el.innerHTML = '<div class="upg-name">'+tierName+(bonusPct?' <span class="companion-lvl">+'+bonusPct+'% spores</span>':'')+'</div>'
+    + progressHtml;
+}
 const POLLINATOR_COOLDOWN_MS = 10*60*1000;
 const POLLINATOR_ROUND_MS = 14000;
 const POLLINATOR_SLOTS = 7;
@@ -4442,6 +4528,8 @@ function defaultState(){
     pollinator:{ lastPlayedAt:0 },
     apex: defaultApexState(),
     buffs: defaultBuffState(),
+    blessedSpecies: defaultBlessedState(),
+    reputation: defaultReputationState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -4522,6 +4610,12 @@ function normalizeState(parsed){
         if(typeof merged.apex.unlocked!=='boolean') merged.apex.unlocked = false;
       }
       merged.buffs = Object.assign(defaultBuffState(), merged.buffs||{});
+      if(!merged.blessedSpecies || typeof merged.blessedSpecies!=='object' || !SPECIES[merged.blessedSpecies.species]){
+        merged.blessedSpecies = defaultBlessedState();
+      }
+      if(!merged.reputation || typeof merged.reputation!=='object' || typeof merged.reputation.count!=='number'){
+        merged.reputation = defaultReputationState();
+      }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
       }
@@ -4934,6 +5028,7 @@ function computeMutationChance(plot, idx, wing='verdant'){
   chance += luckLevel * (UPGRADES.luck.perLevel/100);
   if(state.nextMutationBoost) chance += state.nextMutationBoost;
   chance += getLevelBonus('mutationBonus');
+  if(isBlessedSpecies(plot.genome.species)) chance += BLESSED_MUTATION_BONUS;
   return Math.min(chance, 0.70);
 }
 function applyTraitEffect(genome, traitId){
@@ -5441,7 +5536,8 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   const speciesKey = plot.genome.species;
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
   const buffSporeMult = sporeBuffActive() ? 2 : 1;
-  const companionSporeBonus = (1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus()) * buffSporeMult;
+  const blessedMult = getBlessedYieldMult(speciesKey);
+  const companionSporeBonus = (1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus() + getReputationBonus()) * buffSporeMult * blessedMult;
   let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * companionSporeBonus * randRange(0.85,1.15));
   if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
@@ -6200,7 +6296,7 @@ function renderSheetFull(idx){
         : '<button class="btn btn-small" '+(state.spores<sp.seedCost?'disabled':'')+' onclick="plantBase('+idx+',\''+key+'\',\''+wing+'\')">'+(sp.seedCost>0 ? sp.seedCost+' \u25C6' : 'Free')+'</button>';
       return '<div class="seed-row'+(locked?' is-locked':'')+'">'
         + '<div class="seed-row-glyph">'+renderSprite({species:key,hue:sp.hue,glow:false},'sm','bloom')+'</div>'
-        + '<div class="seed-row-info"><div class="seed-row-name">'+sp.name+'</div><div class="seed-row-sub">'+(locked ? 'Unlocks at Level '+sp.unlockLevel+'.' : sp.blurb+' Likes light ~'+sp.lightTarget+'%, water ~'+sp.waterTarget+'%.')+'</div></div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+sp.name+(isBlessedSpecies(key)?' <span class="blessed-tag">★ Blessed</span>':'')+'</div><div class="seed-row-sub">'+(locked ? 'Unlocks at Level '+sp.unlockLevel+'.' : sp.blurb+' Likes light ~'+sp.lightTarget+'%, water ~'+sp.waterTarget+'%.')+'</div></div>'
         + action
         + '</div>';
     }).join('');
@@ -6719,7 +6815,12 @@ function tick(){
   updateAllFrostTiles();
   updateHeader();
   applyWindowPhase();
-  if(document.getElementById('screen-greenhouse').classList.contains('active')){ updatePollinateBtn(); updateBuffBadges(); }
+  if(document.getElementById('screen-greenhouse').classList.contains('active')){
+    updatePollinateBtn(); updateBuffBadges();
+    const blessedRefreshed = ensureBlessedSpeciesCurrent();
+    if(blessedRefreshed) showToast('A new species is blessed today: '+SPECIES[state.blessedSpecies.species].name+'!');
+    updateBlessedBadge();
+  }
   autoPestTick();
   autoHarvestTick();
   autoPlantTick();
@@ -6758,6 +6859,7 @@ function runAwayCatchup(awayStartOverride){
   ensureTaskBoardCurrent();
   ensureMerchantCurrent();
   ensureVisitorCurrent();
+  ensureBlessedSpeciesCurrent();
   const hasAutoHarvest = getPrestigeBonus('autoHarvest') > 0;
   const hasAutoPlant = getPrestigeBonus('autoPlant') > 0;
   const hasAutoPest = getPrestigeBonus('autoPest') > 0;
@@ -6850,6 +6952,7 @@ async function init(){
   updatePollinateBtn();
   updateBuffBadges();
   runAwayCatchup();
+  updateBlessedBadge();
   if(!state.everPlanted) document.body.classList.add('show-hint');
   if(!state.tutorialSeen) openIntro();
   saveState();

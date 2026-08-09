@@ -915,10 +915,6 @@
       <div id="prestigeSummary"></div>
       <div id="prestigeTreeList"></div>
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
-      <div class="ach-category" style="margin-top:18px;">Apex Synthesis</div>
-      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
-        <div id="apexCard"></div>
-      </div>
       <div class="ach-category" style="margin-top:18px;">Companions</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Tap the same wildlife critter 5 times to befriend it for a permanent passive bonus.</div>
       <div id="companionsList" class="bestiary-grid"></div>
@@ -988,6 +984,10 @@
         </div>
       </div>
       <div class="lab-shelf-board"></div>
+      <div class="ach-category" style="margin-top:18px;">Apex Synthesis</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="apexCard"></div>
+      </div>
     </section>
   </main>
 
@@ -1578,7 +1578,6 @@ function renderCompanions(){
   }).join('');
 }
 function renderAchievements(){
-  renderApexCard();
   renderCompanions();
   const list = document.getElementById('achList');
   if(!list) return;
@@ -2952,6 +2951,7 @@ function renderLab(){
   if(!row) return;
   row.innerHTML = [0,1,2].map(renderLabStationPreview).join('');
   updateNotifyPromptVisibility();
+  renderApexCard();
 }
 function renderLabShelf(){
   const container = document.getElementById('labShelf');

@@ -446,6 +446,11 @@
   @keyframes pollinatorPulse{ from{box-shadow:3px 3px 0 rgba(0,0,0,.4);} to{box-shadow:3px 3px 0 rgba(0,0,0,.4), 0 0 10px 2px rgba(232,111,168,.6);} }
   .pix-flower{ display:grid; image-rendering:pixelated; }
   .pix-flower > div{ width:100%; height:100%; }
+  .apex-slots{ display:flex; gap:10px; justify-content:center; }
+  .apex-slot{ flex:1; aspect-ratio:1/1; max-width:110px; background:var(--panel); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; padding:6px; text-align:center; }
+  .apex-slot-filled{ background:var(--panel-2); cursor:default; }
+  .pix-apex{ display:grid; image-rendering:pixelated; filter:drop-shadow(0 0 6px rgba(244,197,66,.7)); }
+  .pix-apex > div{ width:100%; height:100%; }
   .bestiary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .bestiary-card{ background:var(--panel-2); border:3px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35); padding:10px 6px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
   .bestiary-icon-wrap{ height:24px; display:flex; align-items:center; justify-content:center; }
@@ -866,6 +871,10 @@
       <div id="prestigeSummary"></div>
       <div id="prestigeTreeList"></div>
       <div id="lifetimeStatsList" style="margin-top:18px;"></div>
+      <div class="ach-category" style="margin-top:18px;">Apex Synthesis</div>
+      <div class="upg-card" style="flex-direction:column;align-items:stretch;">
+        <div id="apexCard"></div>
+      </div>
       <div class="ach-category" style="margin-top:18px;">Companions</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Tap the same wildlife critter 5 times to befriend it for a permanent passive bonus.</div>
       <div id="companionsList" class="bestiary-grid"></div>
@@ -1516,6 +1525,7 @@ function renderCompanions(){
   }).join('');
 }
 function renderAchievements(){
+  renderApexCard();
   renderCompanions();
   const list = document.getElementById('achList');
   if(!list) return;
@@ -3535,6 +3545,109 @@ function closePollinatorGame(){
   document.getElementById('pollinatorOverlay').classList.remove('open');
 }
 
+/* ---------- apex mutation chase ---------- */
+const APEX_WINGS = ['verdant','desert','frost'];
+const APEX_WING_LABELS = { verdant:'Verdant', desert:'Desert', frost:'Frost' };
+const APEX_REWARD_SPORES = 500;
+const APEX_REWARD_GEMS = 25;
+const APEX_BLOOM = { rows:['w.g.w','gwwwg','wgygw','.www.','..s..','.sss.'], colors:{ w:'#FFF3B0', g:'#F4C542', y:'#FF6EC7', s:'#5C8A4A' } };
+function renderApexBloom(size){
+  const cell = size==='lg' ? 8 : 5;
+  let cellsHtml = '';
+  for(const row of APEX_BLOOM.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(APEX_BLOOM.colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-apex" style="grid-template-columns:repeat('+APEX_BLOOM.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
+function defaultApexState(){
+  return { donated:{ verdant:null, desert:null, frost:null }, unlocked:false, unlockedAt:0 };
+}
+function getApexYieldBonus(){ return (state.apex && state.apex.unlocked) ? 0.03 : 0; }
+function eligibleApexStacks(wing){
+  return state.inventory.filter(s => s.qty>0 && speciesWing(s.species)===wing && getSeedRarityTier(s.genome)===4);
+}
+function donateApexSeed(wing, stackId){
+  if(state.apex.unlocked || state.apex.donated[wing]) return false;
+  const stack = state.inventory.find(s=>s.id===stackId);
+  if(!stack || stack.qty<=0) return false;
+  if(speciesWing(stack.species)!==wing || getSeedRarityTier(stack.genome)!==4) return false;
+  stack.qty -= 1;
+  state.apex.donated[wing] = { species: stack.species, genome: Object.assign({}, stack.genome) };
+  if(stack.qty<=0) state.inventory = state.inventory.filter(s=>s.qty>0);
+  sfxPurchase();
+  const complete = APEX_WINGS.every(w=>state.apex.donated[w]);
+  if(complete){
+    state.apex.unlocked = true;
+    state.apex.unlockedAt = Date.now();
+    addSpores(APEX_REWARD_SPORES);
+    addGems(APEX_REWARD_GEMS);
+  }
+  saveState();
+  return complete;
+}
+function renderApexCard(){
+  const el = document.getElementById('apexCard');
+  if(!el) return;
+  const a = state.apex;
+  if(a.unlocked){
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'+renderApexBloom('lg')
+      + '<div><div class="upg-name">Apex Bloom</div><div class="upg-desc">Synthesized from a Legendary specimen of every wing. +3% spores from every harvest, forever.</div></div></div>';
+    return;
+  }
+  const slotsHtml = APEX_WINGS.map(w=>{
+    const d = a.donated[w];
+    if(d){
+      return '<div class="apex-slot apex-slot-filled" title="'+buildSpecimenName(d.species, d.genome)+'"><div class="seed-row-glyph">'+renderSprite(d.genome,'sm','bloom')+'</div><div class="bestiary-name" style="font-size:11px;">'+APEX_WING_LABELS[w]+'</div></div>';
+    }
+    return '<div class="apex-slot" onclick="openApexDonatePicker(\''+w+'\')"><div class="bestiary-name is-mystery" style="font-size:11px;">'+APEX_WING_LABELS[w]+'</div><div style="font-size:20px;color:var(--text-muted);">+</div></div>';
+  }).join('');
+  el.innerHTML = '<div class="apex-slots">'+slotsHtml+'</div>'
+    + '<div class="upg-desc" style="margin-top:10px;">Donate a Legendary-tier specimen (a double rare-trait mutation) from each wing to synthesize the Apex Bloom -- a permanent +3% spore bonus.</div>';
+}
+let currentApexWing = null;
+function openApexDonatePicker(wing){
+  if(state.apex.unlocked || state.apex.donated[wing]) return;
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  revealShowing = false;
+  currentApexWing = wing;
+  renderApexDonateSheet(wing);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderApexDonateSheet(wing){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const stacks = eligibleApexStacks(wing);
+  let rows;
+  if(!stacks.length){
+    rows = '<div class="empty-state">No Legendary-tier specimens (double rare trait) from this wing yet.<br>Keep researching and cross-breeding to find one.</div>';
+  } else {
+    rows = stacks.map(stack=>{
+      return '<div class="seed-row">'
+        + '<div class="seed-row-glyph">'+renderSprite(stack.genome,'sm','bloom')+'</div>'
+        + '<div class="seed-row-info"><div class="seed-row-name">'+buildSpecimenName(stack.species, stack.genome)+'</div>'
+        + '<div class="seed-row-sub">×'+stack.qty+' in stock</div></div>'
+        + '<button class="btn btn-small btn-danger" onclick="onDonateApexSeed(\''+wing+'\',\''+stack.id+'\')">Donate</button>'
+        + '</div>';
+    }).join('');
+  }
+  body.innerHTML = '<div class="sheet-head"><h3>Donate to the Apex Synthesis</h3></div>' + '<div class="seed-list">'+rows+'</div>';
+}
+function onDonateApexSeed(wing, stackId){
+  const completed = donateApexSeed(wing, stackId);
+  renderApexCard();
+  updateHeader();
+  closeSheet();
+  if(completed){
+    showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderApexBloom('sm')+'<span>The Apex Bloom has synthesized! +'+APEX_REWARD_SPORES+' ◆ +'+APEX_REWARD_GEMS+' '+renderGemIcon()+' and +3% spores forever.</span></span>');
+  } else {
+    showToast('Donated to the Apex Synthesis.');
+  }
+}
+
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -4147,6 +4260,7 @@ function defaultState(){
     decor: defaultDecorState(),
     companions: defaultCompanionState(),
     pollinator:{ lastPlayedAt:0 },
+    apex: defaultApexState(),
     dailyStreak:{ count:0, lastClaimDay:null },
     tutorialSeen:false,
     merchant:{ day:null, seedOffer:null, cosmeticOffer:null, seedBought:false, cosmeticBought:false },
@@ -4214,6 +4328,12 @@ function normalizeState(parsed){
       }
       if(!merged.pollinator || typeof merged.pollinator!=='object' || typeof merged.pollinator.lastPlayedAt!=='number'){
         merged.pollinator = { lastPlayedAt:0 };
+      }
+      if(!merged.apex || typeof merged.apex!=='object' || !merged.apex.donated){
+        merged.apex = defaultApexState();
+      } else {
+        APEX_WINGS.forEach(w=>{ if(merged.apex.donated[w] && !SPECIES[merged.apex.donated[w].species]) merged.apex.donated[w] = null; });
+        if(typeof merged.apex.unlocked!=='boolean') merged.apex.unlocked = false;
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -5133,7 +5253,7 @@ function harvestPlot(idx, wing='verdant', earningsMult=1){
   const precisionBonus = Math.min(precisionLight, precisionWater) * (getLevelBonus('wellTended') || 0.25);
   const speciesKey = plot.genome.species;
   const harvestLevelBonus = 1 + getLevelBonus('harvestSpores');
-  const companionSporeBonus = 1 + getCompanionYieldBonus() + getCompanionNightSporeBonus();
+  const companionSporeBonus = 1 + getCompanionYieldBonus() + getCompanionNightSporeBonus() + getApexYieldBonus();
   let sellValue = Math.round(sp.baseSell * (finalGenome.yieldMult||1) * (finalGenome.sellMult||1) * yieldUpgradeFactor * (1-pestPenalty) * (1+precisionBonus) * harvestLevelBonus * companionSporeBonus * randRange(0.85,1.15));
   if(earningsMult!==1) sellValue = Math.max(0, Math.round(sellValue * earningsMult));
   addSpores(sellValue);
@@ -5865,6 +5985,7 @@ function openSheet(idx, wing='verdant'){
 function closeSheet(){
   currentSheetIdx = null;
   currentLabSlot = null;
+  currentApexWing = null;
   revealShowing = false;
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');

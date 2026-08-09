@@ -1660,11 +1660,12 @@ function renderCompanions(){
     const feedBtn = maxed
       ? '<button class="btn btn-small" disabled>MAX</button>'
       : '<button class="btn btn-small '+(state.spores>=cost?'btn-primary':'')+'" '+(state.spores>=cost?'':'disabled')+' onclick="onFeedCompanion(\''+key+'\')">Feed '+cost+' ◆</button>';
+    const skinBtn = COMPANION_SKINS[key] ? '<button class="btn btn-small" onclick="openCompanionSkinPicker(\''+key+'\')">Skin</button>' : '';
     return '<div class="bestiary-card" title="'+bonusText+'">'
       + '<div class="bestiary-icon-wrap">'+renderWildlife('sm', key)+'</div>'
       + '<div class="bestiary-name">'+cfg.name+' <span class="companion-lvl">Lv.'+lvl+'</span></div>'
       + '<div class="bestiary-count">'+bonusText+'</div>'
-      + feedBtn
+      + '<div style="display:flex;gap:4px;">'+feedBtn+skinBtn+'</div>'
       + '</div>';
   }).join('');
 }
@@ -3613,13 +3614,47 @@ function pickRandomWildlifeType(){
   if(!keys.length) return null;
   return keys[Math.floor(Math.random()*keys.length)];
 }
+const COMPANION_SKINS = {
+  butterfly: { golden:  { name:'Golden Wing',   cost:140, colors:{ w:'#F4D542', b:'#5C4A1E' } } },
+  bee:       { royal:   { name:'Royal Bee',     cost:140, colors:{ w:'#E8D8F5', y:'#C77DFF', b:'#2C2C28' } } },
+  ladybug:   { azure:   { name:'Azure Beetle',  cost:140, colors:{ r:'#4A90D9', b:'#1E2E42' } } },
+  firefly:   { violet:  { name:'Violet Glow',   cost:140, colors:{ g:'#C77DFF' } } },
+  dragonfly: { crimson: { name:'Crimson Wing',  cost:140, colors:{ w:'#E86F6F', b:'#5C1E1E' } } }
+};
+function companionSkinOwned(type, key){
+  if(key==='default') return true;
+  const owned = state.companions.ownedSkins && state.companions.ownedSkins[type];
+  return !!(owned && owned.includes(key));
+}
+function purchaseCompanionSkin(type, key){
+  const cfg = COMPANION_SKINS[type] && COMPANION_SKINS[type][key];
+  if(!cfg || !ownsCompanion(type) || companionSkinOwned(type, key)) return false;
+  if(state.gems < cfg.cost) return false;
+  state.gems -= cfg.cost;
+  sfxPurchase();
+  state.companions.ownedSkins[type] = state.companions.ownedSkins[type] || [];
+  state.companions.ownedSkins[type].push(key);
+  equipCompanionSkin(type, key);
+  return true;
+}
+function equipCompanionSkin(type, key){
+  if(!companionSkinOwned(type, key)) return false;
+  state.companions.skins[type] = key;
+  saveState();
+  renderCompanions();
+  updateHeader();
+  return true;
+}
 function renderWildlife(size, type){
   const cfg = WILDLIFE_TYPES[type] || WILDLIFE_TYPES.butterfly;
+  const skinKey = state.companions && state.companions.skins && state.companions.skins[type];
+  const skinCfg = skinKey && skinKey!=='default' && COMPANION_SKINS[type] && COMPANION_SKINS[type][skinKey];
+  const colors = skinCfg ? skinCfg.colors : cfg.colors;
   const cell = size==='lg' ? 6 : 4;
   let cellsHtml = '';
   for(const row of cfg.rows){
     for(const ch of row){
-      cellsHtml += '<div style="background:'+(cfg.colors[ch] || 'transparent')+'"></div>';
+      cellsHtml += '<div style="background:'+(colors[ch] || 'transparent')+'"></div>';
     }
   }
   return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
@@ -3636,7 +3671,11 @@ const COMPANION_INFO = {
   dragonfly: { desc:'wilt risk in the Frostbound wing', base:0.20, fmt:v=>'-'+Math.round(v*100)+'% wilt risk in the Frostbound wing' }
 };
 function defaultCompanionState(){
-  return { tapCounts:{ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, owned:[], levels:{} };
+  return {
+    tapCounts:{ butterfly:0, bee:0, ladybug:0, firefly:0, dragonfly:0 }, owned:[], levels:{},
+    ownedSkins:{ butterfly:[], bee:[], ladybug:[], firefly:[], dragonfly:[] },
+    skins:{ butterfly:'default', bee:'default', ladybug:'default', firefly:'default', dragonfly:'default' }
+  };
 }
 function ownsCompanion(type){ return state.companions && state.companions.owned.includes(type); }
 function companionLevel(type){
@@ -4407,6 +4446,52 @@ function onDonateApexSeed(wing, stackId){
   }
 }
 
+let currentSkinCompanionType = null;
+function openCompanionSkinPicker(type){
+  if(!COMPANION_SKINS[type] || !ownsCompanion(type)) return;
+  currentSheetIdx = null;
+  currentLabSlot = null;
+  currentApexWing = null;
+  revealShowing = false;
+  currentSkinCompanionType = type;
+  renderCompanionSkinSheet(type);
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function renderCompanionSkinSheet(type){
+  const body = document.getElementById('sheetBody');
+  if(!body) return;
+  const equipped = state.companions.skins[type] || 'default';
+  const options = [{ key:'default', name:'Original', cost:0 }].concat(
+    Object.entries(COMPANION_SKINS[type]).map(([key,cfg])=>({ key, name:cfg.name, cost:cfg.cost }))
+  );
+  const rows = options.map(opt=>{
+    const isOwned = companionSkinOwned(type, opt.key);
+    const isEquipped = equipped===opt.key;
+    let actionHtml;
+    if(isEquipped) actionHtml = '<button class="btn btn-small" disabled>Equipped</button>';
+    else if(isOwned) actionHtml = '<button class="btn btn-small btn-primary" onclick="equipCompanionSkin(\''+type+'\',\''+opt.key+'\');renderCompanionSkinSheet(\''+type+'\')">Equip</button>';
+    else actionHtml = '<button class="btn btn-small '+(state.gems>=opt.cost?'btn-primary':'')+'" '+(state.gems>=opt.cost?'':'disabled')+' onclick="purchaseCompanionSkin(\''+type+'\',\''+opt.key+'\');renderCompanionSkinSheet(\''+type+'\')">'+opt.cost+' '+renderGemIcon(2)+'</button>';
+    return '<div class="seed-row'+(isEquipped?' is-equipped':'')+'">'
+      + '<div class="seed-row-glyph">'+renderWildlifeSkinPreview(type, opt.key)+'</div>'
+      + '<div class="seed-row-info"><div class="seed-row-name">'+opt.name+'</div></div>'
+      + actionHtml
+      + '</div>';
+  }).join('');
+  body.innerHTML = '<div class="sheet-head"><h3>'+WILDLIFE_TYPES[type].name+' Skin</h3></div>' + '<div class="seed-list">'+rows+'</div>';
+}
+function renderWildlifeSkinPreview(type, skinKey){
+  const cfg = WILDLIFE_TYPES[type];
+  const skinCfg = skinKey!=='default' && COMPANION_SKINS[type][skinKey];
+  const colors = skinCfg ? skinCfg.colors : cfg.colors;
+  let cellsHtml = '';
+  for(const row of cfg.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(colors[ch] || 'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-wildlife" style="grid-template-columns:repeat('+cfg.rows[0].length+',4px);grid-auto-rows:4px;">'+cellsHtml+'</div>';
+}
 function renderFarmer(size, type){
   const cfg = VISITOR_TYPES[type] || VISITOR_TYPES.farmer;
   const cell = size==='lg' ? 8 : 5;
@@ -5110,6 +5195,14 @@ function normalizeState(parsed){
         merged.companions.owned.forEach(k=>{
           const lvl = merged.companions.levels[k];
           merged.companions.levels[k] = (typeof lvl==='number' && lvl>=1 && lvl<=COMPANION_MAX_LEVEL) ? lvl : 1;
+        });
+        if(!merged.companions.ownedSkins || typeof merged.companions.ownedSkins!=='object') merged.companions.ownedSkins = {};
+        if(!merged.companions.skins || typeof merged.companions.skins!=='object') merged.companions.skins = {};
+        Object.keys(WILDLIFE_TYPES).forEach(k=>{
+          if(!Array.isArray(merged.companions.ownedSkins[k])) merged.companions.ownedSkins[k] = [];
+          merged.companions.ownedSkins[k] = merged.companions.ownedSkins[k].filter(key => !!(COMPANION_SKINS[k] && COMPANION_SKINS[k][key]));
+          const eq = merged.companions.skins[k];
+          merged.companions.skins[k] = (eq==='default' || merged.companions.ownedSkins[k].includes(eq)) ? eq : 'default';
         });
       }
       if(!merged.pollinator || typeof merged.pollinator!=='object' || typeof merged.pollinator.lastPlayedAt!=='number'){
@@ -6796,6 +6889,7 @@ function closeSheet(){
   currentSheetIdx = null;
   currentLabSlot = null;
   currentApexWing = null;
+  currentSkinCompanionType = null;
   revealShowing = false;
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('sheetBackdrop').classList.remove('open');

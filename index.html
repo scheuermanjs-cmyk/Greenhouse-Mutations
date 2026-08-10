@@ -561,50 +561,74 @@
 
   /* ---------- herbarium frame cosmetics ---------- */
   body.herb-frame-gilded .herb-card{
-    border-width:4px;
-    border-image: linear-gradient(135deg, #3D2A08 0% 8%, #FFF6D2 8% 22%, #E8C555 22% 48%, #3D2A08 48% 58%, #FFF6D2 58% 74%, #E8C555 74% 100%) 4;
-    box-shadow:3px 3px 0 rgba(61,42,8,.55), 0 0 0 1px rgba(232,197,85,.6), 0 0 7px rgba(232,197,85,.3);
-  }
-  body.herb-frame-gilded .herb-card::before{
-    content:''; position:absolute; inset:0; pointer-events:none;
-    background:linear-gradient(115deg, transparent 35%, rgba(255,246,210,.55) 50%, transparent 65%);
-    background-size:260% 260%;
-    mix-blend-mode:overlay;
+    border-width:4px; border-color:#8C6A1E;
+    box-shadow:3px 3px 0 rgba(61,42,8,.55);
+    background:
+      linear-gradient(115deg, transparent 35%, rgba(255,246,210,.5) 50%, transparent 65%) 0 0/260% 260%,
+      var(--parchment);
   }
   @media (prefers-reduced-motion:no-preference){
-    body.herb-frame-gilded .herb-card::before{ animation:goldShimmerSweep 3.4s linear infinite; }
-    body.herb-frame-gilded .herb-card::after{ animation:potSparkleTwinkle 1.9s ease-in-out infinite; }
+    body.herb-frame-gilded .herb-card{ animation:goldShimmerSweep 3.4s linear infinite; }
+  }
+  @keyframes goldShimmerSweep{
+    0%{ background-position:180% 180%, 0 0; }
+    100%{ background-position:-60% -60%, 0 0; }
+  }
+  body.herb-frame-gilded .herb-card::before,
+  body.herb-frame-gilded .herb-card::after{
+    content:''; position:absolute; width:4px; height:4px; background:#3D2A08; pointer-events:none;
+  }
+  body.herb-frame-gilded .herb-card::before{
+    top:-4px; left:-4px;
+    box-shadow:
+      4px 0 #3D2A08, 8px 0 #3D2A08, 12px 0 #3D2A08,
+      0 4px #3D2A08, 4px 4px #FFF6D2, 8px 4px #FFF6D2, 12px 4px #E8C555,
+      0 8px #3D2A08, 4px 8px #FFF6D2, 8px 8px #E8C555, 12px 8px #E8C555,
+      0 12px #3D2A08, 4px 12px #E8C555, 8px 12px #E8C555,
+      0 16px #3D2A08;
   }
   body.herb-frame-gilded .herb-card::after{
-    content:''; position:absolute; top:10%; right:9%; width:3px; height:3px; background:#FFF6D2;
-    box-shadow:0 0 4px 1px rgba(255,246,210,.9); opacity:0; pointer-events:none;
+    top:-4px; right:-4px;
+    box-shadow:
+      -4px 0 #3D2A08, -8px 0 #3D2A08, -12px 0 #3D2A08,
+      0 4px #3D2A08, -4px 4px #FFF6D2, -8px 4px #FFF6D2, -12px 4px #E8C555,
+      0 8px #3D2A08, -4px 8px #FFF6D2, -8px 8px #E8C555, -12px 8px #E8C555,
+      0 12px #3D2A08, -4px 12px #E8C555, -8px 12px #E8C555,
+      0 16px #3D2A08;
   }
-  @keyframes goldShimmerSweep{ 0%{ background-position:180% 180%; } 100%{ background-position:-60% -60%; } }
 
   body.herb-frame-botanical .herb-card{ border-color:#6B4A2E; box-shadow:3px 3px 0 rgba(95,163,90,.35); }
   body.herb-frame-botanical .herb-card::before,
   body.herb-frame-botanical .herb-card::after{
-    content:''; position:absolute; width:3px; height:3px; background:#5C8A4A; pointer-events:none;
+    content:''; position:absolute; width:4px; height:4px; background:#4A7A3E; pointer-events:none;
   }
   body.herb-frame-botanical .herb-card::before{
-    top:6px; left:-4px;
+    top:6px; left:-5px;
     box-shadow:
-      0 3px #5C8A4A, 3px 6px #5C8A4A, 3px 9px #5C8A4A,
-      0 12px #5C8A4A, 0 15px #5C8A4A,
-      3px 18px #5C8A4A, 3px 21px #5C8A4A,
-      0 24px #5C8A4A, 0 27px #5C8A4A,
-      6px 6px #8FD15C, 6px 18px #8FD15C,
-      6px 24px #E86FA8;
+      4px 0 #4A7A3E,
+      0 4px #4A7A3E, 4px 4px #4A7A3E,
+      4px 8px #4A7A3E, 8px 8px #4A7A3E,
+      4px 12px #6FA659, 8px 12px #6FA659,
+      0 16px #6FA659, 4px 16px #6FA659,
+      0 20px #6FA659, 4px 20px #6FA659,
+      4px 24px #6FA659, 8px 24px #6FA659,
+      4px 28px #6FA659, 8px 28px #6FA659,
+      12px 8px #8FD15C, 16px 8px #8FD15C, 12px 12px #8FD15C, 16px 12px #8FD15C,
+      4px 32px #E86FA8, 8px 32px #E86FA8;
   }
   body.herb-frame-botanical .herb-card::after{
-    top:6px; right:-4px;
+    top:6px; right:-5px;
     box-shadow:
-      0 3px #5C8A4A, -3px 6px #5C8A4A, -3px 9px #5C8A4A,
-      0 12px #5C8A4A, 0 15px #5C8A4A,
-      -3px 18px #5C8A4A, -3px 21px #5C8A4A,
-      0 24px #5C8A4A, 0 27px #5C8A4A,
-      -6px 6px #8FD15C, -6px 18px #8FD15C,
-      -6px 24px #E86FA8;
+      -4px 0 #4A7A3E,
+      0 4px #4A7A3E, -4px 4px #4A7A3E,
+      -4px 8px #4A7A3E, -8px 8px #4A7A3E,
+      -4px 12px #6FA659, -8px 12px #6FA659,
+      0 16px #6FA659, -4px 16px #6FA659,
+      0 20px #6FA659, -4px 20px #6FA659,
+      -4px 24px #6FA659, -8px 24px #6FA659,
+      -4px 28px #6FA659, -8px 28px #6FA659,
+      -12px 8px #8FD15C, -16px 8px #8FD15C, -12px 12px #8FD15C, -16px 12px #8FD15C,
+      -4px 32px #E86FA8, -8px 32px #E86FA8;
   }
   body.herb-frame-celestial .herb-card{ border-color:#A8CFEA; box-shadow:3px 3px 0 rgba(168,207,234,.6); }
 
@@ -996,9 +1020,6 @@
       <div class="ach-category" style="margin-top:18px;">Greenhouse Skylight</div>
       <div class="upg-desc" style="margin:-6px 2px 8px;">Widen the skylight to coax extra vigor out of every harvest. Feed it spores forever — it never stops growing, and never resets, even after Prestige.</div>
       <div id="skylightCard"></div>
-      <div class="ach-category" style="margin-top:18px;">Spore Bank</div>
-      <div class="upg-desc" style="margin:-6px 2px 8px;">Deposit spores to earn slow compounding interest over real time — even while you're away, with no offline cap.</div>
-      <div class="upg-card" id="sporeBankCard" style="flex-direction:column;align-items:stretch;"></div>
       <div class="ach-category" style="margin-top:18px;">Gem Shop</div>
       <div id="gemShopList"></div>
       <div class="ach-category" style="margin-top:18px;">Pot &amp; Furniture Finish</div>
@@ -1440,7 +1461,6 @@ function doPrestige(){
   const keepPollinator = state.pollinator;
   const keepCenturyPlant = state.centuryPlant;
   const keepForeman = state.foreman;
-  const keepSporeBank = state.sporeBank;
   const keepTitles = state.titles;
   const keepGrafting = state.grafting;
   const keepExpeditions = state.expeditions;
@@ -1466,7 +1486,6 @@ function doPrestige(){
     pollinator: keepPollinator,
     centuryPlant: keepCenturyPlant,
     foreman: keepForeman,
-    sporeBank: keepSporeBank,
     titles: keepTitles,
     grafting: keepGrafting,
     expeditions: keepExpeditions
@@ -2060,7 +2079,6 @@ function renderUpgrades(){
   renderMerchant();
   renderMonument();
   renderSkylight();
-  renderSporeBankCard();
   renderGemShop();
 }
 function renderMonument(){
@@ -4135,52 +4153,6 @@ function tickGemTrickle(elapsedMs){
   }
 }
 
-/* ---------- spore bank ---------- */
-const SPORE_BANK_RATE_PER_HOUR = 0.001;
-function defaultSporeBankState(){ return { balance:0, lastTickAt:Date.now() }; }
-function tickSporeBank(elapsedMs){
-  if(elapsedMs<=0 || state.sporeBank.balance<=0) return;
-  const ratePerMs = SPORE_BANK_RATE_PER_HOUR/3600000;
-  state.sporeBank.balance *= (1 + ratePerMs*elapsedMs);
-}
-function depositToSporeBank(amount){
-  amount = Math.floor(amount);
-  if(amount<=0 || amount>state.spores) return false;
-  state.spores -= amount;
-  state.sporeBank.balance += amount;
-  saveState();
-  return true;
-}
-function withdrawFromSporeBank(amount){
-  amount = Math.floor(amount);
-  if(amount<=0 || amount>state.sporeBank.balance) return false;
-  state.sporeBank.balance -= amount;
-  state.spores += amount;
-  saveState();
-  return true;
-}
-function renderSporeBankCard(){
-  const el = document.getElementById('sporeBankCard');
-  if(!el) return;
-  const balance = Math.floor(state.sporeBank.balance);
-  el.innerHTML = '<div class="upg-name">Banked: '+balance+' ◆</div>'
-    + '<div class="upg-desc">Rate: '+(SPORE_BANK_RATE_PER_HOUR*100).toFixed(2)+'% / hour, compounding</div>'
-    + '<div style="display:flex;gap:8px;margin-top:10px;">'
-    + '<button class="btn btn-small btn-block" '+(state.spores<=0?'disabled':'')+' onclick="onDepositSporeBank(0.25)">Deposit 25%</button>'
-    + '<button class="btn btn-small btn-block" '+(state.spores<=0?'disabled':'')+' onclick="onDepositSporeBank(1)">Deposit All</button>'
-    + '</div>'
-    + '<div style="display:flex;gap:8px;margin-top:8px;">'
-    + '<button class="btn btn-small btn-block" '+(balance<=0?'disabled':'')+' onclick="onWithdrawSporeBank(0.25)">Withdraw 25%</button>'
-    + '<button class="btn btn-small btn-block" '+(balance<=0?'disabled':'')+' onclick="onWithdrawSporeBank(1)">Withdraw All</button>'
-    + '</div>';
-}
-function onDepositSporeBank(frac){
-  if(depositToSporeBank(Math.floor(state.spores*frac))){ renderSporeBankCard(); updateHeader(); }
-}
-function onWithdrawSporeBank(frac){
-  if(withdrawFromSporeBank(Math.floor(state.sporeBank.balance*frac))){ renderSporeBankCard(); updateHeader(); }
-}
-
 /* ---------- foreman hire ---------- */
 const FOREMAN_HIRE_COST = 150;
 const FOREMAN_FEED_BASE_COST = 80;
@@ -5516,7 +5488,6 @@ function defaultState(){
     centuryPlant: defaultCenturyPlantState(),
     gemTrickle: defaultGemTrickleState(),
     foreman: defaultForemanState(),
-    sporeBank: defaultSporeBankState(),
     titles:{ unlocked:[], equipped:null },
     grafting: defaultGraftingState(),
     expeditions: defaultExpeditionState(),
@@ -5653,9 +5624,6 @@ function normalizeState(parsed){
         merged.foreman = defaultForemanState();
       } else if(!merged.foreman.lastActionAt || typeof merged.foreman.lastActionAt!=='object'){
         merged.foreman.lastActionAt = { visitor:0, research:0 };
-      }
-      if(!merged.sporeBank || typeof merged.sporeBank!=='object' || typeof merged.sporeBank.balance!=='number'){
-        merged.sporeBank = defaultSporeBankState();
       }
       if(!merged.dailyStreak || typeof merged.dailyStreak!=='object'){
         merged.dailyStreak = { count:0, lastClaimDay:null };
@@ -7855,8 +7823,6 @@ function tick(){
   const now = Date.now();
   tickGemTrickle(now - (state.gemTrickle.lastTickAt||now));
   state.gemTrickle.lastTickAt = now;
-  tickSporeBank(now - (state.sporeBank.lastTickAt||now));
-  state.sporeBank.lastTickAt = now;
   if(growSpeedBuffActive()){
     const pull = p=>{ if(p.status==='growing') p.plantedAt -= 1000; };
     state.plots.forEach(pull);
@@ -7892,7 +7858,6 @@ function tick(){
     if(merchantRefreshed){ renderMerchant(); showToast('The traveling merchant has new stock!'); }
     else updateMerchantTimer();
     updateAdCooldownDisplay();
-    renderSporeBankCard();
   }
   updateLabBadge();
   if(document.getElementById('screen-lab').classList.contains('active')) renderLab();
@@ -7926,10 +7891,6 @@ function runAwayCatchup(awayStartOverride){
   const cappedEnd = Math.min(now, awayStart + offlineCapMs());
   tickGemTrickle(cappedEnd - awayStart);
   state.gemTrickle.lastTickAt = now;
-  // deliberately uncapped -- unlike the auto-action budget above, the Spore Bank's whole
-  // purpose is rewarding long uninterrupted absences, so it uses the full away span
-  tickSporeBank(now - awayStart);
-  state.sporeBank.lastTickAt = now;
   // the same 30s (or upgraded) cooldown that gates auto-harvest/auto-plant live also caps how many
   // total auto actions can happen across the away period -- each wing gets its OWN independent
   // budget now that the greenhouse and desert wing run separate auto-harvesters/auto-farmers,

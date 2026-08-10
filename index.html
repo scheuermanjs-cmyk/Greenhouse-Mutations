@@ -758,6 +758,20 @@
   }
   @keyframes labBubbleRise{ 0%{ transform:translateY(0); opacity:0; } 15%{ opacity:.8; } 100%{ transform:translateY(-16px); opacity:0; } }
 
+  /* ---------- cosmetic shop dropdowns ---------- */
+  .decor-dropdown{ margin-bottom:10px; }
+  .decor-dropdown-header{
+    display:flex; align-items:center; width:100%; gap:8px;
+    background:var(--panel-2); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.35);
+    padding:12px 13px; cursor:pointer; font-family:'VT323'; font-size:16px; color:var(--text);
+    text-transform:uppercase; letter-spacing:.3px;
+  }
+  .decor-dropdown-header:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(0,0,0,.35); }
+  .decor-dropdown-meta{ font-size:13px; color:var(--text-muted); margin-left:auto; text-transform:none; letter-spacing:0; font-family:'VT323'; }
+  .decor-dropdown-arrow{ font-size:12px; color:var(--accent); flex-shrink:0; display:inline-block; transition:transform .15s ease; }
+  .decor-dropdown.is-open .decor-dropdown-arrow{ transform:rotate(90deg); }
+  .decor-dropdown-body{ padding-top:10px; }
+
   /* ---------- achievements ---------- */
   .ach-category{ font-family:'Press Start 2P'; font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px; }
   .ach-card{ display:flex; align-items:center; gap:12px; background:var(--panel-2); border:3px solid var(--outline); padding:10px 12px; margin-bottom:8px; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
@@ -1085,20 +1099,63 @@
       <div id="skylightCard"></div>
       <div class="ach-category" style="margin-top:18px;">Gem Shop</div>
       <div id="gemShopList"></div>
-      <div class="ach-category" style="margin-top:18px;">Pot &amp; Furniture Finish</div>
-      <div id="potDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Wallpaper</div>
-      <div id="wallpaperDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Weather Overlay</div>
-      <div id="weatherOverlayDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Pot Aura</div>
-      <div id="potAuraDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Bloom Filter</div>
-      <div id="bloomFilterDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Discovery Reveal Effect</div>
-      <div id="revealEffectDecorList"></div>
-      <div class="ach-category" style="margin-top:18px;">Herbarium Frame</div>
-      <div id="herbFrameDecorList"></div>
+      <div class="ach-category" style="margin-top:18px;">Cosmetics</div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('pot')">
+          <span>Pot &amp; Furniture Finish</span>
+          <span class="decor-dropdown-meta" id="potDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="potDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="potDecorBody" style="display:none;"><div id="potDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('wallpaper')">
+          <span>Wallpaper</span>
+          <span class="decor-dropdown-meta" id="wallpaperDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="wallpaperDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="wallpaperDecorBody" style="display:none;"><div id="wallpaperDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('weatherOverlay')">
+          <span>Weather Overlay</span>
+          <span class="decor-dropdown-meta" id="weatherOverlayDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="weatherOverlayDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="weatherOverlayDecorBody" style="display:none;"><div id="weatherOverlayDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('potAura')">
+          <span>Pot Aura</span>
+          <span class="decor-dropdown-meta" id="potAuraDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="potAuraDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="potAuraDecorBody" style="display:none;"><div id="potAuraDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('bloomFilter')">
+          <span>Bloom Filter</span>
+          <span class="decor-dropdown-meta" id="bloomFilterDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="bloomFilterDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="bloomFilterDecorBody" style="display:none;"><div id="bloomFilterDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('revealEffect')">
+          <span>Discovery Reveal Effect</span>
+          <span class="decor-dropdown-meta" id="revealEffectDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="revealEffectDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="revealEffectDecorBody" style="display:none;"><div id="revealEffectDecorList"></div></div>
+      </div>
+      <div class="decor-dropdown">
+        <button class="decor-dropdown-header" onclick="toggleDecorDropdown('herbFrame')">
+          <span>Herbarium Frame</span>
+          <span class="decor-dropdown-meta" id="herbFrameDecorMeta"></span>
+          <span class="decor-dropdown-arrow" id="herbFrameDecorArrow">&#9656;</span>
+        </button>
+        <div class="decor-dropdown-body" id="herbFrameDecorBody" style="display:none;"><div id="herbFrameDecorList"></div></div>
+      </div>
     </section>
 
     <section class="screen" id="screen-herbarium">
@@ -2742,6 +2799,14 @@ function equipDecor(kind, key){
   updateHeader();
   return true;
 }
+function toggleDecorDropdown(kind){
+  const body = document.getElementById(kind+'DecorBody');
+  const wrap = body && body.closest('.decor-dropdown');
+  if(!body || !wrap) return;
+  const opening = body.style.display==='none';
+  body.style.display = opening ? '' : 'none';
+  wrap.classList.toggle('is-open', opening);
+}
 function renderDecorGallery(kind){
   const meta = DECOR_KIND_META[kind];
   const el = document.getElementById(meta.listId);
@@ -2749,6 +2814,8 @@ function renderDecorGallery(kind){
   const cfg = decorConfig(kind);
   const owned = decorOwned(kind);
   const equipped = state.decor[meta.equippedKey];
+  const metaEl = document.getElementById(kind+'DecorMeta');
+  if(metaEl) metaEl.textContent = owned.length+'/'+Object.keys(cfg).length+' owned';
   el.innerHTML = Object.entries(cfg).map(([key, theme])=>{
     const isOwned = owned.includes(key);
     const isEquipped = equipped===key;

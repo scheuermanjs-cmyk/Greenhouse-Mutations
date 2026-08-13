@@ -1293,7 +1293,7 @@
         <div id="apexCard"></div>
       </div>
       <div class="ach-category" style="margin-top:18px;">Grafting Bench</div>
-      <div class="upg-desc" style="margin:-6px 2px 8px;">Graft two Rare-tier+ seeds from different wings into a guaranteed Legendary specimen.</div>
+      <div class="upg-desc" style="margin:-6px 2px 8px;">Graft two Rare-tier+ seeds from different wings into a guaranteed Legendary specimen — a combination no in-wing cross-pollination could ever produce. Pressed straight to your Herbarium; not plantable for now.</div>
       <div class="upg-card" style="flex-direction:column;align-items:stretch;">
         <div id="graftBenchCard"></div>
       </div>
@@ -5006,20 +5006,28 @@ function doGraft(){
   const trait1 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
   let trait2 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
   while(trait2.id===trait1.id) trait2 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
-  const genome = { species:stackA.species, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.35, sellMult:1, extraSeed:0, rareTrait:trait1.id, rareTrait2:trait2.id, hybridWith:stackB.species };
-  addToInventory(stackA.species, genome, 1);
+  // combines the two wings' species into a hybrid genome that normal in-wing cross-pollination
+  // could never produce -- pressed straight to the Herbarium rather than a plantable seed, for now
+  const genome = { species:stackA.species, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.35, sellMult:1, extraSeed:0, rareTrait:trait1.id, rareTrait2:trait2.id, hybridWith:SPECIES[stackB.species].name };
+  const { isNew, name } = logHerbarium(stackA.species, genome);
+  const s = state.achStats;
+  if(isNew) s.mutations = (s.mutations||0)+1;
+  s.hybrids = (s.hybrids||0)+1;
+  s.rareTraits = (s.rareTraits||0)+2;
+  s.doubleMutations = (s.doubleMutations||0)+1;
   state.grafting.timesGrafted += 1;
-  sfxPurchase();
+  sfxDiscovery(2);
   pendingGraft = { a:null, b:null };
   checkAchievements();
   saveState();
-  return true;
+  return { isNew, name, genome };
 }
 function onDoGraft(){
-  const ok = doGraft();
+  const result = doGraft();
   renderGraftBenchCard();
   updateHeader();
-  if(ok) showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">✨<span>Grafted a Legendary specimen! Ready to donate to the Apex Synthesis.</span></span>');
+  renderHerbarium();
+  if(result) showToastHtml('<span style="display:flex;align-items:center;justify-content:center;gap:6px;">'+renderSprite(result.genome,'sm','bloom')+'<span>'+(result.isNew?'New specimen pressed to your Herbarium: ':'Grafted again: ')+result.name+'</span></span>');
 }
 function renderGraftSlot(slot){
   const parent = pendingGraft[slot];

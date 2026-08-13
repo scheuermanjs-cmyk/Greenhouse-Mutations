@@ -5860,6 +5860,23 @@ function normalizeState(parsed){
         if(typeof merged.cloud.signedIn!=='boolean') merged.cloud.signedIn = false;
         if(typeof merged.cloud.lastSyncedAt!=='number') merged.cloud.lastSyncedAt = 0;
       }
+      if(Array.isArray(merged.herbarium)){
+        merged.herbarium.forEach(e=>{
+          if(!e || !e.genome || !e.genome.hybridWith || e.genome.grafted) return;
+          let hybridKey = SPECIES[e.genome.hybridWith] ? e.genome.hybridWith : null;
+          if(!hybridKey){
+            for(const key in SPECIES){ if(SPECIES[key].name===e.genome.hybridWith){ hybridKey = key; break; } }
+          }
+          if(!hybridKey || speciesWing(hybridKey)===speciesWing(e.species)) return;
+          // a cross-wing hybridWith is only possible through grafting -- normal in-wing
+          // cross-pollination can never combine species from different wings, so any
+          // pre-existing entry matching this shape was grafted before the visual/flag existed
+          e.genome.grafted = true;
+          e.genome.crossHue = SPECIES[hybridKey].hue;
+          if(e.genome.hybridWith===hybridKey) e.genome.hybridWith = SPECIES[hybridKey].name;
+          e.name = buildSpecimenName(e.species, e.genome);
+        });
+      }
       return merged;
 }
 async function loadState(){

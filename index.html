@@ -390,6 +390,27 @@
     50%{ filter:var(--bloom-filter,none) drop-shadow(0 0 4px hsla(var(--hue),90%,70%,1)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
   }
 
+  /* ---------- grafted (cross-wing) specimens ---------- */
+  .pix-sprite.is-grafted{ position:relative; }
+  .pix-sprite.is-grafted.is-glow{
+    filter:var(--bloom-filter,none) drop-shadow(0 0 3px hsla(var(--hue),88%,66%,.65)) drop-shadow(0 0 6px hsla(var(--hue2),88%,66%,.5));
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .pix-sprite.is-grafted.is-glow{ animation:graftGlowPulse 2.6s ease-in-out infinite; }
+  }
+  @keyframes graftGlowPulse{
+    0%,100%{ filter:var(--bloom-filter,none) drop-shadow(0 0 2px hsla(var(--hue),90%,68%,.65)) drop-shadow(0 0 4px hsla(var(--hue2),90%,68%,.3)); }
+    50%{ filter:var(--bloom-filter,none) drop-shadow(0 0 3px hsla(var(--hue2),90%,70%,.75)) drop-shadow(0 0 9px hsla(var(--hue),90%,70%,.6)); }
+  }
+  .graft-spark{
+    position:absolute; width:2px; height:2px; background:#F4F1E0; opacity:0; pointer-events:none;
+    box-shadow: 0 -3px #F4F1E0, 0 3px #F4F1E0, -3px 0 #F4F1E0, 3px 0 #F4F1E0;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .graft-spark{ animation:graftSparkTwinkle 1.8s ease-in-out infinite; }
+  }
+  @keyframes graftSparkTwinkle{ 0%,100%{ opacity:0; transform:scale(.5); } 50%{ opacity:1; transform:scale(1.2); } }
+
   /* ---------- bottom nav ---------- */
   /* transform forces its own compositor layer -- without it, iOS Safari can visually
      detach position:fixed elements mid-scroll on tall pages and render them inline
@@ -422,6 +443,12 @@
   .herb-name{ font-size:16px; line-height:1.3; text-transform:uppercase; letter-spacing:.3px; }
   .herb-meta{ font-size:13px; opacity:.8; margin-top:2px; }
   .herb-rarity{ font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin-top:3px; font-weight:bold; }
+  .graft-badge{
+    position:absolute; top:-6px; left:-6px; z-index:1;
+    background:linear-gradient(135deg, #C77DFF 0% 50%, #5FC9E8 50% 100%);
+    color:#1B1330; font-family:'Press Start 2P'; font-size:6px; letter-spacing:.3px;
+    padding:3px 4px; border:2px solid var(--outline); box-shadow:2px 2px 0 rgba(0,0,0,.35);
+  }
   .empty-state{ text-align:center; color:var(--text-muted); padding:50px 20px; font-size:16px; line-height:1.6; }
   .stat-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:15px; padding:8px 2px; border-bottom:1px dashed rgba(255,255,255,.1); }
   .stat-row span:first-child{ color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; font-size:12px; }
@@ -3857,11 +3884,15 @@ function renderSprite(genome, size, stage, opts){
       cellsHtml += '<div style="background:'+(color||'transparent')+'"></div>';
     }
   }
+  const grafted = !wilt && !!genome.grafted;
   const classes = ['pix-sprite'];
   if(glow) classes.push('is-glow');
   if(drift) classes.push('is-drift');
   if(wilt) classes.push('is-wilt');
-  return '<div class="'+classes.join(' ')+'" style="--hue:'+Math.round(hue)+';grid-template-columns:repeat('+width+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+  if(grafted) classes.push('is-grafted');
+  const hue2 = grafted ? Math.round(genome.crossHue!=null ? genome.crossHue : (getHybridHue(genome)||hue)) : Math.round(hue);
+  const graftSparkles = grafted ? '<span class="graft-spark" style="top:-6%;left:8%;animation-delay:0s;"></span><span class="graft-spark" style="top:6%;right:2%;animation-delay:.5s;"></span><span class="graft-spark" style="bottom:2%;left:-4%;animation-delay:1s;"></span>' : '';
+  return '<div class="'+classes.join(' ')+'" style="--hue:'+Math.round(hue)+';--hue2:'+hue2+';grid-template-columns:repeat('+width+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+graftSparkles+'</div>';
 }
 function renderPot(size, locked){
   const cell = size==='lg' ? 8 : 3.5;
@@ -5008,7 +5039,7 @@ function doGraft(){
   while(trait2.id===trait1.id) trait2 = RARE_TRAITS[Math.floor(Math.random()*RARE_TRAITS.length)];
   // combines the two wings' species into a hybrid genome that normal in-wing cross-pollination
   // could never produce -- pressed straight to the Herbarium rather than a plantable seed, for now
-  const genome = { species:stackA.species, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.35, sellMult:1, extraSeed:0, rareTrait:trait1.id, rareTrait2:trait2.id, hybridWith:SPECIES[stackB.species].name };
+  const genome = { species:stackA.species, hue:sp.hue, glow:true, growthMult:1, yieldMult:1.35, sellMult:1, extraSeed:0, rareTrait:trait1.id, rareTrait2:trait2.id, hybridWith:SPECIES[stackB.species].name, grafted:true, crossHue:SPECIES[stackB.species].hue };
   const { isNew, name } = logHerbarium(stackA.species, genome);
   const s = state.achStats;
   if(isNew) s.mutations = (s.mutations||0)+1;
@@ -7322,7 +7353,7 @@ function renderHerbarium(){
     const tilt = i%2===0 ? 'tilt-a' : 'tilt-b';
     const tier = getSeedRarityTier(e.genome);
     return '<div class="herb-card" onclick="openHerbDetail(\''+e.key+'\')">'
-      + '<div class="herb-photo '+tilt+'">'+tilePotStack(renderSprite(e.genome,'sm','bloom',{}), false)+'</div>'
+      + '<div class="herb-photo '+tilt+'">'+(e.genome.grafted ? '<div class="graft-badge">GRAFTED</div>' : '')+tilePotStack(renderSprite(e.genome,'sm','bloom',{}), false)+'</div>'
       + '<div class="herb-info">'
       + '<div class="herb-name">'+e.name+'</div>'
       + '<div class="herb-meta">'+SPECIES[e.species].name+' \u00B7 found '+timeAgo(e.firstFound)+(e.count>1 ? ' \u00B7 \u00D7'+e.count : '')+'</div>'

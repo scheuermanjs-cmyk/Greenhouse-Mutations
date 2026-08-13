@@ -840,6 +840,28 @@
   .sheet-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
   .sheet-blurb{ font-size:15px; color:var(--text-muted); margin-bottom:14px; line-height:1.5; }
   .sheet-timer{ text-align:center; font-size:26px; margin-bottom:14px; }
+
+  /* ---------- daily streak calendar ---------- */
+  .pix-gift{ display:grid; image-rendering:pixelated; }
+  .pix-gift > div{ width:100%; height:100%; }
+  .streak-hero{ display:flex; align-items:center; gap:14px; background:var(--panel-2); border:3px solid var(--outline); box-shadow:3px 3px 0 rgba(0,0,0,.35); padding:14px; margin-bottom:14px; }
+  .streak-hero-icon{ flex-shrink:0; filter:drop-shadow(0 0 6px rgba(244,224,77,.5)); }
+  .streak-hero-day{ font-size:18px; color:#F4C542; text-transform:uppercase; }
+  .streak-hero-sub{ font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .streak-calendar{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px; }
+  .streak-day{ background:var(--panel-2); border:2px solid var(--outline); padding:6px 2px 7px; text-align:center; box-shadow:2px 2px 0 rgba(0,0,0,.3); }
+  .streak-day-num{ font-size:8px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; }
+  .streak-day-icon{ display:flex; align-items:center; justify-content:center; height:18px; margin:4px 0 3px; }
+  .streak-day-reward{ font-size:9px; color:var(--accent); line-height:1.3; }
+  .streak-day.is-claimed{ opacity:.55; }
+  .streak-day.is-claimed .streak-day-reward{ color:var(--text-muted); }
+  .streak-day.is-future{ opacity:.7; }
+  .streak-day.is-future .streak-day-reward{ color:var(--text-muted); }
+  .streak-day.is-today{ border-color:#F4C542; box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 6px rgba(244,197,66,.5); }
+  @media (prefers-reduced-motion:no-preference){
+    .streak-day.is-today{ animation:streakTodayPulse 1.8s ease-in-out infinite; }
+  }
+  @keyframes streakTodayPulse{ 0%,100%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 4px rgba(244,197,66,.4); } 50%{ box-shadow:2px 2px 0 rgba(0,0,0,.3), 0 0 10px rgba(244,197,66,.75); } }
   .sheet-subhead{ font-size:13px; color:var(--text-muted); margin:14px 0 8px; text-transform:uppercase; letter-spacing:.5px; }
 
   .slider-row{ margin-bottom:14px; }
@@ -910,9 +932,16 @@
   .welcome-hero{ text-align:center; margin-bottom:20px; }
   .welcome-hero h1{ font-size:20px; line-height:1.5; text-shadow:3px 3px 0 rgba(0,0,0,.35); }
   .welcome-hero p{ color:var(--text-muted); font-size:14px; margin-top:8px; }
+  .welcome-away-time{ color:var(--accent) !important; font-size:13px !important; text-transform:uppercase; letter-spacing:.5px; margin-top:10px !important; }
+  .welcome-featured-sprite{ display:flex; justify-content:center; margin-bottom:8px; filter:drop-shadow(0 0 8px currentColor); }
+  @media (prefers-reduced-motion:no-preference){
+    .welcome-featured-sprite{ animation:welcomeFeaturedBob 2.4s ease-in-out infinite; }
+  }
+  @keyframes welcomeFeaturedBob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4px); } }
   .welcome-section-label{ font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); margin-bottom:8px; }
   .welcome-rewards-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px; }
   .welcome-reward-chip{ background:var(--panel-2); border:3px solid var(--outline); padding:12px 6px; text-align:center; box-shadow:3px 3px 0 rgba(0,0,0,.35); }
+  .welcome-reward-chip .icon{ display:flex; align-items:center; justify-content:center; height:14px; margin-bottom:6px; font-size:13px; }
   .welcome-reward-chip .val{ font-size:15px; color:var(--accent); }
   .welcome-reward-chip .lbl{ font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.3px; margin-top:5px; }
   .welcome-discovery-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(86px,1fr)); gap:8px; margin-bottom:8px; }
@@ -2968,6 +2997,16 @@ function fmtHM(ms){
   const h = Math.floor(totalMin/60);
   const m = totalMin%60;
   return h+'h '+String(m).padStart(2,'0')+'m';
+}
+function fmtAwayDuration(ms){
+  if(ms<0) ms = 0;
+  const totalMin = Math.floor(ms/60000);
+  const days = Math.floor(totalMin/1440);
+  const hours = Math.floor((totalMin%1440)/60);
+  const mins = totalMin%60;
+  if(days>0) return days+'d '+hours+'h';
+  if(hours>0) return hours+'h '+mins+'m';
+  return mins+'m';
 }
 function updateMerchantTimer(){
   const el = document.getElementById('merchantRefreshTimer');
@@ -7763,27 +7802,40 @@ function collectResearchFromWelcome(){
 function renderWelcomeBackScreen(wiltedCount, readyCount, researchDone, offlineSummary){
   const card = document.getElementById('welcomeCard');
   const hasOffline = offlineSummary && (offlineSummary.harvests>0 || offlineSummary.planted>0 || offlineSummary.pestsSquashed>0);
-  let html = '<div class="welcome-hero"><h1>Welcome back!</h1><p>Here’s what happened while you were away.</p></div>';
+  const discoveries = (offlineSummary && offlineSummary.discoveries) || [];
+  let featured = null;
+  discoveries.forEach(d=>{
+    const tier = getSeedRarityTier(d.genome);
+    if(!featured || tier>featured.tier) featured = { d, tier };
+  });
+
+  let html = '<div class="welcome-hero">'
+    + (featured ? '<div class="welcome-featured-sprite" style="color:'+RARITY_COLORS_DARK[featured.tier]+';">'+renderSprite(featured.d.genome,'lg','bloom')+'</div>' : '')
+    + '<h1>Welcome back!</h1>'
+    + (offlineSummary && offlineSummary.awayMs ? '<p class="welcome-away-time">Away for '+fmtAwayDuration(offlineSummary.awayMs)+'</p>' : '')
+    + '<p>Here’s what happened while you were gone.</p></div>';
 
   if(hasOffline){
     const chips = [];
-    if(offlineSummary.spores>0) chips.push({val:'+'+offlineSummary.spores+' ◆', lbl:'Spores'});
-    if(offlineSummary.xp>0) chips.push({val:'+'+offlineSummary.xp, lbl:'XP'});
-    if(offlineSummary.gems>0) chips.push({val:'+'+offlineSummary.gems+' '+renderGemIcon(2), lbl:'Gems'});
-    if(offlineSummary.harvests>0) chips.push({val:offlineSummary.harvests, lbl:'Auto-harvested'});
-    if(offlineSummary.planted>0) chips.push({val:offlineSummary.planted, lbl:'Auto-planted'});
-    if(offlineSummary.pestsSquashed>0) chips.push({val:offlineSummary.pestsSquashed, lbl:'Pests squashed'});
+    if(offlineSummary.spores>0) chips.push({icon:'<span style="color:#FFFFFF;">○</span>', val:'+'+offlineSummary.spores, lbl:'Spores'});
+    if(offlineSummary.gems>0) chips.push({icon:renderGemIcon(2), val:'+'+offlineSummary.gems, lbl:'Gems'});
+    if(offlineSummary.xp>0) chips.push({icon:renderPixIcon('arrow', true, 3), val:'+'+offlineSummary.xp, lbl:'XP'});
+    if(offlineSummary.harvests>0) chips.push({icon:renderPixIcon('wheat', true, 3), val:offlineSummary.harvests, lbl:'Auto-harvested'});
+    if(offlineSummary.planted>0) chips.push({icon:renderPixIcon('seedling', true, 3), val:offlineSummary.planted, lbl:'Auto-planted'});
+    if(offlineSummary.pestsSquashed>0) chips.push({icon:renderPixIcon('bug', true, 3), val:offlineSummary.pestsSquashed, lbl:'Pests squashed'});
     html += '<div class="welcome-section-label">While you were away</div>'
-      + '<div class="welcome-rewards-grid">'+chips.map(c=>'<div class="welcome-reward-chip"><div class="val">'+c.val+'</div><div class="lbl">'+c.lbl+'</div></div>').join('')+'</div>';
+      + '<div class="welcome-rewards-grid">'+chips.map(c=>'<div class="welcome-reward-chip"><div class="icon">'+c.icon+'</div><div class="val">'+c.val+'</div><div class="lbl">'+c.lbl+'</div></div>').join('')+'</div>';
   }
 
-  if(offlineSummary && offlineSummary.discoveries && offlineSummary.discoveries.length){
-    const shown = offlineSummary.discoveries.slice(0,24);
-    const extra = offlineSummary.discoveries.length - shown.length;
+  if(discoveries.length){
+    const shown = discoveries.slice(0,24);
+    const extra = discoveries.length - shown.length;
     html += '<div class="welcome-section-label">New discoveries</div>'
-      + '<div class="welcome-discovery-grid">'+shown.map(d=>
-        '<div class="welcome-discovery-card"><div class="badge">NEW</div>'+renderSprite(d.genome,'sm','bloom')+'<div class="name">'+d.name+'</div></div>'
-      ).join('')+'</div>';
+      + '<div class="welcome-discovery-grid">'+shown.map(d=>{
+        const tier = getSeedRarityTier(d.genome);
+        return '<div class="welcome-discovery-card" style="border-color:'+RARITY_COLORS_DARK[tier]+';">'
+          + '<div class="badge" style="background:'+RARITY_COLORS_DARK[tier]+';">NEW</div>'+renderSprite(d.genome,'sm','bloom')+'<div class="name">'+d.name+'</div></div>';
+      }).join('')+'</div>';
     if(extra>0) html += '<div class="welcome-more-note">+'+extra+' more new discoveries</div>';
   }
 
@@ -7791,7 +7843,7 @@ function renderWelcomeBackScreen(wiltedCount, readyCount, researchDone, offlineS
     if(readyCount>0) html += '<div class="stat-row"><span>Ready to harvest</span><span>'+readyCount+'</span></div>';
     if(wiltedCount>0) html += '<div class="stat-row"><span>Wilted</span><span>'+wiltedCount+'</span></div>';
     if(researchDone) html += '<div class="stat-row"><span>Research</span><span>Complete</span></div>';
-  } else if(!hasOffline && !(offlineSummary && offlineSummary.discoveries && offlineSummary.discoveries.length)){
+  } else if(!hasOffline && !discoveries.length){
     html += '<p class="welcome-more-note" style="margin-top:4px;">Nothing happened while you were away — everything\'s right where you left it.</p>';
   }
 
@@ -7855,14 +7907,38 @@ function claimDailyStreak(){
   }
   showToastHtml('Day '+info.newCount+' streak claimed! +'+info.reward.spores+' ○'+(info.reward.gems?' +'+info.reward.gems+' '+renderGemIcon():''));
 }
+const GIFT_BOX_SPRITE = { rows:['.bbbbb.','yyyyyyy','bbybbyb','bbybbyb','.bbybb.'], colors:{ b:'#D9A441', y:'#F4E04D' } };
+function renderGiftBox(size, muted){
+  const cell = size==='lg' ? 8 : 4;
+  const colors = muted ? { b:'#5C4E30', y:'#8C7A44' } : GIFT_BOX_SPRITE.colors;
+  let cellsHtml = '';
+  for(const row of GIFT_BOX_SPRITE.rows){
+    for(const ch of row){
+      cellsHtml += '<div style="background:'+(colors[ch]||'transparent')+'"></div>';
+    }
+  }
+  return '<div class="pix-gift" style="grid-template-columns:repeat('+GIFT_BOX_SPRITE.rows[0].length+','+cell+'px);grid-auto-rows:'+cell+'px;">'+cellsHtml+'</div>';
+}
 function renderDailyStreakSheet(info){
   const body = document.getElementById('sheetBody');
   const cycleDay = ((info.newCount-1) % DAILY_STREAK_REWARDS.length) + 1;
-  let html = '<div class="sheet-head"><h3>Daily Streak</h3></div>'
-    + '<p class="sheet-blurb">Day '+info.newCount+' in a row! Come back tomorrow to keep it going.</p>'
-    + '<div class="stat-row"><span>Reward</span><span>+'+info.reward.spores+' ○'+(info.reward.gems?' +'+info.reward.gems+' '+renderGemIcon():'')+'</span></div>'
-    + '<div class="stat-row"><span>Cycle day</span><span>'+cycleDay+' / '+DAILY_STREAK_REWARDS.length+'</span></div>'
-    + '<button class="btn btn-primary btn-block" style="margin-top:16px" onclick="claimDailyStreak()">Claim</button>';
+  const dayCells = DAILY_STREAK_REWARDS.map((r,i)=>{
+    const dayNum = i+1;
+    const isToday = dayNum===cycleDay;
+    const isClaimed = dayNum<cycleDay;
+    const stateClass = isToday ? 'is-today' : isClaimed ? 'is-claimed' : 'is-future';
+    const iconHtml = isClaimed ? renderPixIcon('check', true, 3) : renderGiftBox('sm', !isToday);
+    return '<div class="streak-day '+stateClass+'">'
+      + '<div class="streak-day-num">'+dayNum+'</div>'
+      + '<div class="streak-day-icon">'+iconHtml+'</div>'
+      + '<div class="streak-day-reward">'+r.spores+'○'+(r.gems?'<br>'+r.gems+renderGemIcon():'')+'</div>'
+      + '</div>';
+  }).join('');
+  let html = '<div class="sheet-head"><h3>Daily Gift</h3></div>'
+    + '<div class="streak-hero"><div class="streak-hero-icon">'+renderGiftBox('lg')+'</div>'
+    + '<div class="streak-hero-text"><div class="streak-hero-day">Day '+info.newCount+'</div><div class="streak-hero-sub">in a row — keep it going!</div></div></div>'
+    + '<div class="streak-calendar">'+dayCells+'</div>'
+    + '<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="claimDailyStreak()">Claim +'+info.reward.spores+' ○'+(info.reward.gems?' +'+info.reward.gems+' '+renderGemIcon():'')+'</button>';
   body.innerHTML = html;
 }
 function openDailyStreakModal(info){
@@ -8055,6 +8131,7 @@ function runAwayCatchup(awayStartOverride){
   tickAwayWing('verdant');
   tickAwayWing('desert');
   tickAwayWing('frost');
+  offlineSummary.awayMs = away;
   updateAllTiles();
   updateAllDesertTiles();
   updateAllFrostTiles();

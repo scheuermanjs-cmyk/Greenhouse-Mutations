@@ -8084,6 +8084,7 @@ function tick(){
 
 /* ===================== INIT ===================== */
 function runAwayCatchup(awayStartOverride){
+  const isColdStart = awayStartOverride===undefined;
   const now = Date.now();
   const awayStart = awayStartOverride || state.lastSavedAt || now;
   const away = now - awayStart;
@@ -8152,7 +8153,7 @@ function runAwayCatchup(awayStartOverride){
   }
   const researchDoneOnReturn = [0,1,2].some(i => isLabSlotUnlocked(i) && getResearchStatus(i)==='done');
   if(state.tutorialSeen){
-    const showWelcomeBack = away>120000;
+    const showWelcomeBack = isColdStart || away>120000;
     const streakInfo = pendingDailyStreakInfo();
     if(streakInfo){
       if(showWelcomeBack) pendingWelcomeBackArgs = { wiltedCount, readyCount, researchDone:researchDoneOnReturn, offlineSummary };
